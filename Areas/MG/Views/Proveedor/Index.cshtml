@@ -1,21 +1,88 @@
 @model List<AspNet10ArcoERP.Models.ProveedorModel>
 @{
-    ViewData["Title"] = "Directorio de Proveedores";
-    var tiposDoc = ViewBag.TiposDocLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    ViewData["Title"] = "Cliente / Proveedor";
+    var tiposNat = ViewBag.TiposNaturaleza as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposDoc = ViewBag.TiposDoc as List<AspNet10ArcoERP.Models.TipoDocIdentidadLookupModel> ?? new List<AspNet10ArcoERP.Models.TipoDocIdentidadLookupModel>();
+    var tiposVia = ViewBag.TiposVia as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposZona = ViewBag.TiposZona as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposProve = ViewBag.TiposProveedor as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var condsPago = ViewBag.CondicionesPago as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var departamentos = ViewBag.Departamentos as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    
+    int? tipoFiltro = ViewBag.Tipo as int?;
+    string? estadoFiltro = ViewBag.Estado as string;
+    int? naturalezaFiltro = ViewBag.Naturaleza as int?;
+    string currentSort = (ViewBag.Sort as string ?? "id").ToLower();
+    string currentDir = (ViewBag.Dir as string ?? "desc").ToLower();
+    int currentTop = ViewBag.Top as int? ?? 25;
 }
+
+@functions {
+    string SortUrl(string col, string curSort, string curDir, string? search, int? tipo, string? estado, int? naturaleza, int top)
+    {
+        string nextDir = (curSort == col && curDir == "asc") ? "desc" : "asc";
+        return Url.Action("Index", new { search, tipo, estado, naturaleza, sort = col, dir = nextDir, top }) ?? "#";
+    }
+
+    string SortIcon(string col, string curSort, string curDir, bool isNumeric = false)
+    {
+        if (curSort != col) return "bi-arrow-down-up text-muted opacity-50";
+        if (isNumeric)
+        {
+            return curDir == "asc" ? "bi-sort-numeric-down text-primary fw-bold" : "bi-sort-numeric-down-alt text-primary fw-bold";
+        }
+        return curDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold";
+    }
+}
+
+<style>
+    /* Estabilidad y altura fija compacta en cabecera de la tabla */
+    .table-fixed-header {
+        table-layout: auto;
+    }
+    .table-header-custom th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        height: 40px !important;
+        line-height: 1.2;
+    }
+    .table-header-custom th a {
+        transition: color 0.15s ease-in-out;
+        white-space: nowrap !important;
+    }
+    .table-header-custom th a:hover {
+        color: var(--bs-primary) !important;
+    }
+    /* Badge de tipo de persona adaptativo para tema claro y tema oscuro */
+    .badge-naturaleza {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-body-color);
+        border: 1px solid var(--bs-border-color);
+        font-weight: 500;
+    }
+    [data-bs-theme="dark"] .badge-naturaleza {
+        background-color: #2b3035 !important;
+        color: #ced4da !important;
+        border-color: #495057 !important;
+    }
+</style>
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
         <div class="row align-items-center">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
-                    <i class="bi bi-truck text-primary me-2" style="font-size: 1.6rem;"></i>Directorio de Proveedores
+                    <i class="bi bi-people-fill text-primary me-2" style="font-size: 1.6rem;"></i>Cliente / Proveedor
                 </h3>
-                <small class="text-muted">Gestión de proveedores, contratistas, transportistas y acreedores comerciales</small>
+                <small class="text-muted">Maestro de clientes comerciales, proveedores, transportistas y acreedores</small>
             </div>
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
-                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Proveedor
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Registro
                 </button>
             </div>
         </div>
@@ -24,39 +91,163 @@
 
 <div class="app-content py-4">
     <div class="container-fluid">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-body border-bottom py-3">
-                <div class="row g-2 align-items-center justify-content-between">
-                    <div class="col-md-5 d-flex align-items-center">
-                        <form method="get" class="input-group input-group-sm w-100">
-                            <span class="input-group-text bg-body-tertiary border-end-0">
-                                <i class="bi bi-search text-muted"></i>
-                            </span>
-                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por RUC, razón social o código..." value="@ViewBag.Search" />
-                            <button type="submit" class="btn btn-outline-primary">Filtrar</button>
-                            @if (!string.IsNullOrEmpty(ViewBag.Search as string))
+        <!-- BARRA DE FILTROS: TODOS/CLIENTES/PROVEEDORES - BUSCADOR - ESTADO - TIPO PERSONA - MOSTRANDO -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    
+                    <!-- CONTENEDOR DE TODOS LOS FILTROS EN UNA SOLA LÍNEA CONTINUA -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        
+                        <!-- 1. Píldoras de Rol Comercial (TODOS / CLIENTES / PROVEEDORES) -->
+                        <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Filtro de Rol">
+                            <a href="@Url.Action("Index", new { search = ViewBag.Search, estado = estadoFiltro, naturaleza = naturalezaFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                               class="btn @(!tipoFiltro.HasValue ? "btn-primary" : "btn-outline-secondary")">
+                                <i class="bi bi-grid-fill me-1"></i>Todos
+                            </a>
+                            <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = 1, estado = estadoFiltro, naturaleza = naturalezaFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                               class="btn @(tipoFiltro == 1 ? "btn-primary" : "btn-outline-secondary")">
+                                <i class="bi bi-person-heart me-1"></i>Clientes
+                            </a>
+                            <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = 2, estado = estadoFiltro, naturaleza = naturalezaFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                               class="btn @(tipoFiltro == 2 ? "btn-primary" : "btn-outline-secondary")">
+                                <i class="bi bi-truck me-1"></i>Proveedores
+                            </a>
+                        </div>
+
+                        <!-- 2, 3 y 4: FORMULARIO CON BUSCADOR, ESTADO Y TIPO DE PERSONA -->
+                        <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0" id="filtro-form">
+                            @if (tipoFiltro.HasValue)
                             {
-                                <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
+                                <input type="hidden" name="tipo" value="@tipoFiltro.Value" />
                             }
+                            <input type="hidden" name="sort" value="@currentSort" />
+                            <input type="hidden" name="dir" value="@currentDir" />
+                            <input type="hidden" name="top" value="@currentTop" />
+
+                            <!-- 2. Buscador por Nombre, RUC o DNI, código... -->
+                            <div class="input-group input-group-sm" style="width: 290px;">
+                                <span class="input-group-text bg-body-tertiary border-end-0">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por Nombre, RUC o DNI, código..." value="@ViewBag.Search" />
+                                <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                                @if (!string.IsNullOrEmpty(ViewBag.Search as string) || !string.IsNullOrEmpty(estadoFiltro) || naturalezaFiltro.HasValue)
+                                {
+                                    <a href="@Url.Action("Index", new { tipo = tipoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                                }
+                            </div>
+
+                            <!-- 3. Estado (Select) -->
+                            <div class="input-group input-group-sm" style="width: auto;">
+                                <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                    <i class="bi bi-toggle-on text-primary"></i>
+                                </span>
+                                <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="this.form.submit();" title="Filtrar por Estado">
+                                    <option value="" selected="@(string.IsNullOrEmpty(estadoFiltro))">Todos los Estados</option>
+                                    <option value="A" selected="@(estadoFiltro == "A")">Activos</option>
+                                    <option value="I" selected="@(estadoFiltro == "I")">Inactivos</option>
+                                </select>
+                            </div>
+
+                            <!-- 4. Tipo de Persona (Select) -->
+                            <div class="input-group input-group-sm" style="width: auto;">
+                                <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                    <i class="bi bi-person-badge text-primary"></i>
+                                </span>
+                                <select name="naturaleza" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Tipo de Persona">
+                                    <option value="" selected="@(!naturalezaFiltro.HasValue)">Todas las Personas</option>
+                                    <option value="1" selected="@(naturalezaFiltro == 1)">Persona Natural</option>
+                                    <option value="2" selected="@(naturalezaFiltro == 2)">Persona Jurídica</option>
+                                </select>
+                            </div>
                         </form>
                     </div>
-                    <div class="col-md-4 text-md-end text-muted small">
-                        <span>Mostrando: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6">@Model.Count</strong> proveedores</span>
+
+                    <!-- 5. BOTÓN DROPDOWN 'MOSTRANDO: 100' -->
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                            <i class="bi bi-funnel-fill text-primary"></i>
+                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1">@currentTop</strong></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                            @foreach (var cant in new[] { 25, 50, 100, 500 })
+                            {
+                                <li>
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
+                                       href="@Url.Action("Index", new { search = ViewBag.Search, tipo = tipoFiltro, estado = estadoFiltro, naturaleza = naturalezaFiltro, sort = currentSort, dir = currentDir, top = cant })">
+                                        <span>@cant registros</span>
+                                        @if (currentTop == cant)
+                                        {
+                                            <i class="bi bi-check-lg ms-2"></i>
+                                        }
+                                    </a>
+                                </li>
+                            }
+                        </ul>
                     </div>
+
                 </div>
             </div>
+        </div>
 
+        <!-- TABLA DE REGISTROS CON ENCABEZADOS ORDENABLES DE ALTURA Y TAMAÑO FIJO -->
+        <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
                 <table class="table table-striped table-hover align-middle mb-0" id="tabla-proveedores">
-                    <thead class="table-header-custom border-bottom">
+                    <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
-                            <th style="width: 70px;" class="text-center">ID</th>
-                            <th style="width: 100px;" class="text-center">Código</th>
-                            <th>Razón Social / Nombre Comercial</th>
-                            <th style="width: 140px;" class="text-center">RUC / Doc</th>
-                            <th>Contacto / Teléfono</th>
-                            <th style="width: 110px;" class="text-center">Estado</th>
-                            <th style="width: 130px;" class="text-center">Acciones</th>
+                            <th style="width: 65px; min-width: 65px; max-width: 65px;" class="text-center">
+                                <a href="@SortUrl("id", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" class="text-decoration-none text-body fw-bold d-inline-flex align-items-center justify-content-center" title="Ordenar por ID">
+                                    ID <i class="bi @SortIcon("id", currentSort, currentDir, true) ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 95px; min-width: 95px; max-width: 95px;" class="text-center">
+                                <a href="@SortUrl("codigo", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" class="text-decoration-none text-body fw-bold d-inline-flex align-items-center justify-content-center" title="Ordenar por Código">
+                                    Código <i class="bi @SortIcon("codigo", currentSort, currentDir, true) ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 105px; min-width: 105px; max-width: 105px;" class="text-center">
+                                @if (!tipoFiltro.HasValue)
+                                {
+                                    <a href="@SortUrl("rol", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" 
+                                       class="text-decoration-none text-body fw-bold d-inline-flex align-items-center justify-content-center" 
+                                       title="Ordenar por Rol">
+                                        Rol <i class="bi @SortIcon("rol", currentSort, currentDir) ms-1"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span>Rol</span>
+                                }
+                            </th>
+                            <th style="min-width: 230px;">
+                                <a href="@SortUrl("razon_social", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" class="text-decoration-none text-body fw-bold d-inline-flex align-items-center" title="Ordenar por Razón Social">
+                                    Razón Social / Nombre Comercial <i class="bi @SortIcon("razon_social", currentSort, currentDir) ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 145px; min-width: 145px; max-width: 145px;" class="text-center">
+                                <a href="@SortUrl("documento", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" class="text-decoration-none text-body fw-bold d-inline-flex align-items-center justify-content-center" title="Ordenar por Documento / RUC">
+                                    Documento <i class="bi @SortIcon("documento", currentSort, currentDir, true) ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="min-width: 180px;">
+                                <a href="@SortUrl("ubicacion", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" class="text-decoration-none text-body fw-bold d-inline-flex align-items-center" title="Ordenar por Ubicación">
+                                    Ubicación / Dirección <i class="bi @SortIcon("ubicacion", currentSort, currentDir) ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="min-width: 150px;">
+                                <a href="@SortUrl("contacto", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" class="text-decoration-none text-body fw-bold d-inline-flex align-items-center" title="Ordenar por Contacto">
+                                    Contacto / Teléfono <i class="bi @SortIcon("contacto", currentSort, currentDir) ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 90px; min-width: 90px; max-width: 90px;" class="text-center">
+                                <a href="@SortUrl("estado", currentSort, currentDir, ViewBag.Search, tipoFiltro, estadoFiltro, naturalezaFiltro, currentTop)" class="text-decoration-none text-body fw-bold d-inline-flex align-items-center justify-content-center" title="Ordenar por Estado">
+                                    Estado <i class="bi @SortIcon("estado", currentSort, currentDir) ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 115px; min-width: 115px;" class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -67,15 +258,57 @@
                                 <tr id="fila-@item.Id">
                                     <td class="text-center font-monospace text-muted small">@item.Id</td>
                                     <td class="text-center font-monospace fw-bold text-primary">@item.Codigo</td>
+                                    <td class="text-center">
+                                        @if (item.TipoProveedorId == 2)
+                                        {
+                                             <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="bi bi-truck me-1"></i>Proveedor</span>
+                                        }
+                                        else if (item.TipoProveedorId == 3)
+                                        {
+                                             <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1"><i class="bi bi-arrows-collapse me-1"></i>Ambos</span>
+                                        }
+                                        else
+                                        {
+                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1"><i class="bi bi-person me-1"></i>Cliente</span>
+                                        }
+                                    </td>
                                     <td>
                                         <div class="fw-semibold text-body">@item.NombreCompleto</div>
+                                        @if (!string.IsNullOrEmpty(item.Abreviatura))
+                                        {
+                                            <small class="text-primary-emphasis fw-medium d-block"><i class="bi bi-tag me-1"></i>@item.Abreviatura</small>
+                                        }
                                         @if (!string.IsNullOrEmpty(item.Email))
                                         {
-                                            <small class="text-muted"><i class="bi bi-envelope me-1"></i>@item.Email</small>
+                                            <small class="text-muted d-block"><i class="bi bi-envelope me-1"></i>@item.Email</small>
                                         }
                                     </td>
                                     <td class="text-center font-monospace">
-                                        <span class="badge bg-secondary-subtle text-secondary border">@item.Documento</span>
+                                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                            @(!string.IsNullOrEmpty(item.TipoDocumentoIdentidadCodigo) ? item.TipoDocumentoIdentidadCodigo + ": " : "")@item.DocumentoPrincipal
+                                        </span>
+                                        @if (item.TipoNaturalezaJuridicaId == 1)
+                                        {
+                                            <span class="badge badge-naturaleza d-block mt-1 small">Natural</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-naturaleza d-block mt-1 small">Jurídica</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="small text-truncate" style="max-width: 260px;" title="@item.DireccionCompleta">
+                                            @if (!string.IsNullOrWhiteSpace(item.DistritoNombre))
+                                            {
+                                                <strong class="text-body-secondary">@item.DistritoNombre</strong>
+                                                @if (!string.IsNullOrWhiteSpace(item.ProvinciaNombre) && item.ProvinciaNombre != item.DistritoNombre)
+                                                {
+                                                    <span class="text-muted"> - @item.ProvinciaNombre</span>
+                                                }
+                                                <br />
+                                            }
+                                            <span class="text-muted">@item.DireccionCompleta</span>
+                                        </div>
                                     </td>
                                     <td>
                                         @if (!string.IsNullOrEmpty(item.Contacto))
@@ -97,13 +330,15 @@
                                             <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
                                         }
                                     </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.NombreCompleto');">
-                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
-                                        </button>
+                                    <td class="text-center text-nowrap">
+                                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                                            <button class="btn btn-sm btn-outline-primary px-2 py-1 shadow-sm" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") px-2 py-1 shadow-sm" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.NombreCompleto');">
+                                                <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -111,9 +346,9 @@
                         else
                         {
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-5">
+                                <td colspan="9" class="text-center text-muted py-5">
                                     <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
-                                    <span>No se encontraron proveedores</span>
+                                    <span>No se encontraron registros de clientes o proveedores</span>
                                 </td>
                             </tr>
                         }
@@ -125,94 +360,338 @@
 </div>
 
 <!-- ======================================================== -->
-<!-- MODAL CRUD: PROVEEDOR                                    -->
+<!-- MODAL CRUD MAESTRO: CLIENTE / PROVEEDOR (ADMINLTE 4)      -->
 <!-- ======================================================== -->
-<div class="modal fade" id="modal-crud-proveedor" tabindex="-1" aria-labelledby="modalProvLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow border-0 rounded-4">
+<div class="modal fade" id="modal-crud-proveedor" tabindex="-1" aria-labelledby="modalProvLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content shadow-lg border-0 rounded-4">
             <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
                 <h5 class="modal-title fw-bold" id="modalProvLabel">
-                    <i class="bi bi-truck text-primary me-2"></i><span id="modal-titulo">Nuevo Proveedor</span>
+                    <i class="bi bi-people-fill text-primary me-2"></i><span id="modal-titulo">Nuevo Cliente / Proveedor</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
+            
             <form id="form-proveedor" onsubmit="guardarProveedor(event);">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="prov-id" name="Id" value="0" />
+
                 <div class="modal-body p-4">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label for="prov-tipo-doc" class="form-label fw-semibold">Tipo Documento</label>
-                            <select class="form-select" id="prov-tipo-doc" name="TipoDocumentoIdentidadId">
-                                @foreach (var td in tiposDoc)
-                                {
-                                    <option value="@td.Id">@td.Nombre (@td.Codigo)</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="prov-ruc" class="form-label fw-semibold">RUC / N° Doc <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control font-monospace" id="prov-ruc" name="NumeroRuc" placeholder="Ej: 20100012345" maxlength="20" required />
-                        </div>
-                        <div class="col-md-4">
-                            <label for="prov-codigo" class="form-label fw-semibold">Código Proveedor</label>
-                            <input type="text" class="form-control font-monospace text-uppercase" id="prov-codigo" name="Codigo" placeholder="Automático" maxlength="7" />
-                        </div>
-                    </div>
+                    <!-- NAVEGACIÓN POR PESTAÑAS -->
+                    <ul class="nav nav-tabs nav-fill mb-3" id="provModalTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-semibold" id="tab-principales-btn" data-bs-toggle="tab" data-bs-target="#tab-principales" type="button" role="tab" aria-selected="true">
+                                <i class="bi bi-person-vcard me-2"></i>1. Datos Principales
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="tab-domicilio-btn" data-bs-toggle="tab" data-bs-target="#tab-domicilio" type="button" role="tab" aria-selected="false">
+                                <i class="bi bi-geo-alt-fill me-2"></i>2. Domicilio y Ubigeo
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="tab-contacto-btn" data-bs-toggle="tab" data-bs-target="#tab-contacto" type="button" role="tab" aria-selected="false">
+                                <i class="bi bi-telephone-inbound-fill me-2"></i>3. Contacto y Facturación
+                            </button>
+                        </li>
+                    </ul>
 
-                    <div class="mb-3">
-                        <label for="prov-razon-social" class="form-label fw-semibold">Razón Social <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="prov-razon-social" name="RazonSocial" placeholder="Ej: DISTRIBUIDORA INDUSTRIAL S.A.C." maxlength="150" required />
-                    </div>
+                    <div class="tab-content pt-2" id="provModalTabsContent">
+                        
+                        <!-- ============================================== -->
+                        <!-- PESTAÑA 1: DATOS PRINCIPALES                    -->
+                        <!-- ============================================== -->
+                        <div class="tab-pane fade show active" id="tab-principales" role="tabpanel" aria-labelledby="tab-principales-btn">
+                            
+                            <!-- Fila: Tipo de Tercero, Naturaleza y Código -->
+                            <div class="row g-3 mb-3 p-3 bg-body-tertiary rounded-3 border">
+                                <div class="col-md-4">
+                                    <label for="prov-tipo-prove" class="form-label fw-bold">Tipo de Registro (Rol) <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="prov-tipo-prove" name="TipoProveedorId" required>
+                                        @foreach (var tp in tiposProve)
+                                        {
+                                            <option value="@tp.Id">@tp.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label fw-bold">Tipo de Persona (Naturaleza Jurídica) <span class="text-danger">*</span></label>
+                                    <div class="d-flex gap-3 align-items-center mt-1">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="TipoNaturalezaJuridicaId" id="nat-juridica" value="2" checked onchange="onNaturalezaChange();">
+                                            <label class="form-check-label fw-semibold" for="nat-juridica">Persona Jurídica (Empresa)</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="TipoNaturalezaJuridicaId" id="nat-natural" value="1" onchange="onNaturalezaChange();">
+                                            <label class="form-check-label fw-semibold" for="nat-natural">Persona Natural</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="prov-codigo" class="form-label fw-semibold text-muted">Código ERP</label>
+                                    <input type="text" class="form-control font-monospace bg-light text-uppercase fw-bold text-primary" id="prov-codigo" name="Codigo" placeholder="Auto (Correlativo)" maxlength="7" readonly />
+                                </div>
+                            </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label for="prov-nombres" class="form-label fw-semibold">Nombres (Si es persona)</label>
-                            <input type="text" class="form-control" id="prov-nombres" name="Nombres" maxlength="50" />
-                        </div>
-                        <div class="col-md-4">
-                            <label for="prov-ape-pat" class="form-label fw-semibold">Apellido Paterno</label>
-                            <input type="text" class="form-control" id="prov-ape-pat" name="ApellidoPat" maxlength="50" />
-                        </div>
-                        <div class="col-md-4">
-                            <label for="prov-ape-mat" class="form-label fw-semibold">Apellido Materno</label>
-                            <input type="text" class="form-control" id="prov-ape-mat" name="ApellidoMat" maxlength="50" />
-                        </div>
-                    </div>
+                            <!-- Fila: Identificación Documentaria con Botón de Búsqueda -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label for="prov-tipo-doc" class="form-label fw-semibold">Tipo Documento <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="prov-tipo-doc" name="TipoDocumentoIdentidadId" onchange="onTipoDocChange();" required>
+                                        @foreach (var td in tiposDoc)
+                                        {
+                                            <option value="@td.Id" data-cod="@td.Codigo" data-formato="@td.FormatoValidacion">@td.Nombre (@td.Abreviatura)</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="prov-num-doc" class="form-label fw-semibold">N° Documento <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control font-monospace fw-bold" id="prov-num-doc" name="NumeroDocumentoIdentidad" placeholder="Ej: 20100012345" maxlength="20" required onblur="consultarDocumentoAutomatico();" />
+                                        <button class="btn btn-outline-primary" type="button" id="btn-consultar-doc" onclick="consultarDocumento(true);" title="Consultar en base de datos o verificar formato">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="prov-ruc" name="NumeroRuc" />
+                                </div>
+                                <div class="col-md-4 d-flex align-items-center">
+                                    <div id="doc-status-msg" class="small text-muted pt-3">
+                                        <i class="bi bi-info-circle me-1"></i>Ingrese el RUC o DNI y pulse buscar.
+                                    </div>
+                                </div>
+                            </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label for="prov-telefono" class="form-label fw-semibold">Teléfono</label>
-                            <input type="text" class="form-control" id="prov-telefono" name="Telefono" placeholder="Ej: 01-4458920" maxlength="15" />
-                        </div>
-                        <div class="col-md-4">
-                            <label for="prov-email" class="form-label fw-semibold">Correo Electrónico</label>
-                            <input type="email" class="form-control" id="prov-email" name="Email" placeholder="ventas@proveedor.com" maxlength="60" />
-                        </div>
-                        <div class="col-md-4">
-                            <label for="prov-contacto" class="form-label fw-semibold">Persona de Contacto</label>
-                            <input type="text" class="form-control" id="prov-contacto" name="Contacto" placeholder="Ej: Juan Pérez" maxlength="150" />
-                        </div>
-                    </div>
+                            <!-- BLOQUE JURÍDICO: Razón Social y Nombre Comercial -->
+                            <div id="bloque-juridico" class="border rounded-3 p-3 mb-3 bg-light-subtle">
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-building me-2"></i>Datos de Persona Jurídica</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <label for="prov-razon-social" class="form-label fw-semibold">Razón Social <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="prov-razon-social" name="RazonSocial" placeholder="Ej: ARCO DISTRIBUCIONES S.A.C." maxlength="150" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="prov-abrev" class="form-label fw-semibold">Nombre Comercial</label>
+                                        <input type="text" class="form-control" id="prov-abrev" name="Abreviatura" placeholder="Ej: GRUPO ARCO" maxlength="50" />
+                                    </div>
+                                </div>
+                            </div>
 
-                    <div class="row g-3 mb-2">
-                        <div class="col-md-8">
-                            <label for="prov-direccion" class="form-label fw-semibold">Dirección</label>
-                            <input type="text" class="form-control" id="prov-direccion" name="Direccion" placeholder="Av. Principal 123, Lima" maxlength="150" />
+                            <!-- BLOQUE NATURAL: Nombres y Apellidos -->
+                            <div id="bloque-natural" class="border rounded-3 p-3 mb-3 bg-light-subtle d-none">
+                                <h6 class="fw-bold text-success mb-3"><i class="bi bi-person me-2"></i>Datos de Persona Natural</h6>
+                                <div class="row g-3 mb-2">
+                                    <div class="col-md-4">
+                                        <label for="prov-nombres" class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="prov-nombres" name="Nombres" maxlength="50" onkeyup="calcularRazonSocialNatural();" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="prov-ape-pat" class="form-label fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="prov-ape-pat" name="ApellidoPat" maxlength="50" onkeyup="calcularRazonSocialNatural();" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="prov-ape-mat" class="form-label fw-semibold">Apellido Materno</label>
+                                        <input type="text" class="form-control" id="prov-ape-mat" name="ApellidoMat" maxlength="50" onkeyup="calcularRazonSocialNatural();" />
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label for="prov-razon-social-preview" class="form-label small fw-semibold text-muted">Nombre Completo Registrado (Generado Automáticamente)</label>
+                                        <input type="text" class="form-control form-control-sm bg-body-tertiary font-monospace" id="prov-razon-social-preview" readonly placeholder="APELLIDO PATERNO MATERNO NOMBRES" />
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
-                        <div class="col-md-4">
-                            <label for="prov-estado" class="form-label fw-semibold">Estado</label>
-                            <select class="form-select" id="prov-estado" name="Estado">
-                                <option value="A">Activo</option>
-                                <option value="I">Inactivo</option>
-                            </select>
+
+                        <!-- ============================================== -->
+                        <!-- PESTAÑA 2: DOMICILIO Y UBIGEO                  -->
+                        <!-- ============================================== -->
+                        <div class="tab-pane fade" id="tab-domicilio" role="tabpanel" aria-labelledby="tab-domicilio-btn">
+                            
+                            <!-- UBIGEO EN CASCADA -->
+                            <div class="card bg-body-tertiary border mb-3">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-map me-2"></i>Ubigeo Geográfico (Departamento, Provincia, Distrito)</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label for="prov-departamento" class="form-label fw-semibold">Departamento <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="prov-departamento" name="DepartamentoId" onchange="onDepartamentoChange();" required>
+                                                <option value="">-- Seleccione Departamento --</option>
+                                                @foreach (var dep in departamentos)
+                                                {
+                                                    <option value="@dep.Id">@dep.Nombre</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="prov-provincia" class="form-label fw-semibold">Provincia <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="prov-provincia" name="ProvinciaId" onchange="onProvinciaChange();" required disabled>
+                                                <option value="">-- Seleccione Provincia --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="prov-distrito" class="form-label fw-semibold">Distrito <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="prov-distrito" name="DistritoId" required disabled>
+                                                <option value="">-- Seleccione Distrito --</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DIRECCIÓN ESTRUCTURADA NORMALIZADA -->
+                            <div class="border rounded-3 p-3 mb-3">
+                                <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-signpost-split me-2"></i>Estructura de Vía y Numeración</h6>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-3">
+                                        <label for="prov-tipo-via" class="form-label fw-semibold">Tipo de Vía</label>
+                                        <select class="form-select" id="prov-tipo-via" name="TipoViaId">
+                                            @foreach (var v in tiposVia)
+                                            {
+                                                <option value="@v.Id">@v.Nombre (@v.Codigo)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label for="prov-nombre-via" class="form-label fw-semibold">Nombre de Vía (Av / Jr / Calle) <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="prov-nombre-via" name="NombreVia" placeholder="Ej: Principal / Nicolás de Piérola" maxlength="50" required />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="prov-numero-via" class="form-label fw-semibold">Número</label>
+                                        <input type="text" class="form-control" id="prov-numero-via" name="NumeroVia" placeholder="123" maxlength="10" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="prov-interior" class="form-label fw-semibold">Interior</label>
+                                        <input type="text" class="form-control" id="prov-interior" name="Interior" placeholder="4B" maxlength="10" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-2">
+                                        <label for="prov-dpto" class="form-label fw-semibold">Dpto / Of.</label>
+                                        <input type="text" class="form-control" id="prov-dpto" name="Dpto" placeholder="302" maxlength="10" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="prov-manzana" class="form-label fw-semibold">Manzana (Mz)</label>
+                                        <input type="text" class="form-control" id="prov-manzana" name="Manzana" placeholder="M" maxlength="10" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="prov-lote" class="form-label fw-semibold">Lote (Lt)</label>
+                                        <input type="text" class="form-control" id="prov-lote" name="Lote" placeholder="15" maxlength="10" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="prov-kilometro" class="form-label fw-semibold">Kilómetro (Km)</label>
+                                        <input type="text" class="form-control" id="prov-kilometro" name="Kilometro" placeholder="24.5" maxlength="10" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="prov-block" class="form-label fw-semibold">Block</label>
+                                        <input type="text" class="form-control" id="prov-block" name="Block" maxlength="10" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="prov-etapa" class="form-label fw-semibold">Etapa</label>
+                                        <input type="text" class="form-control" id="prov-etapa" name="Etapa" maxlength="10" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label for="prov-tipo-zona" class="form-label fw-semibold">Tipo de Zona</label>
+                                        <select class="form-select" id="prov-tipo-zona" name="TipoZonaId">
+                                            @foreach (var z in tiposZona)
+                                            {
+                                                <option value="@z.Id">@z.Nombre (@z.Codigo)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="prov-nombre-zona" class="form-label fw-semibold">Nombre de Zona</label>
+                                        <input type="text" class="form-control" id="prov-nombre-zona" name="NombreZona" placeholder="Ej: San Felipe / Industrial" maxlength="25" />
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label for="prov-referencia" class="form-label fw-semibold">Referencia</label>
+                                        <input type="text" class="form-control" id="prov-referencia" name="Referencia" placeholder="Ej: Frente al parque / Alt. cuadra 5" maxlength="50" />
+                                    </div>
+                                </div>
+
+                            </div>
+
                         </div>
+
+                        <!-- ============================================== -->
+                        <!-- PESTAÑA 3: CONTACTO Y FACTURACIÓN              -->
+                        <!-- ============================================== -->
+                        <div class="tab-pane fade" id="tab-contacto" role="tabpanel" aria-labelledby="tab-contacto-btn">
+                            
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label for="prov-telefono" class="form-label fw-semibold">Teléfono / Celular</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                        <input type="text" class="form-control font-monospace" id="prov-telefono" name="Telefono" placeholder="Ej: 01-4458920 / 999123456" maxlength="15" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="prov-email" class="form-label fw-semibold">Correo Electrónico</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                        <input type="email" class="form-control" id="prov-email" name="Email" placeholder="ventas@empresa.com" maxlength="60" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="prov-web" class="form-label fw-semibold">Sitio Web</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-globe"></i></span>
+                                        <input type="text" class="form-control" id="prov-web" name="Web" placeholder="www.empresa.com" maxlength="60" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="prov-contacto" class="form-label fw-semibold">Persona de Contacto</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                                        <input type="text" class="form-control" id="prov-contacto" name="Contacto" placeholder="Ej: Lic. Juan Pérez - Jefe de Compras" maxlength="150" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="prov-cond-pago" class="form-label fw-semibold">Condición de Pago Habitual</label>
+                                    <select class="form-select" id="prov-cond-pago" name="CondicionPagoId">
+                                        @foreach (var cp in condsPago)
+                                        {
+                                            <option value="@cp.Id">@cp.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8">
+                                    <label for="prov-cci" class="form-label fw-semibold">Código de Cuenta Interbancario (CCI)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-bank"></i></span>
+                                        <input type="text" class="form-control font-monospace" id="prov-cci" name="NumeroCCI" placeholder="20 dígitos para transferencias de fondos" maxlength="20" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="prov-estado" class="form-label fw-semibold">Estado del Registro</label>
+                                    <select class="form-select" id="prov-estado" name="Estado">
+                                        <option value="A">Activo (Habilitado)</option>
+                                        <option value="I">Inactivo (Suspendido)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                        </div>
+
                     </div>
                 </div>
+
                 <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
                     <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-prov">
-                        <i class="bi bi-check-circle me-1"></i>Guardar Proveedor
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-prov" disabled>
+                        <i class="bi bi-check-circle me-1"></i>Guardar Registro
                     </button>
                 </div>
             </form>
@@ -222,24 +701,355 @@
 
 @section Scripts {
 <script>
+    // Variables de configuración de Lookups
+    var tiposDocData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(tiposDoc));
+
+    function onNaturalezaChange() {
+        var esNatural = $('#nat-natural').is(':checked');
+        
+        if (esNatural) {
+            $('#bloque-juridico').addClass('d-none');
+            $('#bloque-natural').removeClass('d-none');
+            $('#prov-razon-social').prop('required', false);
+            $('#prov-nombres').prop('required', true);
+            $('#prov-ape-pat').prop('required', true);
+            
+            // Filtrar Tipos de Documento para Persona Natural (DNI, CE, etc.)
+            filtrarTiposDoc(1);
+        } else {
+            $('#bloque-juridico').removeClass('d-none');
+            $('#bloque-natural').addClass('d-none');
+            $('#prov-razon-social').prop('required', true);
+            $('#prov-nombres').prop('required', false);
+            $('#prov-ape-pat').prop('required', false);
+            
+            // Filtrar Tipos de Documento para Persona Jurídica (Solo RUC)
+            filtrarTiposDoc(2);
+        }
+        actualizarEstadoBotonGuardar();
+    }
+
+    function filtrarTiposDoc(naturalezaId, docSeleccionado) {
+        var $select = $('#prov-tipo-doc');
+        $select.empty();
+
+        tiposDocData.forEach(function (td) {
+            var esRuc = (td.Codigo === '06' || td.Abreviatura === 'RUC');
+            if (naturalezaId === 2 && esRuc) {
+                $select.append(new Option(td.Nombre + ' (' + td.Abreviatura + ')', td.Id));
+            } else if (naturalezaId === 1 && !esRuc) {
+                $select.append(new Option(td.Nombre + ' (' + td.Abreviatura + ')', td.Id));
+            }
+        });
+
+        if (docSeleccionado) {
+            $select.val(docSeleccionado);
+        } else {
+            $select.val($select.find('option:first').val());
+        }
+        onTipoDocChange();
+    }
+
+    function onTipoDocChange() {
+        var $selected = $('#prov-tipo-doc option:selected');
+        var cod = $selected.text();
+        if (cod.indexOf('RUC') !== -1) {
+            $('#prov-num-doc').attr('maxlength', 11).attr('placeholder', 'RUC de 11 dígitos');
+        } else if (cod.indexOf('DNI') !== -1) {
+            $('#prov-num-doc').attr('maxlength', 8).attr('placeholder', 'DNI de 8 dígitos');
+        } else {
+            $('#prov-num-doc').attr('maxlength', 20).attr('placeholder', 'N° Documento');
+        }
+    }
+
+    function calcularRazonSocialNatural() {
+        var nom = $('#prov-nombres').val().trim();
+        var pat = $('#prov-ape-pat').val().trim();
+        var mat = $('#prov-ape-mat').val().trim();
+        var res = (pat + ' ' + (mat ? mat + ' ' : '') + nom).trim();
+        $('#prov-razon-social-preview').val(res);
+        $('#prov-razon-social').val(res);
+        actualizarEstadoBotonGuardar();
+    }
+
+    function onDepartamentoChange(provinciaSeleccionada, distritoSeleccionado, onComplete) {
+        var deptoId = $('#prov-departamento').val();
+        var $prov = $('#prov-provincia');
+        var $dis = $('#prov-distrito');
+
+        $prov.empty().append(new Option('-- Cargando Provincias... --', '')).prop('disabled', true);
+        $dis.empty().append(new Option('-- Seleccione Distrito --', '')).prop('disabled', true);
+
+        if (!deptoId) {
+            $prov.empty().append(new Option('-- Seleccione Provincia --', ''));
+            actualizarEstadoBotonGuardar();
+            if (typeof onComplete === 'function') onComplete();
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Action("ListarProvincias", "Proveedor", new { area = "MG" })',
+            type: 'GET',
+            data: { departamentoId: deptoId },
+            success: function (res) {
+                $prov.empty().append(new Option('-- Seleccione Provincia --', ''));
+                if (res && res.success && res.data) {
+                    res.data.forEach(function (p) {
+                        $prov.append(new Option(p.nombre || p.Nombre, p.id || p.Id));
+                    });
+                    $prov.prop('disabled', false);
+
+                    if (provinciaSeleccionada) {
+                        $prov.val(provinciaSeleccionada);
+                        onProvinciaChange(distritoSeleccionado, onComplete);
+                    } else {
+                        actualizarEstadoBotonGuardar();
+                        if (typeof onComplete === 'function') onComplete();
+                    }
+                } else {
+                    actualizarEstadoBotonGuardar();
+                    if (typeof onComplete === 'function') onComplete();
+                }
+            },
+            error: function () {
+                actualizarEstadoBotonGuardar();
+                if (typeof onComplete === 'function') onComplete();
+            }
+        });
+    }
+
+    function onProvinciaChange(distritoSeleccionado, onComplete) {
+        var provId = $('#prov-provincia').val();
+        var $dis = $('#prov-distrito');
+
+        $dis.empty().append(new Option('-- Cargando Distritos... --', '')).prop('disabled', true);
+
+        if (!provId) {
+            $dis.empty().append(new Option('-- Seleccione Distrito --', ''));
+            actualizarEstadoBotonGuardar();
+            if (typeof onComplete === 'function') onComplete();
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Action("ListarDistritos", "Proveedor", new { area = "MG" })',
+            type: 'GET',
+            data: { provinciaId: provId },
+            success: function (res) {
+                $dis.empty().append(new Option('-- Seleccione Distrito --', ''));
+                if (res && res.success && res.data) {
+                    res.data.forEach(function (d) {
+                        $dis.append(new Option(d.nombre || d.Nombre, d.id || d.Id));
+                    });
+                    $dis.prop('disabled', false);
+
+                    if (distritoSeleccionado) {
+                        $dis.val(distritoSeleccionado);
+                    }
+                }
+                actualizarEstadoBotonGuardar();
+                if (typeof onComplete === 'function') onComplete();
+            },
+            error: function () {
+                actualizarEstadoBotonGuardar();
+                if (typeof onComplete === 'function') onComplete();
+            }
+        });
+    }
+
+    function consultarDocumento(esClickManual) {
+        var doc = $('#prov-num-doc').val().trim();
+        if (!doc) {
+            if (esClickManual) Swal.fire({ icon: 'warning', title: 'Atención', text: 'Ingrese un número de documento para consultar.' });
+            return;
+        }
+
+        var $btn = $('#btn-consultar-doc');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+        $('#doc-status-msg').html('<span class="text-primary"><i class="bi bi-hourglass-split me-1"></i>Consultando...</span>');
+
+        $.ajax({
+            url: '@Url.Action("ConsultarDocumento", "Proveedor", new { area = "MG" })',
+            type: 'GET',
+            data: { doc: doc },
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-search"></i>');
+
+                if (res && res.success) {
+                    if (res.source === 'BD') {
+                        $('#doc-status-msg').html('<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Registrado en BD local.</span>');
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Registro Existente',
+                            text: 'El documento ya está registrado como "' + res.data.nombreCompleto + '". ¿Desea cargar sus datos para edición?',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, cargar datos',
+                            cancelButtonText: 'No'
+                        }).then(function (result) {
+                            if (result.isConfirmed) {
+                                poblarFormulario(res.data);
+                            }
+                        });
+                    } else if (res.source === 'FORMATO') {
+                        $('#doc-status-msg').html('<span class="text-info"><i class="bi bi-lightbulb me-1"></i>' + res.message + '</span>');
+                        if (res.tipoNaturalezaJuridicaId === 1) {
+                            $('#nat-natural').prop('checked', true);
+                            onNaturalezaChange();
+                            $('#prov-tipo-doc').val(res.tipoDocumentoIdentidadId || 1);
+                        } else {
+                            $('#nat-juridica').prop('checked', true);
+                            onNaturalezaChange();
+                            $('#prov-tipo-doc').val(3);
+                            $('#prov-ruc').val(res.numeroRuc);
+                        }
+                    }
+                } else {
+                    $('#doc-status-msg').html('<span class="text-muted"><i class="bi bi-info-circle me-1"></i>' + (res.message || 'Sin coincidencias') + '</span>');
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-search"></i>');
+                $('#doc-status-msg').html('<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error de consulta.</span>');
+            }
+        });
+    }
+
+    function consultarDocumentoAutomatico() {
+        var doc = $('#prov-num-doc').val().trim();
+        var id = parseInt($('#prov-id').val()) || 0;
+        if (id === 0 && (doc.length === 8 || doc.length === 11)) {
+            consultarDocumento(false);
+        }
+    }
+
     function abrirModalCrear() {
-        $('#modal-titulo').text('Nuevo Proveedor');
+        $('#modal-titulo').text('Nuevo Registro');
         $('#prov-id').val(0);
         $('#prov-codigo').val('');
+        $('#prov-num-doc').val('');
         $('#prov-ruc').val('');
         $('#prov-razon-social').val('');
+        $('#prov-abrev').val('');
         $('#prov-nombres').val('');
         $('#prov-ape-pat').val('');
         $('#prov-ape-mat').val('');
+        $('#prov-razon-social-preview').val('');
+        $('#doc-status-msg').empty();
+        
+        // Vía y Dirección
+        $('#prov-tipo-via').val(12); // '-'
+        $('#prov-nombre-via').val('');
+        $('#prov-numero-via').val('');
+        $('#prov-interior').val('');
+        $('#prov-dpto').val('');
+        $('#prov-manzana').val('');
+        $('#prov-lote').val('');
+        $('#prov-kilometro').val('');
+        $('#prov-block').val('');
+        $('#prov-etapa').val('');
+        $('#prov-tipo-zona').val(12); // '-'
+        $('#prov-nombre-zona').val('');
+        $('#prov-referencia').val('');
+
+        // Contacto
         $('#prov-telefono').val('');
         $('#prov-email').val('');
+        $('#prov-web').val('');
         $('#prov-contacto').val('');
-        $('#prov-direccion').val('');
-        $('#prov-tipo-doc').val('6');
+        $('#prov-cond-pago').val(1); // Contado
+        $('#prov-cci').val('');
         $('#prov-estado').val('A');
+
+        // Rol según filtro activo o Cliente por defecto
+        var rolActivo = '@ViewBag.Tipo';
+        $('#prov-tipo-prove').val(rolActivo ? parseInt(rolActivo) : 1);
+
+        // Naturaleza: Jurídica por defecto
+        $('#nat-juridica').prop('checked', true);
+        onNaturalezaChange();
+
+        // Ubigeo: Lima / Lima / Lima Cercado por defecto
+        $('#prov-departamento').val(15);
+        onDepartamentoChange(128, 1281);
+
+        // Estado inicial vacío para modo creación y refresco de botón
+        formInitialState = "";
+        actualizarEstadoBotonGuardar();
+
+        // Mostrar pestaña 1
+        bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
+        
         var modal = new bootstrap.Modal(document.getElementById('modal-crud-proveedor'));
         modal.show();
-        setTimeout(function () { $('#prov-ruc').focus(); }, 300);
+        setTimeout(function () { $('#prov-num-doc').focus(); }, 350);
+    }
+
+    function poblarFormulario(data, onFinished) {
+        $('#prov-id').val(data.id || data.Id);
+        $('#prov-codigo').val(data.codigo || data.Codigo || '');
+        $('#prov-tipo-prove').val(data.tipoProveedorId || data.TipoProveedorId || 1);
+
+        var esNat = (data.tipoNaturalezaJuridicaId || data.TipoNaturalezaJuridicaId) === 1;
+        if (esNat) {
+            $('#nat-natural').prop('checked', true);
+        } else {
+            $('#nat-juridica').prop('checked', true);
+        }
+        onNaturalezaChange();
+
+        var numDoc = data.numeroDocumentoIdentidad || data.NumeroDocumentoIdentidad || data.numeroRuc || data.NumeroRuc || data.documento || data.Documento || '';
+        $('#prov-num-doc').val(numDoc);
+        $('#prov-ruc').val(data.numeroRuc || data.NumeroRuc || '');
+        
+        var tipoDocId = data.tipoDocumentoIdentidadId || data.TipoDocumentoIdentidadId;
+        filtrarTiposDoc(esNat ? 1 : 2, tipoDocId);
+
+        if (esNat) {
+            $('#prov-nombres').val(data.nombres || data.Nombres || '');
+            $('#prov-ape-pat').val(data.apellidoPat || data.ApellidoPat || '');
+            $('#prov-ape-mat').val(data.apellidoMat || data.ApellidoMat || '');
+            calcularRazonSocialNatural();
+        } else {
+            var rz = (data.razonSocial || data.RazonSocial || '').trim();
+            $('#prov-razon-social').val(rz);
+            var ab = (data.abreviatura || data.Abreviatura || data.abrev || data.Abrev || '').trim();
+            $('#prov-abrev').val(ab);
+            $('#prov-nombres').val('');
+            $('#prov-ape-pat').val('');
+            $('#prov-ape-mat').val('');
+            $('#prov-razon-social-preview').val(rz);
+        }
+
+        // Domicilio y Vía
+        $('#prov-tipo-via').val(data.tipoViaId || data.TipoViaId || 12);
+        $('#prov-nombre-via').val(data.nombreVia || data.NombreVia || data.direccion || data.Direccion || '');
+        $('#prov-numero-via').val(data.numeroVia || data.NumeroVia || '');
+        $('#prov-interior').val(data.interior || data.Interior || '');
+        $('#prov-dpto').val(data.dpto || data.Dpto || '');
+        $('#prov-manzana').val(data.manzana || data.Manzana || '');
+        $('#prov-lote').val(data.lote || data.Lote || '');
+        $('#prov-kilometro').val(data.kilometro || data.Kilometro || '');
+        $('#prov-block').val(data.block || data.Block || '');
+        $('#prov-etapa').val(data.etapa || data.Etapa || '');
+        $('#prov-tipo-zona').val(data.tipoZonaId || data.TipoZonaId || 12);
+        $('#prov-nombre-zona').val(data.nombreZona || data.NombreZona || '');
+        $('#prov-referencia').val(data.referencia || data.Referencia || '');
+
+        // Ubigeo
+        var depId = data.departamentoId || data.DepartamentoId || 15;
+        var provId = data.provinciaId || data.ProvinciaId || 128;
+        var disId = data.distritoId || data.DistritoId || 1281;
+        $('#prov-departamento').val(depId);
+        onDepartamentoChange(provId, disId, onFinished);
+
+        // Contacto
+        $('#prov-telefono').val(data.telefono || data.Telefono || '');
+        $('#prov-email').val(data.email || data.Email || '');
+        $('#prov-web').val(data.web || data.Web || '');
+        $('#prov-contacto').val(data.contacto || data.Contacto || '');
+        $('#prov-cond-pago').val(data.condicionPagoId || data.CondicionPagoId || 1);
+        $('#prov-cci').val(data.numeroCCI || data.NumeroCCI || '');
+        $('#prov-estado').val(data.estado || data.Estado || 'A');
     }
 
     function abrirModalEditar(id) {
@@ -249,25 +1059,26 @@
             data: { id: id },
             success: function (res) {
                 if (res && res.success && res.data) {
-                    $('#modal-titulo').text('Editar Proveedor #' + id);
-                    $('#prov-id').val(res.data.id || res.data.Id);
-                    $('#prov-codigo').val(res.data.codigo || res.data.Codigo || '');
-                    $('#prov-ruc').val(res.data.numeroRuc || res.data.NumeroRuc || res.data.documento || res.data.Documento || '');
-                    $('#prov-razon-social').val(res.data.razonSocial || res.data.RazonSocial || '');
-                    $('#prov-nombres').val(res.data.nombres || res.data.Nombres || '');
-                    $('#prov-ape-pat').val(res.data.apellidoPat || res.data.ApellidoPat || '');
-                    $('#prov-ape-mat').val(res.data.apellidoMat || res.data.ApellidoMat || '');
-                    $('#prov-telefono').val(res.data.telefono || res.data.Telefono || '');
-                    $('#prov-email').val(res.data.email || res.data.Email || '');
-                    $('#prov-contacto').val(res.data.contacto || res.data.Contacto || '');
-                    $('#prov-direccion').val(res.data.direccion || res.data.Direccion || '');
-                    $('#prov-tipo-doc').val(res.data.tipoDocumentoIdentidadId || res.data.TipoDocumentoIdentidadId || 6);
-                    $('#prov-estado').val(res.data.estado || res.data.Estado || 'A');
+                    $('#modal-titulo').text('Editar ' + (res.data.tipoProveedorNombre || 'Cliente / Proveedor') + ' #' + id);
+                    formInitialState = "";
+                    poblarFormulario(res.data, function () {
+                        formInitialState = $('#form-proveedor').serialize();
+                        actualizarEstadoBotonGuardar();
+                    });
+                    
+                    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
                     var modal = new bootstrap.Modal(document.getElementById('modal-crud-proveedor'));
                     modal.show();
-                    setTimeout(function () { $('#prov-razon-social').focus(); }, 300);
+
+                    // Fallback para registrar estado inicial exacto
+                    setTimeout(function () {
+                        if (!formInitialState) {
+                            formInitialState = $('#form-proveedor').serialize();
+                        }
+                        actualizarEstadoBotonGuardar();
+                    }, 500);
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el proveedor.' });
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el registro.' });
                 }
             },
             error: function () {
@@ -278,10 +1089,52 @@
 
     function guardarProveedor(e) {
         e.preventDefault();
-        var ruc = $('#prov-ruc').val().trim();
-        var rs = $('#prov-razon-social').val().trim();
-        if (!ruc || !rs) {
-            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor complete el RUC y la razón social.' });
+
+        // Validaciones
+        var esNat = $('#nat-natural').is(':checked');
+        var doc = $('#prov-num-doc').val().trim();
+        var depto = $('#prov-departamento').val();
+        var prov = $('#prov-provincia').val();
+        var dis = $('#prov-distrito').val();
+        var nombreVia = $('#prov-nombre-via').val().trim();
+
+        if (!doc) {
+            bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
+            Swal.fire({ icon: 'warning', title: 'Campo Requerido', text: 'Por favor complete el número de documento.' });
+            $('#prov-num-doc').focus();
+            return;
+        }
+
+        if (esNat) {
+            var nom = $('#prov-nombres').val().trim();
+            var pat = $('#prov-ape-pat').val().trim();
+            if (!nom || !pat) {
+                bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
+                Swal.fire({ icon: 'warning', title: 'Campos Requeridos', text: 'Para personas naturales es obligatorio ingresar Nombres y Apellido Paterno.' });
+                $('#prov-nombres').focus();
+                return;
+            }
+        } else {
+            var rs = $('#prov-razon-social').val().trim();
+            if (!rs) {
+                bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
+                Swal.fire({ icon: 'warning', title: 'Campo Requerido', text: 'Para personas jurídicas es obligatoria la Razón Social.' });
+                $('#prov-razon-social').focus();
+                return;
+            }
+            $('#prov-ruc').val(doc);
+        }
+
+        if (!depto || !prov || !dis) {
+            bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-domicilio-btn')).show();
+            Swal.fire({ icon: 'warning', title: 'Ubigeo Incompleto', text: 'Por favor seleccione el Departamento, Provincia y Distrito.' });
+            return;
+        }
+
+        if (!nombreVia) {
+            bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-domicilio-btn')).show();
+            Swal.fire({ icon: 'warning', title: 'Dirección Requerida', text: 'Por favor ingrese el Nombre de Vía / Dirección.' });
+            $('#prov-nombre-via').focus();
             return;
         }
 
@@ -294,24 +1147,24 @@
             type: 'POST',
             data: formData,
             success: function (res) {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Proveedor');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Registro');
                 if (res && res.success) {
                     bootstrap.Modal.getInstance(document.getElementById('modal-crud-proveedor')).hide();
                     Swal.fire({
                         icon: 'success',
-                        title: '¡Éxito!',
-                        text: res.message || 'Proveedor guardado correctamente.',
-                        timer: 1500,
+                        title: '¡Operación Exitosa!',
+                        text: res.message || 'Registro guardado correctamente.',
+                        timer: 1600,
                         showConfirmButton: false
                     }).then(function () {
                         location.reload();
                     });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+                    Swal.fire({ icon: 'error', title: 'Error al Guardar', text: res.message || 'No se pudo guardar el registro.' });
                 }
             },
             error: function () {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Proveedor');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Registro');
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
             }
         });
@@ -321,7 +1174,7 @@
         var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
         Swal.fire({
             title: '¿Confirmar cambio de estado?',
-            text: '¿Desea ' + accion + ' al proveedor "' + nombre + '"?',
+            text: '¿Desea ' + accion + ' el registro "' + nombre + '"?',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, ' + accion,
@@ -355,5 +1208,54 @@
             }
         });
     }
+
+    // =========================================================================
+    // VALIDACIÓN DINÁMICA DE BOTÓN GUARDAR (NUEVO vs EDICIÓN)
+    // =========================================================================
+    var formInitialState = "";
+
+    function sonCamposRequeridosValidos() {
+        var esNat = $('#nat-natural').is(':checked');
+        var doc = ($('#prov-num-doc').val() || '').trim();
+        if (!doc) return false;
+
+        if (esNat) {
+            var nom = ($('#prov-nombres').val() || '').trim();
+            var pat = ($('#prov-ape-pat').val() || '').trim();
+            if (!nom || !pat) return false;
+        } else {
+            var rs = ($('#prov-razon-social').val() || '').trim();
+            if (!rs) return false;
+        }
+
+        var depto = $('#prov-departamento').val();
+        var prov = $('#prov-provincia').val();
+        var dis = $('#prov-distrito').val();
+        if (!depto || !prov || !dis) return false;
+
+        var nombreVia = ($('#prov-nombre-via').val() || '').trim();
+        if (!nombreVia) return false;
+
+        return true;
+    }
+
+    function actualizarEstadoBotonGuardar() {
+        var id = parseInt($('#prov-id').val()) || 0;
+        var valido = sonCamposRequeridosValidos();
+        var $btn = $('#btn-guardar-prov');
+
+        if (id === 0) {
+            // Nuevo Registro: Se habilita solo cuando se completan todos los campos obligatorios
+            $btn.prop('disabled', !valido);
+        } else {
+            // Edición: Se habilita solo cuando sea válido Y haya cambiado algún campo
+            var haCambiado = (formInitialState !== "" && $('#form-proveedor').serialize() !== formInitialState);
+            $btn.prop('disabled', !(valido && haCambiado));
+        }
+    }
+
+    $(document).on('input change keyup', '#form-proveedor input, #form-proveedor select, #form-proveedor textarea', function () {
+        actualizarEstadoBotonGuardar();
+    });
 </script>
 }

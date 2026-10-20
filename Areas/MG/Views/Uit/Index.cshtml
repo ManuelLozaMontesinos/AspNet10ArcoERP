@@ -1,7 +1,33 @@
 @model List<AspNet10ArcoERP.Models.UitModel>
 @{
-    ViewData["Title"] = "Maestro de UIT";
+    ViewData["Title"] = "Unidad Impositiva Tributaria (UIT)";
 }
+
+<style>
+    /* Estabilidad y altura fija compacta en cabecera de la tabla */
+    .table-fixed-header {
+        table-layout: auto;
+    }
+    .table-header-custom th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        height: 40px !important;
+        line-height: 1.2;
+    }
+    .th-sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .th-sortable:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-primary);
+    }
+</style>
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
@@ -10,10 +36,10 @@
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-cash-coin text-success me-2" style="font-size: 1.6rem;"></i>Unidad Impositiva Tributaria (UIT)
                 </h3>
-                <small class="text-muted">Parámetros tributarios oficiales y montos históricos por año</small>
+                <small class="text-muted">Valores anuales e históricos de la UIT fijados por el MEF</small>
             </div>
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
                     <i class="bi bi-plus-circle-fill me-1"></i>Nueva UIT
                 </button>
             </div>
@@ -23,32 +49,77 @@
 
 <div class="app-content py-4">
     <div class="container-fluid">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-body border-bottom py-3">
-                <div class="row g-2 align-items-center justify-content-between">
-                    <div class="col-md-5 d-flex align-items-center">
-                        <div class="input-group input-group-sm">
+        <!-- BARRA DE FILTROS: BUSCADOR - ESTADO - MOSTRANDO -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    
+                    <!-- CONTENEDOR DE FILTROS EN LÍNEA -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <!-- 1. Buscador -->
+                        <div class="input-group input-group-sm" style="width: 290px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por monto o fecha..." onkeyup="filtrarTabla();" />
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por monto o fecha..." onkeyup="aplicarFiltros();" />
+                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
+                        </div>
+
+                        <!-- 2. Estado (Select) -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-toggle-on text-primary"></i>
+                            </span>
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado">
+                                <option value="">Todos los Estados</option>
+                                <option value="A">Solo Activos</option>
+                                <option value="I">Solo Inactivos</option>
+                            </select>
+                        </div>
+
+                        <div class="text-muted small ms-2">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> periodos</span>
                         </div>
                     </div>
-                    <div class="col-md-4 text-md-end text-muted small">
-                        <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@Model.Count</strong> periodos registrados</span>
+
+                    <!-- 3. BOTÓN DROPDOWN 'MOSTRANDO: 25' -->
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                            <i class="bi bi-funnel-fill text-primary"></i>
+                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">25</strong></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                            <li><a class="dropdown-item item-top active" href="javascript:void(0)" onclick="cambiarTop(25)">25 registros</a></li>
+                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(50)">50 registros</a></li>
+                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(100)">100 registros</a></li>
+                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(500)">500 registros</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0" id="tabla-uits">
-                    <thead class="table-header-custom border-bottom">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-uits">
+                    <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
-                            <th style="width: 80px;" class="text-center">ID</th>
-                            <th>Monto de UIT</th>
-                            <th style="width: 160px;" class="text-center">Fecha Alta</th>
-                            <th style="width: 160px;" class="text-center">Fecha Baja</th>
-                            <th style="width: 120px;" class="text-center">Estado</th>
+                            <th style="width: 80px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-uits', 0, true)">
+                                <span>ID</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
+                            <th class="th-sortable" onclick="ordenarTabla('tabla-uits', 1, true)">
+                                <span>Monto de UIT</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
+                            <th style="width: 160px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-uits', 2, false)">
+                                <span>Fecha Alta</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
+                            <th style="width: 160px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-uits', 3, false)">
+                                <span>Fecha Baja</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
+                            <th style="width: 120px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-uits', 4, false)">
+                                <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
                             <th style="width: 130px;" class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -57,7 +128,7 @@
                         {
                             foreach (var item in Model)
                             {
-                                <tr id="fila-@item.Id" data-search="@item.Monto @item.FechaAlta.ToString("yyyy-MM-dd")">
+                                <tr id="fila-@item.Id" data-search="@item.Monto @item.FechaAlta.ToString("yyyy-MM-dd") @item.FechaAlta.ToString("dd/MM/yyyy")" data-estado="@item.Estado">
                                     <td class="text-center font-monospace text-muted small">@item.Id</td>
                                     <td>
                                         <span class="fw-bold font-monospace text-success fs-6">S/ @item.Monto.ToString("N2")</span>
@@ -85,20 +156,22 @@
                                             <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
                                         }
                                     </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Monto');">
-                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
-                                        </button>
+                                    <td class="text-center text-nowrap">
+                                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                                            <button class="btn btn-sm btn-outline-primary px-2 py-1 shadow-sm btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") px-2 py-1 shadow-sm btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', 'S/ @item.Monto.ToString("N2")');">
+                                                <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
                         }
                         else
                         {
-                            <tr>
+                            <tr id="fila-vacia">
                                 <td colspan="6" class="text-center text-muted py-5">
                                     <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
                                     <span>No se encontraron registros de UIT</span>
@@ -155,7 +228,7 @@
                 </div>
                 <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
                     <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-uit">
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-uit" disabled>
                         <i class="bi bi-check-circle me-1"></i>Guardar
                     </button>
                 </div>
@@ -166,20 +239,117 @@
 
 @section Scripts {
 <script>
-    function filtrarTabla() {
-        var query = $('#filtro-tabla').val().toLowerCase().trim();
-        var visibles = 0;
-        $('#tabla-uits tbody tr').each(function () {
+    var topActual = 25;
+    var sortColIdx = -1;
+    var sortAsc = true;
+    var formInitialState = "";
+
+    function sonCamposRequeridosValidos() {
+        var monto = parseFloat($('#uit-monto').val()) || 0;
+        var fAlta = ($('#uit-fecha-alta').val() || '').trim();
+        return (monto > 0 && fAlta !== '');
+    }
+
+    function actualizarEstadoBotonGuardar() {
+        var id = parseInt($('#uit-id').val()) || 0;
+        var valido = sonCamposRequeridosValidos();
+        var $btn = $('#btn-guardar-uit');
+
+        if (id === 0) {
+            $btn.prop('disabled', !valido);
+        } else {
+            var haCambiado = (formInitialState !== "" && $('#form-uit').serialize() !== formInitialState);
+            $btn.prop('disabled', !(valido && haCambiado));
+        }
+    }
+
+    $(document).on('input change keyup', '#form-uit input, #form-uit select', function () {
+        actualizarEstadoBotonGuardar();
+    });
+
+    function aplicarFiltros() {
+        var query = ($('#filtro-tabla').val() || '').toLowerCase().trim();
+        var estado = ($('#filtro-estado').val() || '').trim();
+        var totalCoincidencias = 0;
+        var mostrados = 0;
+
+        $('#tabla-uits tbody tr:not(#fila-vacia)').each(function () {
             var $row = $(this);
-            var search = $row.data('search') || '';
-            if (!query || search.indexOf(query) >= 0) {
-                $row.removeClass('d-none');
-                visibles++;
+            var search = ($row.data('search') || '').toString();
+            var rowEstado = ($row.data('estado') || '').toString();
+
+            var cumpleQuery = !query || search.indexOf(query) >= 0;
+            var cumpleEstado = !estado || rowEstado === estado;
+
+            if (cumpleQuery && cumpleEstado) {
+                totalCoincidencias++;
+                var limit = topActual > 0 ? topActual : 25;
+                if (mostrados < limit) {
+                    $row.removeClass('d-none');
+                    mostrados++;
+                } else {
+                    $row.addClass('d-none');
+                }
             } else {
                 $row.addClass('d-none');
             }
         });
-        $('#total-registros').text(visibles);
+
+        $('#total-registros').text(totalCoincidencias);
+    }
+
+    function limpiarFiltros() {
+        $('#filtro-tabla').val('');
+        $('#filtro-estado').val('');
+        aplicarFiltros();
+    }
+
+    function cambiarTop(cant) {
+        topActual = cant > 0 ? cant : 25;
+        $('#lbl-top-actual').text(topActual);
+        $('.item-top').removeClass('active');
+        $(event.target).addClass('active');
+        aplicarFiltros();
+    }
+
+    function ordenarTabla(tablaId, colIndex, isNumeric) {
+        var $table = $('#' + tablaId);
+        var $tbody = $table.find('tbody');
+        var rows = $tbody.find('tr:not(#fila-vacia)').get();
+
+        if (sortColIdx === colIndex) {
+            sortAsc = !sortAsc;
+        } else {
+            sortColIdx = colIndex;
+            sortAsc = true;
+        }
+
+        // Actualizar iconos
+        $table.find('thead th .sort-icon').attr('class', 'bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon');
+        var $th = $table.find('thead th').eq(colIndex);
+        var iconClass = isNumeric
+            ? (sortAsc ? 'bi-sort-numeric-down text-primary fw-bold' : 'bi-sort-numeric-down-alt text-primary fw-bold')
+            : (sortAsc ? 'bi-sort-alpha-down text-primary fw-bold' : 'bi-sort-alpha-down-alt text-primary fw-bold');
+        $th.find('.sort-icon').attr('class', 'bi ' + iconClass + ' ms-1 sort-icon');
+
+        rows.sort(function (a, b) {
+            var aVal = $(a).children('td').eq(colIndex).text().trim();
+            var bVal = $(b).children('td').eq(colIndex).text().trim();
+
+            if (isNumeric) {
+                var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+                var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+                return sortAsc ? (aNum - bNum) : (bNum - aNum);
+            } else {
+                return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            }
+        });
+
+        $.each(rows, function (index, row) {
+            $tbody.append(row);
+        });
+
+        aplicarFiltros();
     }
 
     function abrirModalCrear() {
@@ -190,6 +360,10 @@
         $('#uit-fecha-alta').val(hoy);
         $('#uit-fecha-baja').val('');
         $('#uit-estado').val('A');
+
+        formInitialState = "";
+        actualizarEstadoBotonGuardar();
+
         var modal = new bootstrap.Modal(document.getElementById('modal-crud-uit'));
         modal.show();
         setTimeout(function () { $('#uit-monto').focus(); }, 300);
@@ -205,14 +379,24 @@
                     $('#modal-titulo').text('Editar UIT #' + id);
                     $('#uit-id').val(res.data.id || res.data.Id);
                     $('#uit-monto').val(res.data.monto || res.data.Monto);
-                    var fAlta = (res.data.fechaAlta || res.data.FechaAlta || '').split('T')[0];
-                    var fBaja = (res.data.fechaBaja || res.data.FechaBaja || '').split('T')[0];
-                    $('#uit-fecha-alta').val(fAlta);
-                    $('#uit-fecha-baja').val(fBaja);
+                    
+                    var fAlta = res.data.fechaAlta || res.data.FechaAlta;
+                    if (fAlta) $('#uit-fecha-alta').val(fAlta.substring(0, 10));
+                    
+                    var fBaja = res.data.fechaBaja || res.data.FechaBaja;
+                    if (fBaja) $('#uit-fecha-baja').val(fBaja.substring(0, 10));
+                    else $('#uit-fecha-baja').val('');
+                    
                     $('#uit-estado').val(res.data.estado || res.data.Estado || 'A');
+
                     var modal = new bootstrap.Modal(document.getElementById('modal-crud-uit'));
                     modal.show();
-                    setTimeout(function () { $('#uit-monto').focus(); }, 300);
+
+                    setTimeout(function () {
+                        formInitialState = $('#form-uit').serialize();
+                        actualizarEstadoBotonGuardar();
+                        $('#uit-monto').focus();
+                    }, 300);
                 } else {
                     Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar la UIT.' });
                 }
@@ -225,9 +409,10 @@
 
     function guardarUit(e) {
         e.preventDefault();
-        var monto = parseFloat($('#uit-monto').val()) || 0;
-        if (monto <= 0) {
-            Swal.fire({ icon: 'warning', title: 'Atención', text: 'El monto de la UIT debe ser mayor a 0.' });
+        var monto = $('#uit-monto').val();
+        var fAlta = $('#uit-fecha-alta').val();
+        if (!monto || !fAlta) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'El monto y la fecha de alta son obligatorios.' });
             return;
         }
 
@@ -246,7 +431,7 @@
                     Swal.fire({
                         icon: 'success',
                         title: '¡Éxito!',
-                        text: res.message || 'Guardado correctamente.',
+                        text: res.message || 'UIT guardada correctamente.',
                         timer: 1500,
                         showConfirmButton: false
                     }).then(function () {
@@ -263,11 +448,11 @@
         });
     }
 
-    function cambiarEstado(id, estadoActual, monto) {
+    function cambiarEstado(id, estadoActual, descripcion) {
         var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
         Swal.fire({
             title: '¿Confirmar cambio de estado?',
-            text: '¿Desea ' + accion + ' la UIT de S/ ' + monto + '?',
+            text: '¿Desea ' + accion + ' la UIT ' + descripcion + '?',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, ' + accion,
@@ -301,5 +486,9 @@
             }
         });
     }
+
+    $(document).ready(function () {
+        aplicarFiltros();
+    });
 </script>
 }

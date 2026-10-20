@@ -27,9 +27,20 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             }
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(
+            string? search = null,
+            int? tipo = null,
+            string? estado = null,
+            int top = 25)
         {
-            var list = await _maestrosService.GetTiposCambioAsync();
+            int safeTop = top > 0 ? top : 25;
+            var list = await _maestrosService.GetTiposCambioAsync(search, tipo, estado, safeTop);
+            ViewBag.Search = search;
+            ViewBag.Tipo = tipo;
+            ViewBag.Estado = estado;
+            ViewBag.Top = safeTop;
+            ViewBag.TiposCambio = await _maestrosService.GetTiposCambioCatalogoAsync();
+            ViewBag.Monedas = await _maestrosService.GetMonedasCatalogoAsync();
             return View(list);
         }
 

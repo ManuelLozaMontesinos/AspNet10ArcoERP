@@ -1,0 +1,27 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="arcoGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D97706" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#FCD34D" />
+    </linearGradient>
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B45309" />
+      <stop offset="100%" stop-color="#78350F" />
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#1E293B" stroke="url(#arcoGrad)" stroke-width="3" />
+  
+  <!-- Stylized Melamine Board 1 (Left leg of Arch/A) -->
+  <path d="M 32 74 L 46 26 L 54 26 L 40 74 Z" fill="url(#arcoGrad)" />
+  
+  <!-- Stylized Board 2 (Right leg of Arch/A) -->
+  <path d="M 68 74 L 54 26 L 46 26 L 60 74 Z" fill="#FBBF24" opacity="0.9" />
+  
+  <!-- Horizontal Board (Beam/Drywall plate) -->
+  <rect x="36" y="52" width="28" height="6" rx="2" fill="#FFFFFF" />
+  
+  <!-- Modern Geometric Accent Dot at top -->
+  <circle cx="50" cy="20" r="3.5" fill="#FCD34D" />
+</svg>

@@ -141,15 +141,16 @@
 
         <!-- Main Sidebar Container -->
         <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
-            <!-- Sidebar Brand -->
+            <!-- Sidebar Brand: Logo Corporativo ARCO -->
             <div class="sidebar-brand border-bottom border-secondary-subtle">
-                <a asp-controller="Home" asp-action="Index" class="brand-link d-flex align-items-center px-3 py-2 text-decoration-none">
-                    <div class="rounded-3 bg-gradient bg-primary text-white p-2 d-flex align-items-center justify-content-center shadow-sm me-2" style="width: 38px; height: 38px;">
-                        <i class="bi bi-shield-check fs-4"></i>
-                    </div>
-                    <div>
-                        <span class="brand-text fw-bold text-white fs-5" style="letter-spacing: -0.02em;">ARCO ERP</span>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.65rem;">.NET 10 LTS</span>
+                <a asp-controller="Home" asp-action="Index" class="brand-link brand-link-arco d-flex align-items-center text-decoration-none px-3" title="ARCO - Hazlo Realidad">
+                    <!-- Icono cuando el menú está colapsado -->
+                    <img src="~/img/logo-arco-circle.png" alt="ARCO" class="brand-logo-collapsed rounded-circle" />
+
+                    <!-- Logo corporativo expandido (Sistema original) -->
+                    <div class="brand-logo-expanded d-flex align-items-center justify-content-between w-100">
+                        <img src="~/img/logo-arco-full.png" alt="ARCO - Hazlo Realidad" class="brand-image-full" />
+                        <span class="badge ms-2" style="background: #EAFF00; color: #111; font-size: 0.62rem; padding: 3px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); white-space: nowrap;">29+ AÑOS</span>
                     </div>
                 </a>
             </div>

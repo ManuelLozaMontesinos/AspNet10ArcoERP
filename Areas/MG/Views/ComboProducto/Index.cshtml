@@ -1,20 +1,112 @@
-@model List<AspNet10ArcoERP.Models.ComboProductoModel>
+@model List<AspNet10ArcoERP.Models.ProductoComboModel>
 @{
-    ViewData["Title"] = "Combos y Kits de Productos";
-    var productosLookup = ViewBag.ProductosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    ViewData["Title"] = "Combos y Kits de Producto";
+
+    var gruposCombos = ViewBag.GruposCombosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var clasesLookup = ViewBag.ClasesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var familiasLookup = ViewBag.FamiliasLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var unidadesLookup = ViewBag.UnidadesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var estadosProdLookup = ViewBag.EstadosProductoLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var estadosComLookup = ViewBag.EstadosComercialesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+
+    int? grupoFiltro = ViewBag.GrupoId as int?;
+    int? claseFiltro = ViewBag.ClaseId as int?;
+    int? familiaFiltro = ViewBag.FamiliaId as int?;
+    string? estadoFiltro = ViewBag.Estado as string;
+    string currentSort = (ViewBag.Sort as string) ?? "id";
+    string currentDir = (ViewBag.Dir as string) ?? "desc";
+    int currentTop = ViewBag.Top != null ? (int)ViewBag.Top : 25;
 }
+
+<style>
+    /* Estabilidad y altura fija compacta en cabecera de la tabla */
+    .table-fixed-header {
+        table-layout: auto;
+    }
+    .table-header-custom th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        height: 40px !important;
+        line-height: 1.2;
+    }
+    .table-header-custom th a {
+        color: var(--bs-body-color) !important;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        width: 100%;
+        transition: color 0.15s ease-in-out;
+        white-space: nowrap !important;
+    }
+    .table-header-custom th a:hover {
+        color: var(--bs-primary) !important;
+    }
+
+    /* Modal Extendido: Scrollbar suave, rueda del ratón y altura adaptada */
+    #modal-crud-combo .modal-content {
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    #modal-crud-combo .modal-body {
+        max-height: calc(90vh - 135px) !important;
+        overflow-y: auto !important;
+        flex: 1 1 auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
+    }
+    #modal-crud-combo .modal-body::-webkit-scrollbar {
+        width: 7px;
+    }
+    #modal-crud-combo .modal-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #modal-crud-combo .modal-body::-webkit-scrollbar-thumb {
+        background: rgba(140, 150, 165, 0.45);
+        border-radius: 4px;
+    }
+    #modal-crud-combo .modal-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(140, 150, 165, 0.75);
+    }
+
+    /* Lista flotante de autocompletado de productos para el combo */
+    .autocomplete-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1055;
+        max-height: 230px;
+        overflow-y: auto;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.25);
+    }
+    .autocomplete-item {
+        cursor: pointer;
+        padding: 0.5rem 0.75rem;
+        transition: background-color 0.12s ease-in-out;
+    }
+    .autocomplete-item:hover {
+        background-color: var(--bs-primary);
+        color: #fff !important;
+    }
+</style>
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
         <div class="row align-items-center">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
-                    <i class="bi bi-collection-fill text-info me-2" style="font-size: 1.6rem;"></i>Combos y Kits de Producto
+                    <i class="bi bi-collection-fill text-info me-2" style="font-size: 1.6rem;"></i>Combos / Kits
                 </h3>
-                <small class="text-muted">Estructura de combos comerciales, paquetes promocionales y artículos incluidos</small>
+                <small class="text-muted">Estructuras de artículos compuestos, combos y kits promocionales</small>
             </div>
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
                     <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Combo
                 </button>
             </div>
@@ -24,34 +116,167 @@
 
 <div class="app-content py-4">
     <div class="container-fluid">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-body border-bottom py-3">
-                <div class="row g-2 align-items-center justify-content-between">
-                    <div class="col-md-5 d-flex align-items-center">
-                        <div class="input-group input-group-sm">
+        <!-- BARRA DE FILTROS: BUSCADOR LARGO - GRUPO - CLASE - FAMILIA - ESTADO - MOSTRANDO -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <form method="get" class="d-flex flex-wrap align-items-center justify-content-between gap-2 m-0" id="filtro-form">
+                    <input type="hidden" name="sort" value="@currentSort" />
+                    <input type="hidden" name="dir" value="@currentDir" />
+                    <input type="hidden" name="top" value="@currentTop" />
+
+                    <!-- CONTENEDOR DE FILTROS EN LÍNEA -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                        <!-- 1. Buscador Amplio -->
+                        <div class="input-group input-group-sm flex-grow-1" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por producto principal o incluido..." onkeyup="filtrarTabla();" />
+                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código o descripción de combo..." value="@ViewBag.Search" />
+                            <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                            @if (!string.IsNullOrEmpty(ViewBag.Search as string) || grupoFiltro.HasValue || claseFiltro.HasValue || familiaFiltro.HasValue || !string.IsNullOrEmpty(estadoFiltro))
+                            {
+                                <a href="@Url.Action("Index", new { sort = currentSort, dir = currentDir, top = currentTop })" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                            }
+                        </div>
+
+                        <!-- 2. Grupo de Combos -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-collection text-info"></i>
+                            </span>
+                            <select name="grupoId" class="form-select form-select-sm border-start-0" style="min-width: 150px;" onchange="this.form.submit();" title="Filtrar por Grupo">
+                                <option value="" selected="@(!grupoFiltro.HasValue)">Todos los Grupos</option>
+                                @foreach (var g in gruposCombos)
+                                {
+                                    <option value="@g.Id" selected="@(grupoFiltro == g.Id)">@g.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- 3. Clase -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-tag text-success"></i>
+                            </span>
+                            <select name="claseId" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="this.form.submit();" title="Filtrar por Clase">
+                                <option value="" selected="@(!claseFiltro.HasValue)">Todas las Clases</option>
+                                @foreach (var c in clasesLookup)
+                                {
+                                    <option value="@c.Id" selected="@(claseFiltro == c.Id)">@c.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- 4. Familia -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-diagram-3 text-warning"></i>
+                            </span>
+                            <select name="familiaId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="this.form.submit();" title="Filtrar por Familia">
+                                <option value="" selected="@(!familiaFiltro.HasValue)">Todas las Familias</option>
+                                @foreach (var f in familiasLookup)
+                                {
+                                    <option value="@f.Id" selected="@(familiaFiltro == f.Id)">@f.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- 5. Estado -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-toggle-on text-primary"></i>
+                            </span>
+                            <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 135px;" onchange="this.form.submit();" title="Filtrar por Estado">
+                                <option value="" selected="@(string.IsNullOrEmpty(estadoFiltro))">Todos los Estados</option>
+                                <option value="A" selected="@(estadoFiltro == "A")">Solo Activos</option>
+                                <option value="I" selected="@(estadoFiltro == "I")">Solo Inactivos</option>
+                            </select>
+                        </div>
+
+                        <div class="text-muted small ms-2">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> combos</span>
                         </div>
                     </div>
-                    <div class="col-md-4 text-md-end text-muted small">
-                        <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@Model.Count</strong> combinaciones</span>
-                    </div>
-                </div>
-            </div>
 
+                    <!-- 6. BOTÓN DROPDOWN 'MOSTRANDO: 25' -->
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                            <i class="bi bi-funnel-fill text-primary"></i>
+                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">@currentTop</strong></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                            @foreach (var cant in new[] { 25, 50, 100, 500 })
+                            {
+                                <li>
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
+                                       href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = cant })">
+                                        <span>@cant registros</span>
+                                        @if (currentTop == cant)
+                                        {
+                                            <i class="bi bi-check text-primary"></i>
+                                        }
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- TABLA PRINCIPAL DE COMBOS -->
+        <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0" id="tabla-combos">
-                    <thead class="table-header-custom border-bottom">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-combos">
+                    <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
-                            <th style="width: 70px;" class="text-center">ID</th>
-                            <th>Producto Principal (Combo)</th>
-                            <th>Producto Incluido</th>
-                            <th style="width: 100px;" class="text-center">Cantidad</th>
-                            <th style="width: 110px;" class="text-center">% Precio</th>
-                            <th style="width: 110px;" class="text-center">Estado</th>
-                            <th style="width: 130px;" class="text-center">Acciones</th>
+                            <th style="width: 70px;" class="text-center">
+                                <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "id", dir = (currentSort == "id" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })" class="justify-content-center">
+                                    <span>ID</span>
+                                    <i class="bi @(currentSort == "id" ? (currentDir == "asc" ? "bi-sort-numeric-down text-primary fw-bold" : "bi-sort-numeric-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 140px;">
+                                <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "codigo", dir = (currentSort == "codigo" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })">
+                                    <span>Código SKU</span>
+                                    <i class="bi @(currentSort == "codigo" ? (currentDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "descripcion", dir = (currentSort == "descripcion" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })">
+                                    <span>Descripción del Combo / Kit</span>
+                                    <i class="bi @(currentSort == "descripcion" ? (currentDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 180px;">
+                                <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "familia", dir = (currentSort == "familia" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })">
+                                    <span>Familia</span>
+                                    <i class="bi @(currentSort == "familia" ? (currentDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 85px;" class="text-center">
+                                <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "um", dir = (currentSort == "um" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })" class="justify-content-center">
+                                    <span>U.M.</span>
+                                    <i class="bi @(currentSort == "um" ? (currentDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 140px;" class="text-center">
+                                <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "items", dir = (currentSort == "items" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })" class="justify-content-center">
+                                    <span>Artículos</span>
+                                    <i class="bi @(currentSort == "items" ? (currentDir == "asc" ? "bi-sort-numeric-down text-primary fw-bold" : "bi-sort-numeric-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 110px;" class="text-center">
+                                <span>Estado Com.</span>
+                            </th>
+                            <th style="width: 95px;" class="text-center">
+                                <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "estado", dir = (currentSort == "estado" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })" class="justify-content-center">
+                                    <span>Estado</span>
+                                    <i class="bi @(currentSort == "estado" ? (currentDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
+                                </a>
+                            </th>
+                            <th style="width: 110px;" class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -59,19 +284,39 @@
                         {
                             foreach (var item in Model)
                             {
-                                <tr id="fila-@item.Id" data-search="@item.ProductoPrincipal.ToLower() @item.ProductoIncluido.ToLower()">
+                                <tr id="fila-@item.Id">
                                     <td class="text-center font-monospace text-muted small">@item.Id</td>
                                     <td>
-                                        <div class="fw-semibold text-primary">@item.ProductoPrincipal</div>
+                                        <span class="badge bg-secondary-subtle text-secondary border font-monospace px-2 py-1">@item.Codigo</span>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold text-body">@item.ProductoIncluido</div>
+                                        <div class="fw-semibold text-body">@item.Descripcion</div>
+                                        <small class="text-muted d-block font-monospace" style="font-size: 0.75rem;">Grupo: @item.GrupoNombre &bull; Clase: @item.ClaseNombre</small>
                                     </td>
-                                    <td class="text-center font-monospace fw-bold">
-                                        @item.Cantidad.ToString("N2")
+                                    <td>
+                                        <span class="badge bg-body-secondary text-body border text-truncate" style="max-width: 170px;" title="@item.FamiliaNombre">
+                                            @item.FamiliaNombre
+                                        </span>
                                     </td>
-                                    <td class="text-center font-monospace">
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle">@item.PorcentajePrecio%</span>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border">@item.UnidadMedida</span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.ItemsCount > 0)
+                                        {
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                                <i class="bi bi-boxes me-1"></i>@item.ItemsCount @(item.ItemsCount == 1 ? "artículo" : "artículos")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Sin artículos
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-body-tertiary text-body border font-monospace small">STOCK</span>
                                     </td>
                                     <td class="text-center">
                                         @if (item.Estado == "A")
@@ -84,10 +329,10 @@
                                         }
                                     </td>
                                     <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar combo y artículos" onclick="abrirModalEditar(@item.Id);">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.ProductoPrincipal');">
+                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Descripcion');">
                                             <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
                                         </button>
                                     </td>
@@ -96,10 +341,10 @@
                         }
                         else
                         {
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-5">
+                            <tr id="fila-vacia">
+                                <td colspan="9" class="text-center text-muted py-5">
                                     <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
-                                    <span>No se encontraron combinaciones de combos</span>
+                                    <span>No se encontraron combos o kits de productos</span>
                                 </td>
                             </tr>
                         }
@@ -111,101 +356,342 @@
 </div>
 
 <!-- ======================================================== -->
-<!-- MODAL CRUD: COMBO PRODUCTO                               -->
+<!-- MODAL EXTENDIDO: COMBO PRODUCTO (CABECERA Y DETALLES)     -->
 <!-- ======================================================== -->
-<div class="modal fade" id="modal-crud-combo" tabindex="-1" aria-labelledby="modalComboLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow border-0 rounded-4">
-            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
-                <h5 class="modal-title fw-bold" id="modalComboLabel">
-                    <i class="bi bi-collection text-info me-2"></i><span id="modal-titulo">Nuevo Combo</span>
-                </h5>
+<div class="modal fade" id="modal-crud-combo" tabindex="-1" aria-labelledby="modalComboLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="form-combo-cabecera" class="modal-content shadow border-0 rounded-4" onsubmit="guardarCabeceraCombo(event);">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="combo-id" name="Id" value="0" />
+            <input type="hidden" id="combo-codigo" name="Codigo" value="" />
+
+            <!-- CABECERA MODAL FIJA -->
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary sticky-top">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 bg-info bg-opacity-10 text-info rounded-3">
+                        <i class="bi bi-collection-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalComboLabel">
+                            <span id="modal-titulo">Nuevo Combo / Kit</span>
+                        </h5>
+                        <small class="text-muted" id="modal-subtitulo">Estructura del producto principal y sus artículos componentes</small>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="form-combo" onsubmit="guardarCombo(event);">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="combo-id" name="Id" value="0" />
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label for="combo-prod-padre" class="form-label fw-semibold">Producto Principal (Combo/Kit) <span class="text-danger">*</span></label>
-                        <select class="form-select" id="combo-prod-padre" name="ProductoId" required>
-                            <option value="">-- Seleccione el producto principal --</option>
-                            @foreach (var p in productosLookup)
-                            {
-                                <option value="@p.Id">@p.Nombre (@p.Codigo)</option>
-                            }
-                        </select>
-                    </div>
 
-                    <div class="mb-3">
-                        <label for="combo-prod-hijo" class="form-label fw-semibold">Producto Incluido <span class="text-danger">*</span></label>
-                        <select class="form-select" id="combo-prod-hijo" name="ProdIncluId" required>
-                            <option value="">-- Seleccione el producto a incluir --</option>
-                            @foreach (var p in productosLookup)
-                            {
-                                <option value="@p.Id">@p.Nombre (@p.Codigo)</option>
-                            }
-                        </select>
+            <!-- CUERPO MODAL CON SCROLL SUAVE -->
+            <div class="modal-body p-4 bg-body">
+                
+                <!-- SECCIÓN 1: CABECERA DEL COMBO -->
+                <div class="card border border-secondary-subtle rounded-3 mb-4 bg-body-tertiary">
+                    <div class="card-header bg-body-secondary border-bottom border-secondary-subtle py-2 px-3 d-flex align-items-center justify-content-between">
+                        <h6 class="mb-0 fw-bold d-flex align-items-center text-body">
+                            <i class="bi bi-info-circle text-primary me-2"></i>Datos Principales del Combo / Kit
+                        </h6>
+                        <span id="badge-sku-container" class="d-none">
+                            <span class="text-muted small me-1">SKU:</span>
+                            <span class="badge bg-primary text-white font-monospace px-2 py-1 fs-6" id="badge-sku-code">CMB000000000</span>
+                        </span>
                     </div>
-
-                    <div class="row g-3 mb-2">
-                        <div class="col-md-4">
-                            <label for="combo-cantidad" class="form-label fw-semibold">Cantidad Incluida <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" class="form-control" id="combo-cantidad" name="Cantidad" placeholder="1.00" min="0.01" required />
-                        </div>
-                        <div class="col-md-4">
-                            <label for="combo-porc" class="form-label fw-semibold">% de Precio</label>
-                            <div class="input-group">
-                                <input type="number" step="0.01" class="form-control" id="combo-porc" name="PorcentajePrecio" placeholder="100.00" min="0" max="100" />
-                                <span class="input-group-text">%</span>
+                    <div class="card-body p-3">
+                        
+                        <!-- FILA JERARQUÍA (GRUPO - CLASE - FAMILIA) -->
+                        <div id="row-jerarquia-crear" class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="combo-grupo" class="form-label fw-semibold small">Grupo de Combo <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm" id="combo-grupo" name="GrupoId" onchange="cargarClasesPorGrupo(this.value);" required>
+                                    <option value="">-- Seleccione Grupo --</option>
+                                    @foreach (var g in gruposCombos)
+                                    {
+                                        <option value="@g.Id">@g.Nombre (@g.Codigo)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="combo-clase" class="form-label fw-semibold small">Clase de Producto <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm" id="combo-clase" name="ClaseId" onchange="cargarFamiliasPorClase(this.value);" required disabled>
+                                    <option value="">-- Seleccione Clase --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="combo-familia" class="form-label fw-semibold small">Familia de Producto <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm" id="combo-familia" name="FamiliaId" required disabled>
+                                    <option value="">-- Seleccione Familia --</option>
+                                </select>
+                            </div>
+                            <div class="col-12 mt-1">
+                                <small class="text-muted fst-italic">
+                                    <i class="bi bi-magic text-info me-1"></i>El código correlativo SKU del combo se generará automáticamente según la familia seleccionada (ej. CMBMEL001001).
+                                </small>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label for="combo-estado" class="form-label fw-semibold">Estado</label>
-                            <select class="form-select" id="combo-estado" name="Estado">
-                                <option value="A">Activo</option>
-                                <option value="I">Inactivo</option>
-                            </select>
+
+                        <!-- PANEL INFORMATIVO DE JERARQUÍA EN EDICIÓN -->
+                        <div id="panel-jerarquia-editar" class="row g-2 mb-3 d-none">
+                            <div class="col-12">
+                                <div class="p-2 rounded-2 border border-secondary-subtle bg-body-secondary d-flex flex-wrap align-items-center gap-2">
+                                    <span class="text-muted small fw-semibold"><i class="bi bi-diagram-3 me-1"></i>Jerarquía Asignada:</span>
+                                    <span class="badge bg-body-tertiary text-body border" id="info-grupo-nombre">Grupo</span>
+                                    <i class="bi bi-chevron-right text-muted small"></i>
+                                    <span class="badge bg-body-tertiary text-body border" id="info-clase-nombre">Clase</span>
+                                    <i class="bi bi-chevron-right text-muted small"></i>
+                                    <span class="badge bg-body-tertiary text-body border" id="info-familia-nombre">Familia</span>
+                                    <input type="hidden" id="edit-familia-id" name="FamiliaId" value="0" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DESCRIPCIÓN DEL COMBO -->
+                        <div class="mb-3">
+                            <label for="combo-descripcion" class="form-label fw-semibold small">Descripción del Combo / Kit <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="combo-descripcion" name="Descripcion" placeholder="Ej. COMBO 1PL HISPANOS 18MM + 1CJA TORNILLOS 4X50MM" maxlength="150" required />
+                        </div>
+
+                        <!-- ATRIBUTOS: U.M. - ESTADO PROD - ESTADO COMERCIAL - ESTADO -->
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="combo-um" class="form-label fw-semibold small">Unidad de Medida <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm" id="combo-um" name="UnidadMedidaId" required>
+                                    @foreach (var um in unidadesLookup)
+                                    {
+                                        <option value="@um.Id" selected="@(um.Codigo == "UND")">@um.Nombre (@um.Codigo)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="combo-estado-prod" class="form-label fw-semibold small">Estado de Producto</label>
+                                <select class="form-select form-select-sm" id="combo-estado-prod" name="EstadoProductoId">
+                                    @foreach (var ep in estadosProdLookup)
+                                    {
+                                        <option value="@ep.Id">@ep.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="combo-estado-com" class="form-label fw-semibold small">Estado Comercial</label>
+                                <select class="form-select form-select-sm" id="combo-estado-com" name="EstadoComProdId">
+                                    @foreach (var ec in estadosComLookup)
+                                    {
+                                        <option value="@ec.Id">@ec.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="combo-estado" class="form-label fw-semibold small">Estado</label>
+                                <select class="form-select form-select-sm" id="combo-estado" name="Estado">
+                                    <option value="A">Activo</option>
+                                    <option value="I">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- BOTÓN GUARDAR CABECERA -->
+                        <div class="text-end mt-3 pt-2 border-top border-secondary-subtle">
+                            <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold shadow-sm" id="btn-guardar-cabecera">
+                                <i class="bi bi-check-circle me-1"></i><span id="btn-guardar-cabecera-lbl">Guardar Cabecera</span>
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
-                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-combo">
-                        <i class="bi bi-check-circle me-1"></i>Guardar
-                    </button>
+
+                <!-- SECCIÓN 2: ARTÍCULOS QUE INTEGRAN EL COMBO -->
+                <div class="card border border-secondary-subtle rounded-3 bg-body-tertiary" id="card-articulos-combo">
+                    <div class="card-header bg-body-secondary border-bottom border-secondary-subtle py-2 px-3 d-flex align-items-center justify-content-between">
+                        <h6 class="mb-0 fw-bold d-flex align-items-center text-body">
+                            <i class="bi bi-boxes text-info me-2"></i>Artículos que Componen el Combo
+                            <span class="badge bg-primary ms-2" id="badge-total-detalles">0 artículos</span>
+                        </h6>
+                        <small class="text-muted">Desglose de productos, cantidades y ponderación de precio</small>
+                    </div>
+                    <div class="card-body p-3">
+                        
+                        <!-- AVISO CUANDO AÚN NO SE HA GUARDADO LA CABECERA -->
+                        <div id="aviso-cabecera-requerida" class="alert alert-info border-info-subtle d-flex align-items-center gap-2 mb-0">
+                            <i class="bi bi-info-circle-fill fs-5 text-info flex-shrink-0"></i>
+                            <div>
+                                <strong>Paso 1:</strong> Guarde primero los datos principales del combo arriba para generar su código y habilitar la incorporación de sus artículos componentes.
+                            </div>
+                        </div>
+
+                        <!-- SUBFORMULARIO PARA AGREGAR ARTÍCULOS (SOLO VISIBLE SI Id > 0) -->
+                        <div id="panel-agregar-articulo" class="d-none">
+                            <div class="p-3 mb-3 rounded-3 border border-secondary-subtle bg-body-secondary">
+                                <h6 class="fw-semibold small text-body mb-2 d-flex align-items-center">
+                                    <i class="bi bi-plus-circle text-success me-1"></i>Agregar Producto / Artículo al Combo
+                                </h6>
+                                <div class="row g-2 align-items-end">
+                                    
+                                    <!-- Buscador Autocomplete de Producto Incluido -->
+                                    <div class="col-lg-5 col-md-6 position-relative">
+                                        <label class="form-label fw-semibold small mb-1">Producto a Incluir <span class="text-danger">*</span></label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                            <input type="text" id="txt-busqueda-producto" class="form-control border-start-0" placeholder="Escriba código o nombre del producto..." autocomplete="off" onkeyup="buscarProductosAutocomplete(this.value);" />
+                                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarProductoSeleccionado();" title="Limpiar selección"><i class="bi bi-x-lg"></i></button>
+                                        </div>
+                                        <input type="hidden" id="nuevo-prod-inclu-id" value="0" />
+                                        
+                                        <!-- Menú flotante de resultados -->
+                                        <div id="lista-resultados-productos" class="autocomplete-results list-group bg-body border rounded-2 d-none"></div>
+
+                                        <!-- Badge de producto seleccionado -->
+                                        <div id="badge-prod-seleccionado" class="mt-1 d-none">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace text-truncate d-block" style="max-width: 100%;" id="lbl-prod-seleccionado">
+                                                Producto seleccionado
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Cantidad -->
+                                    <div class="col-lg-2 col-md-2 col-6">
+                                        <label for="nuevo-cant" class="form-label fw-semibold small mb-1">Cantidad <span class="text-danger">*</span></label>
+                                        <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end font-monospace" id="nuevo-cant" value="1.00" placeholder="1.00" />
+                                    </div>
+
+                                    <!-- % Precio de Lista -->
+                                    <div class="col-lg-2 col-md-2 col-6">
+                                        <label for="nuevo-porc" class="form-label fw-semibold small mb-1">% P. Lista</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" step="0.01" min="0" max="100" class="form-control text-end font-monospace" id="nuevo-porc" value="100.00" placeholder="100.00" />
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Decimales Redondeo -->
+                                    <div class="col-lg-1 col-md-2 col-6">
+                                        <label for="nuevo-dec" class="form-label fw-semibold small mb-1"># Dec.</label>
+                                        <input type="number" min="0" max="4" class="form-control form-control-sm text-center font-monospace" id="nuevo-dec" value="1" />
+                                    </div>
+
+                                    <!-- Botón Agregar -->
+                                    <div class="col-lg-2 col-md-12 col-6">
+                                        <button type="button" class="btn btn-success btn-sm w-100 fw-semibold" id="btn-agregar-detalle" onclick="agregarArticuloDetalle();">
+                                            <i class="bi bi-plus-lg me-1"></i>Agregar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TABLA DE ARTÍCULOS INCLUIDOS -->
+                            <div class="table-responsive rounded-3 border border-secondary-subtle">
+                                <table class="table table-sm table-striped table-hover align-middle mb-0" id="tabla-detalles-combo">
+                                    <thead class="bg-body-secondary text-body small">
+                                        <tr>
+                                            <th style="width: 40px;" class="text-center">#</th>
+                                            <th style="width: 130px;">Código</th>
+                                            <th>Descripción del Artículo</th>
+                                            <th style="width: 90px;" class="text-center">U.M.</th>
+                                            <th style="width: 100px;" class="text-end">Cantidad</th>
+                                            <th style="width: 105px;" class="text-end">% P. Lista</th>
+                                            <th style="width: 80px;" class="text-center"># Dec.</th>
+                                            <th style="width: 70px;" class="text-center">Quitar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-detalles-combo">
+                                        <!-- Renderizado dinámico vía JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-            </form>
-        </div>
+
+            </div>
+
+            <!-- FOOTER MODAL FIJO -->
+            <div class="modal-footer border-top py-2 px-4 bg-body-tertiary sticky-bottom justify-content-between">
+                <span class="text-muted small">
+                    <i class="bi bi-shield-check text-success me-1"></i>Gestión Integral de Kits y Combos &bull; Arco ERP
+                </span>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
 @section Scripts {
 <script>
-    function filtrarTabla() {
-        var query = $('#filtro-tabla').val().toLowerCase().trim();
-        var visibles = 0;
-        $('#tabla-combos tbody tr').each(function () {
-            var $row = $(this);
-            var search = $row.data('search') || '';
-            if (!query || search.indexOf(query) >= 0) {
-                $row.removeClass('d-none');
-                visibles++;
-            } else {
-                $row.addClass('d-none');
+    var timeoutBusqueda = null;
+    var detallesCache = [];
+
+    // =========================================================================
+    // CASCADA DE JERARQUÍA EN CREACIÓN
+    // =========================================================================
+    function cargarClasesPorGrupo(grupoId) {
+        var $clase = $('#combo-clase');
+        var $fam = $('#combo-familia');
+        $clase.empty().append('<option value="">-- Seleccione Clase --</option>').prop('disabled', true);
+        $fam.empty().append('<option value="">-- Seleccione Familia --</option>').prop('disabled', true);
+
+        if (!grupoId) return;
+
+        $.getJSON('@Url.Action("ClasesPorGrupo", "ComboProducto", new { area = "MG" })', { grupoId: grupoId }, function (res) {
+            if (res && res.success && res.data) {
+                $.each(res.data, function (i, item) {
+                    $clase.append($('<option>', { value: item.id || item.Id, text: item.nombre || item.Nombre }));
+                });
+                $clase.prop('disabled', false);
             }
         });
-        $('#total-registros').text(visibles);
     }
 
+    function cargarFamiliasPorClase(claseId) {
+        var $fam = $('#combo-familia');
+        var grupoId = $('#combo-grupo').val();
+        $fam.empty().append('<option value="">-- Seleccione Familia --</option>').prop('disabled', true);
+
+        if (!claseId) return;
+
+        $.getJSON('@Url.Action("FamiliasPorClase", "ComboProducto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId }, function (res) {
+            if (res && res.success && res.data) {
+                $.each(res.data, function (i, item) {
+                    $fam.append($('<option>', { value: item.id || item.Id, text: item.nombre || item.Nombre }));
+                });
+                $fam.prop('disabled', false);
+            }
+        });
+    }
+
+    // =========================================================================
+    // ABRIR MODAL CREAR / EDITAR
+    // =========================================================================
     function abrirModalCrear() {
         $('#modal-titulo').text('Nuevo Combo / Kit');
+        $('#modal-subtitulo').text('Defina la estructura del combo y luego agregue los artículos que lo componen');
         $('#combo-id').val(0);
-        $('#combo-prod-padre').val('').prop('disabled', false);
-        $('#combo-prod-hijo').val('').prop('disabled', false);
-        $('#combo-cantidad').val('1.00');
-        $('#combo-porc').val('100.00');
+        $('#combo-codigo').val('');
+        $('#badge-sku-container').addClass('d-none');
+
+        // Jerarquía: modo crear activo
+        $('#row-jerarquia-crear').removeClass('d-none');
+        $('#panel-jerarquia-editar').addClass('d-none');
+        $('#combo-grupo').val('');
+        $('#combo-clase').empty().append('<option value="">-- Seleccione Clase --</option>').prop('disabled', true);
+        $('#combo-familia').empty().append('<option value="">-- Seleccione Familia --</option>').prop('disabled', true);
+        $('#edit-familia-id').val(0);
+
+        $('#combo-descripcion').val('');
+        $('#combo-um').val('1'); // UND
+        $('#combo-estado-prod').val('1'); // ACTIVO
+        $('#combo-estado-com').val('1'); // STOCK
         $('#combo-estado').val('A');
+
+        $('#btn-guardar-cabecera-lbl').text('Crear Combo y Habilitar Artículos');
+        $('#btn-guardar-cabecera').prop('disabled', false);
+
+        // Ocultar sección de artículos en creación
+        $('#aviso-cabecera-requerida').removeClass('d-none');
+        $('#panel-agregar-articulo').addClass('d-none');
+        $('#tbody-detalles-combo').empty();
+        $('#badge-total-detalles').text('0 artículos');
+
+        limpiarProductoSeleccionado();
+
         var modal = new bootstrap.Modal(document.getElementById('modal-crud-combo'));
         modal.show();
     }
@@ -217,13 +703,42 @@
             data: { id: id },
             success: function (res) {
                 if (res && res.success && res.data) {
-                    $('#modal-titulo').text('Editar Combo #' + id);
-                    $('#combo-id').val(res.data.id || res.data.Id);
-                    $('#combo-prod-padre').val(res.data.productoId || res.data.ProductoId);
-                    $('#combo-prod-hijo').val(res.data.prodIncluId || res.data.ProdIncluId);
-                    $('#combo-cantidad').val(res.data.cantidad !== undefined ? res.data.cantidad : res.data.Cantidad);
-                    $('#combo-porc').val(res.data.porcentajePrecio !== undefined ? res.data.porcentajePrecio : res.data.PorcentajePrecio);
-                    $('#combo-estado').val(res.data.estado || res.data.Estado || 'A');
+                    var data = res.data;
+                    $('#modal-titulo').text('Editar Combo: ' + (data.codigo || data.Codigo || ('#' + id)));
+                    $('#modal-subtitulo').text(data.descripcion || data.Descripcion || '');
+
+                    $('#combo-id').val(data.id || data.Id);
+                    var cod = data.codigo || data.Codigo || '';
+                    $('#combo-codigo').val(cod);
+                    $('#badge-sku-code').text(cod);
+                    $('#badge-sku-container').removeClass('d-none');
+
+                    // Jerarquía: modo editar bloqueado informativo
+                    $('#row-jerarquia-crear').addClass('d-none');
+                    $('#panel-jerarquia-editar').removeClass('d-none');
+                    $('#info-grupo-nombre').text(data.grupoNombre || data.GrupoNombre || 'Grupo');
+                    $('#info-clase-nombre').text(data.claseNombre || data.ClaseNombre || 'Clase');
+                    $('#info-familia-nombre').text(data.familiaNombre || data.FamiliaNombre || 'Familia');
+                    $('#edit-familia-id').val(data.familiaId || data.FamiliaId || 0);
+
+                    $('#combo-descripcion').val(data.descripcion || data.Descripcion);
+                    $('#combo-um').val(data.unidadMedidaId || data.UnidadMedidaId || 1);
+                    $('#combo-estado-prod').val(data.estadoProductoId || data.EstadoProductoId || 1);
+                    $('#combo-estado-com').val(data.estadoComProdId || data.EstadoComProdId || 1);
+                    $('#combo-estado').val(data.estado || data.Estado || 'A');
+
+                    $('#btn-guardar-cabecera-lbl').text('Actualizar Datos del Combo');
+                    $('#btn-guardar-cabecera').prop('disabled', false);
+
+                    // Sección de artículos desbloqueada
+                    $('#aviso-cabecera-requerida').addClass('d-none');
+                    $('#panel-agregar-articulo').removeClass('d-none');
+
+                    detallesCache = res.detalles || [];
+                    renderizarDetalles(detallesCache);
+
+                    limpiarProductoSeleccionado();
+
                     var modal = new bootstrap.Modal(document.getElementById('modal-crud-combo'));
                     modal.show();
                 } else {
@@ -236,53 +751,294 @@
         });
     }
 
-    function guardarCombo(e) {
+    // =========================================================================
+    // GUARDAR CABECERA
+    // =========================================================================
+    function guardarCabeceraCombo(e) {
         e.preventDefault();
-        var padre = $('#combo-prod-padre').val();
-        var hijo = $('#combo-prod-hijo').val();
-        var cant = parseFloat($('#combo-cantidad').val()) || 0;
-        if (!padre || !hijo || cant <= 0) {
-            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor seleccione ambos productos y especifique una cantidad válida.' });
+        var id = parseInt($('#combo-id').val()) || 0;
+        var desc = $('#combo-descripcion').val().trim();
+        var famId = id === 0 ? parseInt($('#combo-familia').val()) || 0 : parseInt($('#edit-familia-id').val()) || 0;
+
+        if (id === 0 && famId === 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Debe seleccionar la jerarquía completa (Grupo, Clase y Familia).' });
+            return;
+        }
+        if (!desc) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'La descripción del combo es obligatoria.' });
             return;
         }
 
-        var $btn = $('#btn-guardar-combo');
+        var $btn = $('#btn-guardar-cabecera');
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
 
-        var formData = $('#form-combo').serialize();
+        var formData = $('#form-combo-cabecera').serialize();
         $.ajax({
-            url: '@Url.Action("Guardar", "ComboProducto", new { area = "MG" })',
+            url: '@Url.Action("GuardarCabecera", "ComboProducto", new { area = "MG" })',
             type: 'POST',
             data: formData,
             success: function (res) {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i><span id="btn-guardar-cabecera-lbl">Guardar Cabecera</span>');
                 if (res && res.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-combo')).hide();
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: res.message || 'Combo guardado correctamente.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(function () {
-                        location.reload();
-                    });
+                    if (id === 0) {
+                        // Se creó el combo: actualizar id y código, desbloquear artículos
+                        $('#combo-id').val(res.id);
+                        $('#combo-codigo').val(res.codigo);
+                        $('#badge-sku-code').text(res.codigo);
+                        $('#badge-sku-container').removeClass('d-none');
+
+                        // Pasar a modo edición
+                        $('#row-jerarquia-crear').addClass('d-none');
+                        $('#panel-jerarquia-editar').removeClass('d-none');
+                        $('#info-grupo-nombre').text($('#combo-grupo option:selected').text());
+                        $('#info-clase-nombre').text($('#combo-clase option:selected').text());
+                        $('#info-familia-nombre').text($('#combo-familia option:selected').text());
+                        $('#edit-familia-id').val(famId);
+
+                        $('#aviso-cabecera-requerida').addClass('d-none');
+                        $('#panel-agregar-articulo').removeClass('d-none');
+                        $('#btn-guardar-cabecera-lbl').text('Actualizar Datos del Combo');
+                        $('#modal-titulo').text('Combo Creado: ' + res.codigo);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Combo Creado!',
+                            text: 'Se asignó el SKU ' + res.codigo + '. Ahora ya puede agregar los artículos componentes del combo.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Actualizado!',
+                            text: res.message || 'Datos del combo actualizados correctamente.',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    }
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar la cabecera.' });
                 }
             },
             error: function () {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i><span id="btn-guardar-cabecera-lbl">Guardar Cabecera</span>');
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
             }
         });
     }
 
-    function cambiarEstado(id, estadoActual, nombre) {
+    // =========================================================================
+    // GESTIÓN DE ARTÍCULOS INCLUIDOS EN COMBO
+    // =========================================================================
+    function renderizarDetalles(detalles) {
+        var $tbody = $('#tbody-detalles-combo');
+        $tbody.empty();
+        $('#badge-total-detalles').text((detalles ? detalles.length : 0) + ' artículos');
+
+        if (!detalles || detalles.length === 0) {
+            $tbody.append('<tr><td colspan="8" class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i>No hay artículos agregados al combo todavía.</td></tr>');
+            return;
+        }
+
+        $.each(detalles, function (index, item) {
+            var id = item.id || item.Id;
+            var cod = item.codigo || item.Codigo || '';
+            var desc = item.descripcion || item.Descripcion || '';
+            var um = item.unidadMedida || item.UnidadMedida || 'UND';
+            var cant = parseFloat(item.cantidad !== undefined ? item.cantidad : item.Cantidad) || 0;
+            var porc = parseFloat(item.porcentajePrecio !== undefined ? item.porcentajePrecio : item.PorcentajePrecio) || 100;
+            var numDec = parseInt(item.numDecRedo !== undefined ? item.numDecRedo : item.NumDecRedo) || 1;
+
+            var tr = $('<tr>')
+                .append($('<td>', { class: 'text-center font-monospace text-muted small', text: (index + 1) }))
+                .append($('<td>').html('<span class="badge bg-secondary-subtle text-secondary border font-monospace">' + cod + '</span>'))
+                .append($('<td>', { class: 'fw-semibold text-body', text: desc }))
+                .append($('<td>', { class: 'text-center small', text: um }))
+                .append($('<td>', { class: 'text-end font-monospace fw-bold text-primary', text: cant.toFixed(2) }))
+                .append($('<td>', { class: 'text-end font-monospace', text: porc.toFixed(2) + '%' }))
+                .append($('<td>', { class: 'text-center font-monospace small', text: numDec }))
+                .append($('<td>', { class: 'text-center' }).html(
+                    '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Quitar artículo del combo" onclick="quitarArticuloDetalle(' + id + ', \'' + cod.replace(/'/g, "\\'") + '\');"><i class="bi bi-trash3"></i></button>'
+                ));
+
+            $tbody.append(tr);
+        });
+    }
+
+    function buscarProductosAutocomplete(query) {
+        clearTimeout(timeoutBusqueda);
+        var q = (query || '').trim();
+        var $lista = $('#lista-resultados-productos');
+
+        if (q.length < 2) {
+            $lista.addClass('d-none').empty();
+            return;
+        }
+
+        timeoutBusqueda = setTimeout(function () {
+            $.getJSON('@Url.Action("BuscarProductos", "ComboProducto", new { area = "MG" })', { q: q }, function (res) {
+                $lista.empty();
+                if (res && res.success && res.data && res.data.length > 0) {
+                    $.each(res.data, function (i, item) {
+                        var prodId = item.id || item.Id;
+                        var prodNom = item.nombre || item.Nombre;
+                        var prodCod = item.codigo || item.Codigo;
+
+                        var $a = $('<a>', {
+                            href: 'javascript:void(0)',
+                            class: 'list-group-item list-group-item-action autocomplete-item small border-0',
+                            html: '<div class="fw-semibold">' + prodNom + '</div>'
+                        }).on('click', function () {
+                            seleccionarProducto(prodId, prodNom);
+                        });
+
+                        $lista.append($a);
+                    });
+                    $lista.removeClass('d-none');
+                } else {
+                    $lista.append('<div class="p-2 text-muted small text-center">No se encontraron artículos activos</div>').removeClass('d-none');
+                }
+            });
+        }, 250);
+    }
+
+    function seleccionarProducto(id, nombre) {
+        $('#nuevo-prod-inclu-id').val(id);
+        $('#txt-busqueda-producto').val(nombre);
+        $('#lbl-prod-seleccionado').text(nombre);
+        $('#badge-prod-seleccionado').removeClass('d-none');
+        $('#lista-resultados-productos').addClass('d-none').empty();
+        $('#nuevo-cant').focus();
+    }
+
+    function limpiarProductoSeleccionado() {
+        $('#nuevo-prod-inclu-id').val(0);
+        $('#txt-busqueda-producto').val('');
+        $('#badge-prod-seleccionado').addClass('d-none');
+        $('#lista-resultados-productos').addClass('d-none').empty();
+    }
+
+    function agregarArticuloDetalle() {
+        var comboId = parseInt($('#combo-id').val()) || 0;
+        var prodIncluId = parseInt($('#nuevo-prod-inclu-id').val()) || 0;
+        var cant = parseFloat($('#nuevo-cant').val()) || 0;
+        var porc = parseFloat($('#nuevo-porc').val()) || 100;
+        var numDec = parseInt($('#nuevo-dec').val()) || 1;
+
+        if (comboId <= 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Primero debe guardar los datos principales del combo.' });
+            return;
+        }
+        if (prodIncluId <= 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor busque y seleccione el producto que desea incluir en el combo.' });
+            return;
+        }
+        if (cant <= 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'La cantidad debe ser mayor a 0.' });
+            return;
+        }
+
+        var $btn = $('#btn-agregar-detalle');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+        $.ajax({
+            url: '@Url.Action("GuardarDetalle", "ComboProducto", new { area = "MG" })',
+            type: 'POST',
+            data: {
+                Id: 0,
+                ProductoId: comboId,
+                ProdIncluId: prodIncluId,
+                Cantidad: cant,
+                PorcentajePrecio: porc,
+                NumDecRedo: numDec,
+                Estado: 'A'
+            },
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-plus-lg me-1"></i>Agregar');
+                if (res && res.success) {
+                    limpiarProductoSeleccionado();
+                    $('#nuevo-cant').val('1.00');
+                    $('#nuevo-porc').val('100.00');
+
+                    // Recargar detalles
+                    cargarDetallesCombo(comboId);
+
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 1800,
+                        timerProgressBar: true
+                    });
+                    Toast.fire({ icon: 'success', title: 'Artículo agregado al combo' });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo agregar el artículo.' });
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-plus-lg me-1"></i>Agregar');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function cargarDetallesCombo(comboId) {
+        $.getJSON('@Url.Action("ListarDetalles", "ComboProducto", new { area = "MG" })', { productoId: comboId }, function (res) {
+            if (res && res.success) {
+                detallesCache = res.data || [];
+                renderizarDetalles(detallesCache);
+            }
+        });
+    }
+
+    function quitarArticuloDetalle(detalleId, codigo) {
+        Swal.fire({
+            title: '¿Quitar artículo?',
+            text: '¿Desea retirar el artículo ' + codigo + ' del combo?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, retirar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc3545'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("EliminarDetalle", "ComboProducto", new { area = "MG" })',
+                    type: 'POST',
+                    data: { id: detalleId },
+                    success: function (res) {
+                        if (res && res.success) {
+                            var comboId = parseInt($('#combo-id').val()) || 0;
+                            cargarDetallesCombo(comboId);
+
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 1500,
+                                timerProgressBar: true
+                            });
+                            Toast.fire({ icon: 'success', title: 'Artículo retirado' });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo retirar el artículo.' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                    }
+                });
+            }
+        });
+    }
+
+    // =========================================================================
+    // CAMBIAR ESTADO DE COMBO EN BANDEJA
+    // =========================================================================
+    function cambiarEstado(id, estadoActual, descripcion) {
         var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
         Swal.fire({
             title: '¿Confirmar cambio de estado?',
-            text: '¿Desea ' + accion + ' esta combinación de combo?',
+            text: '¿Desea ' + accion + ' el combo "' + descripcion + '"?',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, ' + accion,
@@ -316,5 +1072,20 @@
             }
         });
     }
+
+    // Cerrar menú flotante al hacer clic fuera
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('#panel-agregar-articulo').length) {
+            $('#lista-resultados-productos').addClass('d-none');
+        }
+    });
+
+    // Al cerrar el modal, si se guardó cabecera o se agregaron ítems, recargar página si se desea sincronizar bandeja
+    $('#modal-crud-combo').on('hidden.bs.modal', function () {
+        var id = parseInt($('#combo-id').val()) || 0;
+        if (id > 0) {
+            location.reload();
+        }
+    });
 </script>
 }

@@ -1,23 +1,133 @@
 @model List<AspNet10ArcoERP.Models.ProductoModel>
 @{
-    ViewData["Title"] = "Catálogo de Productos";
+    ViewData["Title"] = "Catálogo de Productos y Servicios";
+    var tiposProductoLookup = ViewBag.TiposProductoLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var gruposLookup = ViewBag.GruposProductoLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var clasesLookup = ViewBag.ClasesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var familiasLookup = ViewBag.FamiliasLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var unidadesLookup = ViewBag.UnidadesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var coloresLookup = ViewBag.ColoresLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposIgvLookup = ViewBag.TiposIgvLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var estadosComLookup = ViewBag.EstadosComercialesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var estadosProdLookup = ViewBag.EstadosProductoLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+
+    string? tipoFiltro = ViewBag.Tipo as string;
+    int? grupoFiltro = ViewBag.GrupoId as int?;
+    int? claseFiltro = ViewBag.ClaseId as int?;
+    int? familiaFiltro = ViewBag.FamiliaId as int?;
+    string? estadoFiltro = ViewBag.Estado as string;
+    string currentSort = (ViewBag.Sort as string ?? "id").ToLower();
+    string currentDir = (ViewBag.Dir as string ?? "desc").ToLower();
+    int currentTop = ViewBag.Top != null ? (int)ViewBag.Top : 25;
+
+    int totalCount = ViewBag.TotalCount ?? (Model?.Count ?? 0);
+    int productosCount = ViewBag.ProductosCount ?? 0;
+    int serviciosCount = ViewBag.ServiciosCount ?? 0;
 }
+
+@functions {
+    string SortUrl(string col, string curSort, string curDir, string? search, string? tipo, int? grupoId, int? claseId, int? familiaId, string? estado, int top)
+    {
+        string nextDir = (curSort == col && curDir == "asc") ? "desc" : "asc";
+        return Url.Action("Index", new { search, tipo, grupoId, claseId, familiaId, estado, sort = col, dir = nextDir, top }) ?? "#";
+    }
+
+    string SortIcon(string col, string curSort, string curDir, bool isNumeric = false)
+    {
+        if (curSort != col) return "bi-arrow-down-up text-muted opacity-50";
+        if (isNumeric)
+            return curDir == "asc" ? "bi-sort-numeric-down text-primary fw-bold" : "bi-sort-numeric-down-alt text-primary fw-bold";
+        return curDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold";
+    }
+}
+
+<style>
+    /* Estabilidad y altura fija compacta en cabecera de la tabla */
+    .table-fixed-header {
+        table-layout: auto;
+    }
+    .table-header-custom th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        height: 40px !important;
+        line-height: 1.2;
+    }
+    .table-header-custom th a {
+        transition: color 0.15s ease-in-out;
+        white-space: nowrap !important;
+    }
+    .table-header-custom th a:hover {
+        color: var(--bs-primary) !important;
+    }
+
+    /* Modal Extendido: Scrollbar suave, rueda del ratón y altura adaptada */
+    #modal-crud-producto .modal-content {
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    #modal-crud-producto .modal-body {
+        max-height: calc(90vh - 145px) !important;
+        overflow-y: auto !important;
+        flex: 1 1 auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
+    }
+    #modal-crud-producto .modal-body::-webkit-scrollbar {
+        width: 7px;
+    }
+    #modal-crud-producto .modal-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #modal-crud-producto .modal-body::-webkit-scrollbar-thumb {
+        background: rgba(140, 150, 165, 0.45);
+        border-radius: 4px;
+    }
+    #modal-crud-producto .modal-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(140, 150, 165, 0.75);
+    }
+
+    /* Pestañas (Tabs) compatibles con Dark Mode y Light Mode */
+    #prodTabs {
+        border-bottom: 1px solid var(--bs-border-color-translucent);
+    }
+    #prodTabs .nav-link {
+        color: var(--bs-body-color);
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.65rem 1rem;
+        transition: all 0.15s ease-in-out;
+    }
+    #prodTabs .nav-link:hover {
+        color: var(--bs-primary);
+        border-bottom-color: rgba(var(--bs-primary-rgb), 0.4);
+    }
+    #prodTabs .nav-link.active {
+        color: var(--bs-primary) !important;
+        background: var(--bs-body-bg) !important;
+        border-bottom: 3px solid var(--bs-primary) !important;
+        font-weight: 600;
+    }
+</style>
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
         <div class="row align-items-center">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
-                    <i class="bi bi-box-seam-fill text-primary me-2" style="font-size: 1.6rem;"></i>Catálogo de Productos
+                    <i class="bi bi-box-seam-fill text-primary me-2" style="font-size: 1.6rem;"></i>Catálogo de Productos y Servicios
                 </h3>
-                <small class="text-muted">Artículos, materias primas, insumos y productos terminados del ERP</small>
+                <small class="text-muted">Maestro de artículos, insumos, materias primas y servicios operativos del ERP</small>
             </div>
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
-                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Producto
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Registro
                 </button>
             </div>
         </div>
@@ -26,39 +136,186 @@
 
 <div class="app-content py-4">
     <div class="container-fluid">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-body border-bottom py-3">
-                <div class="row g-2 align-items-center justify-content-between">
-                    <div class="col-md-5 d-flex align-items-center">
-                        <form method="get" class="input-group input-group-sm w-100">
-                            <span class="input-group-text bg-body-tertiary border-end-0">
-                                <i class="bi bi-search text-muted"></i>
-                            </span>
-                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código, descripción o ref..." value="@ViewBag.Search" />
-                            <button type="submit" class="btn btn-outline-primary">Filtrar</button>
-                            @if (!string.IsNullOrEmpty(ViewBag.Search as string))
-                            {
-                                <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
-                            }
-                        </form>
+        <!-- BARRA DE FILTROS: TODOS/PRODUCTOS/SERVICIOS - BUSCADOR - GRUPO - CLASE - FAMILIA - ESTADO - MOSTRANDO -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <!-- 1. FILA SUPERIOR: PÍLDORAS DE TIPO (IZQUIERDA) Y SELECTOR MOSTRANDO (DERECHA) -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
+                    <!-- Píldoras de Rol / Tipo de Ítem -->
+                    <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Filtro de Tipo">
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                           class="btn @(string.IsNullOrEmpty(tipoFiltro) ? "btn-primary" : "btn-outline-secondary")">
+                            <i class="bi bi-grid-fill me-1"></i>Todos <span class="badge bg-white text-primary ms-1">@totalCount</span>
+                        </a>
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "P", grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                           class="btn @(tipoFiltro == "P" ? "btn-primary" : "btn-outline-secondary")">
+                            <i class="bi bi-box-seam me-1"></i>Productos <span class="badge bg-white text-primary ms-1">@productosCount</span>
+                        </a>
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "S", grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                           class="btn @(tipoFiltro == "S" ? "btn-primary" : "btn-outline-secondary")">
+                            <i class="bi bi-gear-wide-connected me-1"></i>Servicios <span class="badge bg-white text-primary ms-1">@serviciosCount</span>
+                        </a>
                     </div>
-                    <div class="col-md-4 text-md-end text-muted small">
-                        <span>Mostrando: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6">@Model.Count</strong> productos</span>
+
+                    <!-- Dropdown 'Mostrando: 25' -->
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                            <i class="bi bi-funnel-fill text-primary"></i>
+                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1">@currentTop</strong></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                            @foreach (var cant in new[] { 25, 50, 100, 500 })
+                            {
+                                <li>
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
+                                       href="@Url.Action("Index", new { search = ViewBag.Search, tipo = tipoFiltro, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = cant })">
+                                        <span>@cant registros</span>
+                                        @if (currentTop == cant)
+                                        {
+                                            <i class="bi bi-check text-primary"></i>
+                                        }
+                                    </a>
+                                </li>
+                            }
+                        </ul>
                     </div>
                 </div>
-            </div>
 
+                <!-- 2. FILA DE FILTROS: BUSCADOR LARGO + GRUPO + CLASE + FAMILIA + ESTADO -->
+                <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0" id="filtro-form">
+                    @if (!string.IsNullOrEmpty(tipoFiltro))
+                    {
+                        <input type="hidden" name="tipo" value="@tipoFiltro" />
+                    }
+                    <input type="hidden" name="sort" value="@currentSort" />
+                    <input type="hidden" name="dir" value="@currentDir" />
+                    <input type="hidden" name="top" value="@currentTop" />
+
+                    <!-- Buscador Amplio -->
+                    <div class="input-group input-group-sm flex-grow-1" style="min-width: 320px; max-width: 440px;">
+                        <span class="input-group-text bg-body-tertiary border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código, descripción o ref..." value="@ViewBag.Search" />
+                        <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                        @if (!string.IsNullOrEmpty(ViewBag.Search as string) || grupoFiltro.HasValue || claseFiltro.HasValue || familiaFiltro.HasValue || !string.IsNullOrEmpty(estadoFiltro))
+                        {
+                            <a href="@Url.Action("Index", new { tipo = tipoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                        }
+                    </div>
+
+                    <!-- 1. Grupo -->
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                            <i class="bi bi-folder text-primary"></i>
+                        </span>
+                        <select name="grupoId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="this.form.submit();" title="Filtrar por Grupo">
+                            <option value="" selected="@(!grupoFiltro.HasValue)">Todos los Grupos</option>
+                            @foreach (var g in gruposLookup)
+                            {
+                                <option value="@g.Id" selected="@(grupoFiltro == g.Id)">@g.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- 2. Clase (Entre Grupo y Familia) -->
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                            <i class="bi bi-tag text-primary"></i>
+                        </span>
+                        <select name="claseId" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Clase">
+                            <option value="" selected="@(!claseFiltro.HasValue)">Todas las Clases</option>
+                            @foreach (var c in clasesLookup)
+                            {
+                                <option value="@c.Id" selected="@(claseFiltro == c.Id)">@c.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- 3. Familia -->
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                            <i class="bi bi-diagram-3 text-primary"></i>
+                        </span>
+                        <select name="familiaId" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Familia">
+                            <option value="" selected="@(!familiaFiltro.HasValue)">Todas las Familias</option>
+                            @foreach (var f in familiasLookup)
+                            {
+                                <option value="@f.Id" selected="@(familiaFiltro == f.Id)">@f.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- 4. Estado (Select) -->
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                            <i class="bi bi-toggle-on text-primary"></i>
+                        </span>
+                        <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 135px;" onchange="this.form.submit();" title="Filtrar por Estado">
+                            <option value="" selected="@(string.IsNullOrEmpty(estadoFiltro))">Todos los Estados</option>
+                            <option value="A" selected="@(estadoFiltro == "A")">Activos</option>
+                            <option value="I" selected="@(estadoFiltro == "I")">Inactivos</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- TABLA PRINCIPAL DE PRODUCTOS Y SERVICIOS -->
+        <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0" id="tabla-productos">
-                    <thead class="table-header-custom border-bottom">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-productos">
+                    <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
-                            <th style="width: 70px;" class="text-center">ID</th>
-                            <th style="width: 130px;" class="text-center">Código</th>
-                            <th>Descripción del Producto</th>
-                            <th>Familia</th>
-                            <th style="width: 90px;" class="text-center">U.M.</th>
-                            <th style="width: 100px;" class="text-end">Peso (kg)</th>
-                            <th style="width: 100px;" class="text-center">Estado</th>
+                            <th style="width: 70px;" class="text-center">
+                                <a href="@SortUrl("id", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>ID</span>
+                                    <i class="bi @SortIcon("id", currentSort, currentDir, true) small"></i>
+                                </a>
+                            </th>
+                            <th style="width: 105px;" class="text-center">
+                                <a href="@SortUrl("tipo", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>Tipo</span>
+                                    <i class="bi @SortIcon("tipo", currentSort, currentDir) small"></i>
+                                </a>
+                            </th>
+                            <th style="width: 135px;" class="text-center">
+                                <a href="@SortUrl("codigo", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>Código</span>
+                                    <i class="bi @SortIcon("codigo", currentSort, currentDir) small"></i>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="@SortUrl("descripcion", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>Descripción / Nombre Comercial</span>
+                                    <i class="bi @SortIcon("descripcion", currentSort, currentDir) small"></i>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="@SortUrl("familia", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>Jerarquía (Grupo / Clase / Familia)</span>
+                                    <i class="bi @SortIcon("familia", currentSort, currentDir) small"></i>
+                                </a>
+                            </th>
+                            <th style="width: 85px;" class="text-center">
+                                <a href="@SortUrl("um", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>U.M.</span>
+                                    <i class="bi @SortIcon("um", currentSort, currentDir) small"></i>
+                                </a>
+                            </th>
+                            <th style="width: 95px;" class="text-end">
+                                <a href="@SortUrl("peso", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>Peso (kg)</span>
+                                    <i class="bi @SortIcon("peso", currentSort, currentDir, true) small"></i>
+                                </a>
+                            </th>
+                            <th style="width: 95px;" class="text-center">
+                                <a href="@SortUrl("estado", currentSort, currentDir, ViewBag.Search, tipoFiltro, grupoFiltro, claseFiltro, familiaFiltro, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                                    <span>Estado</span>
+                                    <i class="bi @SortIcon("estado", currentSort, currentDir) small"></i>
+                                </a>
+                            </th>
                             <th style="width: 120px;" class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -67,21 +324,65 @@
                         {
                             foreach (var item in Model)
                             {
+                                bool esSvc = (item.TipoProductoCodigo == "S" || item.TipoProductoId == 2);
                                 <tr id="fila-@item.Id">
                                     <td class="text-center font-monospace text-muted small">@item.Id</td>
+                                    <td class="text-center">
+                                        @if (esSvc)
+                                        {
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                                <i class="bi bi-gear-wide-connected me-1"></i>Servicio
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                                <i class="bi bi-box-seam me-1"></i>Producto
+                                            </span>
+                                        }
+                                    </td>
                                     <td class="text-center font-monospace fw-bold text-primary">@item.Codigo</td>
                                     <td>
                                         <div class="fw-semibold text-body">@item.Descripcion</div>
-                                        @if (!string.IsNullOrEmpty(item.CodReferencial))
-                                        {
-                                            <small class="text-muted font-monospace"><i class="bi bi-tag me-1"></i>Ref: @item.CodReferencial</small>
-                                        }
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            @if (!string.IsNullOrEmpty(item.CodReferencial))
+                                            {
+                                                <small class="text-muted font-monospace"><i class="bi bi-tag me-1"></i>Ref: @item.CodReferencial</small>
+                                            }
+                                            @if (esSvc && item.DetalleReq == "S")
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 0.7rem;"><i class="bi bi-pencil-square me-1"></i>Detalle Requerido</span>
+                                            }
+                                            @if (item.ColorNombre != null && !string.IsNullOrEmpty(item.ColorNombre))
+                                            {
+                                                <small class="text-muted"><i class="bi bi-palette me-1"></i>@item.ColorNombre</small>
+                                            }
+                                        </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary-subtle text-secondary border">@item.FamiliaNombre</span>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @if (!string.IsNullOrEmpty(item.GrupoNombre))
+                                            {
+                                                <span class="badge bg-light text-dark border">@item.GrupoNombre</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.ClaseNombre))
+                                            {
+                                                <span class="badge bg-body-secondary text-body border">@item.ClaseNombre</span>
+                                            }
+                                            <span class="badge bg-secondary-subtle text-secondary border">@item.FamiliaNombre</span>
+                                        </div>
                                     </td>
                                     <td class="text-center font-monospace">@item.UnidadMedida</td>
-                                    <td class="text-end font-monospace">@(item.PesoNeto?.ToString("N2") ?? "0.00")</td>
+                                    <td class="text-end font-monospace">
+                                        @if (esSvc)
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                        else
+                                        {
+                                            @(item.PesoNeto?.ToString("N2") ?? "0.00")
+                                        }
+                                    </td>
                                     <td class="text-center">
                                         @if (item.Estado == "A")
                                         {
@@ -93,12 +394,14 @@
                                         }
                                     </td>
                                     <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Descripcion');">
-                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
-                                        </button>
+                                        <div class="d-inline-flex gap-2 align-items-center justify-content-center">
+                                            <button class="btn btn-sm btn-outline-primary px-2 py-1 shadow-sm btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") px-2 py-1 shadow-sm btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Descripcion');">
+                                                <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -106,9 +409,9 @@
                         else
                         {
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-5">
+                                <td colspan="9" class="text-center text-muted py-5">
                                     <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
-                                    <span>No se encontraron productos registrados</span>
+                                    <span>No se encontraron registros en el catálogo</span>
                                 </td>
                             </tr>
                         }
@@ -120,34 +423,89 @@
 </div>
 
 <!-- ======================================================== -->
-<!-- MODAL CRUD: PRODUCTO                                     -->
+<!-- MODAL EXTENDIDO CRUD: PRODUCTOS Y SERVICIOS              -->
 <!-- ======================================================== -->
-<div class="modal fade" id="modal-crud-producto" tabindex="-1" aria-labelledby="modalProdLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow border-0 rounded-4">
-            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
-                <h5 class="modal-title fw-bold" id="modalProdLabel">
-                    <i class="bi bi-box-seam text-primary me-2"></i><span id="modal-titulo">Nuevo Producto</span>
-                </h5>
+<div class="modal fade" id="modal-crud-producto" tabindex="-1" aria-labelledby="modalProdLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form class="modal-content shadow border border-secondary-subtle rounded-4" id="form-producto" onsubmit="guardarProducto(event);">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="prod-id" name="Id" value="0" />
+            <input type="hidden" id="prod-estado" name="Estado" value="A" />
+
+            <div class="modal-header border-bottom border-secondary-subtle py-3 px-4 bg-body-tertiary">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-box-seam text-primary fs-4" id="modal-icono"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 d-flex align-items-center text-body" id="modalProdLabel">
+                            <span id="modal-titulo">Nuevo Registro</span>
+                            <span id="modal-codigo-badge" class="badge bg-primary-subtle text-primary border border-primary-subtle ms-2 font-monospace fs-6"></span>
+                        </h5>
+                        <small class="text-body-secondary" id="modal-subtitulo">Catálogo General de Productos y Servicios</small>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="form-producto" onsubmit="guardarProducto(event);">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="prod-id" name="Id" value="0" />
-                <div class="modal-body p-4">
+            
+            <div class="modal-body p-4">
+                <!-- AVISO DE BLOQUEO DE JERARQUÍA EN EDICIÓN (PARIDAD LEGACY) -->
+                <div id="alert-modo-edicion" class="alert alert-secondary-subtle border border-secondary-subtle py-2 px-3 small d-none mb-3 text-body-secondary">
+                    <i class="bi bi-info-circle text-primary me-1"></i>
+                    <span>En modo edición, la jerarquía (Tipo, Grupo, Clase y Familia) permanece protegida para preservar el código correlativo autogenerado.</span>
+                </div>
+
+                <!-- SECCIÓN 1: DATOS GENERALES Y JERARQUÍA -->
+                <div class="card border border-secondary-subtle bg-body-tertiary p-3 rounded-3 mb-3 shadow-none">
+                    <!-- TIPO DE PRODUCTO (1: PRODUCTO, 2: SERVICIO) -->
+                    <div class="row g-3 align-items-center mb-3 pb-2 border-bottom border-secondary-subtle">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-uppercase small text-body-secondary mb-0">
+                                <i class="bi bi-layers me-1"></i>Tipo de Producto
+                            </label>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="d-flex gap-4">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="TipoProductoId" id="tipo-prod-1" value="1" checked onchange="alCambiarTipoModal();" />
+                                    <label class="form-check-label fw-semibold text-body" for="tipo-prod-1">
+                                        <i class="bi bi-box-seam text-primary me-1"></i>PRODUCTO
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="TipoProductoId" id="tipo-prod-2" value="2" onchange="alCambiarTipoModal();" />
+                                    <label class="form-check-label fw-semibold text-body" for="tipo-prod-2">
+                                        <i class="bi bi-gear-wide-connected text-info me-1"></i>SERVICIO
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CASCADA COMPLETA: GRUPO -> CLASE -> FAMILIA -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label for="prod-codigo" class="form-label fw-semibold">Código Producto</label>
-                            <input type="text" class="form-control font-monospace text-uppercase" id="prod-codigo" name="Codigo" placeholder="Automático" maxlength="12" />
+                            <label for="prod-grupo-id" class="form-label fw-semibold text-body">Grupo <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="prod-grupo-id" name="GrupoId" onchange="alCambiarGrupoModal();" required>
+                                <option value="">-- Seleccionar Grupo --</option>
+                                @foreach (var g in gruposLookup)
+                                {
+                                    <option value="@g.Id">@g.Nombre</option>
+                                }
+                            </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="prod-cod-ref" class="form-label fw-semibold">Código Referencial</label>
-                            <input type="text" class="form-control" id="prod-cod-ref" name="CodReferencial" placeholder="Ej: REF-001" maxlength="20" />
+                            <label for="prod-clase-id" class="form-label fw-semibold text-body">Clase <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="prod-clase-id" name="ClaseId" onchange="alCambiarClaseModal();" required>
+                                <option value="">-- Seleccionar Clase --</option>
+                                @foreach (var c in clasesLookup)
+                                {
+                                    <option value="@c.Id">@c.Nombre</option>
+                                }
+                            </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="prod-familia-id" class="form-label fw-semibold">Familia <span class="text-danger">*</span></label>
-                            <select class="form-select" id="prod-familia-id" name="FamiliaId" required>
-                                <option value="">-- Seleccionar --</option>
+                            <label for="prod-familia-id" class="form-label fw-semibold text-body">Familia <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="prod-familia-id" name="FamiliaId" required>
+                                <option value="">-- Seleccionar Familia --</option>
                                 @foreach (var f in familiasLookup)
                                 {
                                     <option value="@f.Id">@f.Nombre</option>
@@ -156,79 +514,570 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="prod-descripcion" class="form-label fw-semibold">Descripción / Nombre del Producto <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="prod-descripcion" name="Descripcion" placeholder="Ej: Esmalte Sintético Brillante Blanco Galón..." maxlength="150" required />
-                    </div>
-
+                    <!-- CÓDIGO - DESCRIPCIÓN - CÓDIGO REFERENCIAL -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label for="prod-unidad-id" class="form-label fw-semibold">Unidad Medida</label>
-                            <select class="form-select" id="prod-unidad-id" name="UnidadMedidaId">
+                            <label for="prod-codigo" class="form-label fw-semibold text-body">Código</label>
+                            <input type="text" class="form-control form-control-sm font-monospace text-uppercase fw-bold bg-body-secondary text-body border-secondary-subtle" id="prod-codigo" name="Codigo" placeholder="Automático" readonly />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="prod-descripcion" class="form-label fw-semibold text-body">Descripción <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="prod-descripcion" name="Descripcion" placeholder="Ej: [007] TIRADOR CORBATA CROMO 96MM DM" maxlength="150" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="prod-cod-ref" class="form-label fw-semibold text-body">Código Ref.</label>
+                            <input type="text" class="form-control form-control-sm" id="prod-cod-ref" name="CodReferencial" placeholder="Ej: 900.01.007" maxlength="20" />
+                        </div>
+                    </div>
+
+                    <!-- UNIDAD DE MEDIDA - TIPO IGV - COLOR -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="prod-unidad-id" class="form-label fw-semibold text-body">Unidad de Medida <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="prod-unidad-id" name="UnidadMedidaId">
                                 @foreach (var u in unidadesLookup)
                                 {
                                     <option value="@u.Id">@u.Nombre (@u.Codigo)</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label for="prod-color-id" class="form-label fw-semibold">Color</label>
-                            <select class="form-select" id="prod-color-id" name="ColorId">
-                                <option value="">-- Sin Color --</option>
-                                @foreach (var col in coloresLookup)
+                        <div class="col-md-4">
+                            <label for="prod-tipo-igv" class="form-label fw-semibold text-body">Tipo IGV</label>
+                            <select class="form-select form-select-sm" id="prod-tipo-igv" name="TipoIgvId">
+                                @foreach (var igv in tiposIgvLookup)
                                 {
-                                    <option value="@col.Id">@col.Nombre</option>
+                                    <option value="@igv.Id">@igv.Nombre</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label for="prod-peso-neto" class="form-label fw-semibold">Peso Neto (kg)</label>
-                            <input type="number" step="0.01" class="form-control" id="prod-peso-neto" name="PesoNeto" placeholder="0.00" />
-                        </div>
-                        <div class="col-md-3">
-                            <label for="prod-master-pack" class="form-label fw-semibold">Master Pack</label>
-                            <input type="number" class="form-control" id="prod-master-pack" name="MasterPack" placeholder="1" min="1" />
+                        <div class="col-md-4">
+                            <label for="prod-color-id" class="form-label fw-semibold text-body">Color</label>
+                            <div class="input-group input-group-sm">
+                                <select class="form-select form-select-sm" id="prod-color-id" name="ColorId">
+                                    <option value="">-- Sin Color --</option>
+                                    @foreach (var col in coloresLookup)
+                                    {
+                                        <option value="@col.Id">@col.Nombre</option>
+                                    }
+                                </select>
+                                <button class="btn btn-outline-secondary" type="button" onclick="abrirModalColorRapido();" title="Crear Nuevo Color">
+                                    <i class="bi bi-palette"></i> +
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-2">
-                        <label for="prod-estado" class="form-label fw-semibold">Estado</label>
-                        <select class="form-select" id="prod-estado" name="Estado" style="max-width: 200px;">
-                            <option value="A">Activo</option>
-                            <option value="I">Inactivo</option>
-                        </select>
+                    <!-- PROPIEDADES FÍSICAS (OCULTABLES EN SERVICIOS) -->
+                    <div id="seccion-propiedades-fisicas">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-2">
+                                <label for="prod-peso-bruto" class="form-label fw-semibold text-body">Peso Bruto</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm text-end" id="prod-peso-bruto" name="PesoBruto" placeholder="0.0" />
+                            </div>
+                            <div class="col-md-2">
+                                <label for="prod-peso-neto" class="form-label fw-semibold text-body">Peso Neto</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm text-end" id="prod-peso-neto" name="PesoNeto" placeholder="0.0" />
+                            </div>
+                            <div class="col-md-2">
+                                <label for="prod-volumen" class="form-label fw-semibold text-body">Volumen</label>
+                                <input type="number" step="0.001" class="form-control form-control-sm text-end" id="prod-volumen" name="Volumen" placeholder="0.0" />
+                            </div>
+                            <div class="col-md-2">
+                                <label for="prod-valor-repo" class="form-label fw-semibold text-body">Valor Reposición</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm text-end" id="prod-valor-repo" name="ValorReposicion" placeholder="0.0" />
+                            </div>
+                            <div class="col-md-2">
+                                <label for="prod-master-pack" class="form-label fw-semibold text-body">Master Pack</label>
+                                <input type="number" class="form-control form-control-sm text-end" id="prod-master-pack" name="MasterPack" placeholder="1" min="1" />
+                            </div>
+                            <div class="col-md-2 d-flex flex-column justify-content-end">
+                                <div class="form-check form-switch pb-1">
+                                    <input class="form-check-input" type="checkbox" id="prod-es-perecible" onchange="alCambiarEsPerecible();" />
+                                    <input type="hidden" id="prod-es-perecible-val" name="EsPerecible" value="N" />
+                                    <label class="form-check-label fw-semibold small text-body" for="prod-es-perecible">Es Perecible</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ESTADO Y ESTADO COMERCIAL -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="prod-estado-producto" class="form-label fw-semibold text-body">Estado</label>
+                            <select class="form-select form-select-sm" id="prod-estado-producto" name="EstadoProductoId">
+                                @foreach (var ep in estadosProdLookup)
+                                {
+                                    <option value="@ep.Id">@ep.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="prod-estado-com" class="form-label fw-semibold text-body">Estado Comercial</label>
+                            <select class="form-select form-select-sm" id="prod-estado-com" name="EstadoComProdId">
+                                @foreach (var ec in estadosComLookup)
+                                {
+                                    <option value="@ec.Id">@ec.Nombre</option>
+                                }
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
-                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+
+                <!-- ======================================================== -->
+                <!-- SECCIÓN 2: PESTAÑAS OPERATIVAS (TABS INFERIORES)         -->
+                <!-- ======================================================== -->
+                <div class="card border border-secondary-subtle rounded-3 p-0 overflow-hidden shadow-none mb-2 bg-body-tertiary">
+                    <div class="card-header bg-body-tertiary border-bottom border-secondary-subtle p-0">
+                        <ul class="nav nav-tabs nav-fill card-header-tabs m-0 border-0" id="prodTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-semibold py-2" id="tab-pres-btn" data-bs-toggle="tab" data-bs-target="#tab-pres" type="button" role="tab">
+                                    <i class="bi bi-box-seam me-1"></i>Presentación para la Venta 
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" id="count-pres">0</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-semibold py-2" id="tab-proc-btn" data-bs-toggle="tab" data-bs-target="#tab-proc" type="button" role="tab">
+                                    <i class="bi bi-gear-wide-connected me-1"></i>Procesos 
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" id="count-proc">0</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-semibold py-2" id="tab-det-btn" data-bs-toggle="tab" data-bs-target="#tab-det" type="button" role="tab">
+                                    <i class="bi bi-card-checklist me-1"></i>Detalle 
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" id="count-det">0</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card-body p-3">
+                        <div class="tab-content" id="prodTabsContent">
+                            <!-- TAB 1: PRESENTACIÓN PARA LA VENTA -->
+                            <div class="tab-pane fade show active" id="tab-pres" role="tabpanel">
+                                <div id="alert-pres-new" class="alert alert-secondary-subtle border border-secondary-subtle small text-body-secondary py-2 mb-0 d-none">
+                                    <i class="bi bi-info-circle text-primary me-1"></i>
+                                    Para registrar presentaciones de venta (cajas, cajones, paquetes con sus cantidades equivalentes), primero debe guardar el producto.
+                                </div>
+                                <div id="content-pres">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="small text-body-secondary">Defina empaques o presentaciones de venta con su factor de equivalencia respecto a la unidad base.</span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="mostrarFormNuevaPres();">
+                                            <i class="bi bi-plus-circle me-1"></i>Nuevo
+                                        </button>
+                                    </div>
+
+                                    <!-- Subform inline para agregar / editar presentación -->
+                                    <div id="form-inline-pres" class="card card-body bg-body-tertiary border border-secondary-subtle mb-3 p-3 d-none">
+                                        <input type="hidden" id="pres-id" value="0" />
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-5">
+                                                <label class="form-label small fw-semibold text-body">Unidad de Medida</label>
+                                                <select class="form-select form-select-sm" id="pres-um-id">
+                                                    @foreach (var u in unidadesLookup)
+                                                    {
+                                                        <option value="@u.Id">@u.Nombre (@u.Codigo)</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold text-body">Cant. Equiv.</label>
+                                                <input type="number" step="0.01" class="form-control form-control-sm text-end" id="pres-cant-equiv" placeholder="1.00" />
+                                            </div>
+                                            <div class="col-md-3 d-flex gap-1">
+                                                <button type="button" class="btn btn-sm btn-primary flex-fill" onclick="guardarPresentacion();">
+                                                    <i class="bi bi-check-lg me-1"></i>Guardar
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelarFormPres();">
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover align-middle mb-0">
+                                            <thead class="bg-body-secondary small text-body-secondary border-bottom border-secondary-subtle">
+                                                <tr>
+                                                    <th class="py-2">Unidad de Medida</th>
+                                                    <th class="text-end py-2" style="width: 140px;">Cant. Equiv.</th>
+                                                    <th class="text-end py-2" style="width: 100px;">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-presentaciones">
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-body-secondary py-3 small">Cargando presentaciones...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: PROCESOS -->
+                            <div class="tab-pane fade" id="tab-proc" role="tabpanel">
+                                <div id="alert-proc-new" class="alert alert-secondary-subtle border border-secondary-subtle small text-body-secondary py-2 mb-0 d-none">
+                                    <i class="bi bi-info-circle text-primary me-1"></i>
+                                    Para asignar la ruta o subprocesos de producción de taller, primero guarde el producto.
+                                </div>
+                                <div id="content-proc">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="small text-body-secondary">Secuencia y ruta de operaciones de fabricación (corte, canteado, mecanizado, etc.).</span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="mostrarFormNuevoProc();">
+                                            <i class="bi bi-plus-circle me-1"></i>Nuevo
+                                        </button>
+                                    </div>
+
+                                    <!-- Subform inline para asignar sub-proceso -->
+                                    <div id="form-inline-proc" class="card card-body bg-body-tertiary border border-secondary-subtle mb-3 p-3 d-none">
+                                        <input type="hidden" id="proc-id" value="0" />
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-7">
+                                                <label class="form-label small fw-semibold text-body">Sub-Proceso de Producción</label>
+                                                <select class="form-select form-select-sm" id="proc-subproceso-id">
+                                                    <option value="">-- Seleccionar Sub-Proceso --</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label small fw-semibold text-body">Orden</label>
+                                                <input type="number" class="form-control form-control-sm text-end" id="proc-orden" placeholder="1" min="1" value="1" />
+                                            </div>
+                                            <div class="col-md-3 d-flex gap-1">
+                                                <button type="button" class="btn btn-sm btn-primary flex-fill" onclick="guardarProceso();">
+                                                    <i class="bi bi-check-lg me-1"></i>Guardar
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelarFormProc();">
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover align-middle mb-0">
+                                            <thead class="bg-body-secondary small text-body-secondary border-bottom border-secondary-subtle">
+                                                <tr>
+                                                    <th class="py-2">Proceso</th>
+                                                    <th class="py-2">Sub-Proceso</th>
+                                                    <th class="text-end py-2" style="width: 100px;">Orden</th>
+                                                    <th class="text-end py-2" style="width: 100px;">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-procesos">
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-body-secondary py-3 small">Cargando procesos...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 3: DETALLE -->
+                            <div class="tab-pane fade" id="tab-det" role="tabpanel">
+                                <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-body-tertiary rounded-2 border border-secondary-subtle">
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input" type="checkbox" id="prod-detalle-req" onchange="alCambiarDetalleReq();" />
+                                        <input type="hidden" id="prod-detalle-req-val" name="DetalleReq" value="N" />
+                                        <label class="form-check-label fw-bold text-body small" for="prod-detalle-req">
+                                            Requerido
+                                        </label>
+                                        <small class="text-body-secondary ms-2">(Exigir especificación de detalle o medidas al emitir comprobantes o pedidos)</small>
+                                    </div>
+                                </div>
+
+                                <div id="alert-det-new" class="alert alert-secondary-subtle border border-secondary-subtle small text-body-secondary py-2 mb-0 d-none">
+                                    <i class="bi bi-info-circle text-primary me-1"></i>
+                                    Para registrar especificaciones de detalle o variantes personalizadas, guarde primero el producto.
+                                </div>
+                                <div id="content-det">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="small text-body-secondary">Lista de nombres o variantes predefinidas para el detalle del ítem.</span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="mostrarFormNuevoDet();">
+                                            <i class="bi bi-plus-circle me-1"></i>Nuevo
+                                        </button>
+                                    </div>
+
+                                    <!-- Subform inline para agregar detalle -->
+                                    <div id="form-inline-det" class="card card-body bg-body-tertiary border border-secondary-subtle mb-3 p-3 d-none">
+                                        <input type="hidden" id="det-id" value="0" />
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-9">
+                                                <label class="form-label small fw-semibold text-body">Nombre / Especificación</label>
+                                                <input type="text" class="form-control form-control-sm" id="det-nombre" placeholder="Ej: Medida especial, Acabado brillante, Biselado..." maxlength="100" />
+                                            </div>
+                                            <div class="col-md-3 d-flex gap-1">
+                                                <button type="button" class="btn btn-sm btn-primary flex-fill" onclick="guardarDetalle();">
+                                                    <i class="bi bi-check-lg me-1"></i>Guardar
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelarFormDet();">
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover align-middle mb-0">
+                                            <thead class="bg-body-secondary small text-body-secondary border-bottom border-secondary-subtle">
+                                                <tr>
+                                                    <th class="py-2">Nombre</th>
+                                                    <th class="text-end py-2" style="width: 100px;">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-detalles">
+                                                <tr>
+                                                    <td colspan="2" class="text-center text-body-secondary py-3 small">Cargando detalles...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top border-secondary-subtle py-3 px-4 bg-body-tertiary d-flex justify-content-between">
+                <div>
+                    <span class="small text-body-secondary"><i class="bi bi-shield-check me-1"></i>Gestión integral de catálogo en tiempo real</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Salir</button>
                     <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-prod">
-                        <i class="bi bi-check-circle me-1"></i>Guardar Producto
+                        <i class="bi bi-check-circle me-1"></i>Guardar
                     </button>
                 </div>
-            </form>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL RÁPIDO: CREAR COLOR                                -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-color-rapido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow border border-secondary-subtle rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom border-secondary-subtle">
+                <h6 class="modal-title fw-bold mb-0 text-body"><i class="bi bi-palette text-primary me-2"></i>Nuevo Color</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <label class="form-label small fw-semibold text-body">Nombre del Color <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm text-uppercase" id="input-nuevo-color" placeholder="Ej: BLANCO HUMO / NOGAL" maxlength="50" />
+            </div>
+            <div class="modal-footer py-2 px-3 bg-body-tertiary border-top border-secondary-subtle">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="guardarColorRapido();">Guardar</button>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
 <script>
+    var formInitialState = "";
+    var subProcesosCache = null;
+
+    // ========================================================
+    // CASCADA DE FILTROS EN BARRA PRINCIPAL (INDEX)
+    // ========================================================
+    function alCambiarGrupoFiltro() {
+        var grupoId = $('#filtro-grupo').val();
+        $('#filtro-clase').html('<option value="">-- Todas las Clases --</option>');
+        $('#filtro-familia').html('<option value="">-- Todas las Familias --</option>');
+
+        if (grupoId) {
+            $.get('@Url.Action("ClasesPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId }, function (data) {
+                if (data && data.length > 0) {
+                    $.each(data, function (i, c) {
+                        $('#filtro-clase').append('<option value="' + c.id + '">' + c.nombre + '</option>');
+                    });
+                }
+            });
+            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId }, function (data) {
+                if (data && data.length > 0) {
+                    $.each(data, function (i, f) {
+                        $('#filtro-familia').append('<option value="' + f.id + '">' + f.nombre + '</option>');
+                    });
+                }
+            });
+        }
+    }
+
+    function alCambiarClaseFiltro() {
+        var grupoId = $('#filtro-grupo').val();
+        var claseId = $('#filtro-clase').val();
+        $('#filtro-familia').html('<option value="">-- Todas las Familias --</option>');
+
+        if (grupoId || claseId) {
+            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId }, function (data) {
+                if (data && data.length > 0) {
+                    $.each(data, function (i, f) {
+                        $('#filtro-familia').append('<option value="' + f.id + '">' + f.nombre + '</option>');
+                    });
+                }
+            });
+        }
+    }
+
+    // ========================================================
+    // CASCADA DENTRO DEL FORMULARIO MODAL (GRUPO -> CLASE -> FAMILIA)
+    // ========================================================
+    function alCambiarTipoModal(callback) {
+        var tipoId = $('input[name="TipoProductoId"]:checked').val();
+        var esServicio = (tipoId === "2");
+
+        if (esServicio) {
+            $('#seccion-propiedades-fisicas').addClass('d-none');
+            $('#modal-icono').removeClass('bi-box-seam text-primary').addClass('bi-gear-wide-connected text-info');
+        } else {
+            $('#seccion-propiedades-fisicas').removeClass('d-none');
+            $('#modal-icono').removeClass('bi-gear-wide-connected text-info').addClass('bi-box-seam text-primary');
+        }
+
+        // Cargar Grupos según tipo si el combo no está deshabilitado
+        if (!$('#prod-grupo-id').is(':disabled')) {
+            $.get('@Url.Action("GruposPorTipo", "Producto", new { area = "MG" })', { tipoProductoId: tipoId }, function (data) {
+                $('#prod-grupo-id').html('<option value="">-- Seleccionar Grupo --</option>');
+                if (data && data.length > 0) {
+                    $.each(data, function (i, g) {
+                        $('#prod-grupo-id').append('<option value="' + g.id + '">' + g.nombre + '</option>');
+                    });
+                }
+                if (callback) callback();
+            });
+        } else {
+            if (callback) callback();
+        }
+    }
+
+    function alCambiarGrupoModal(targetClaseId, callback) {
+        var grupoId = $('#prod-grupo-id').val();
+        $('#prod-clase-id').html('<option value="">-- Seleccionar Clase --</option>');
+        $('#prod-familia-id').html('<option value="">-- Seleccionar Familia --</option>');
+
+        if (grupoId) {
+            $.get('@Url.Action("ClasesPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId }, function (data) {
+                if (data && data.length > 0) {
+                    $.each(data, function (i, c) {
+                        $('#prod-clase-id').append('<option value="' + c.id + '">' + c.nombre + '</option>');
+                    });
+                }
+                if (targetClaseId) {
+                    $('#prod-clase-id').val(targetClaseId);
+                }
+                if (callback) callback();
+            });
+        }
+    }
+
+    function alCambiarClaseModal(targetFamiliaId, callback) {
+        var grupoId = $('#prod-grupo-id').val();
+        var claseId = $('#prod-clase-id').val();
+        $('#prod-familia-id').html('<option value="">-- Seleccionar Familia --</option>');
+
+        if (claseId || grupoId) {
+            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId }, function (data) {
+                if (data && data.length > 0) {
+                    $.each(data, function (i, f) {
+                        $('#prod-familia-id').append('<option value="' + f.id + '">' + f.nombre + '</option>');
+                    });
+                }
+                if (targetFamiliaId) {
+                    $('#prod-familia-id').val(targetFamiliaId);
+                }
+                if (callback) callback();
+            });
+        }
+    }
+
+    function alCambiarEsPerecible() {
+        $('#prod-es-perecible-val').val($('#prod-es-perecible').is(':checked') ? 'S' : 'N');
+    }
+
+    function alCambiarDetalleReq() {
+        var val = $('#prod-detalle-req').is(':checked') ? 'S' : 'N';
+        $('#prod-detalle-req-val').val(val);
+
+        var prodId = parseInt($('#prod-id').val()) || 0;
+        if (prodId > 0) {
+            $.post('@Url.Action("ActualizarDetalleRequerido", "Producto", new { area = "MG" })', { productoId: prodId, detalleReq: val });
+        }
+    }
+
+    // ========================================================
+    // ABRIR MODAL CREAR
+    // ========================================================
     function abrirModalCrear() {
-        $('#modal-titulo').text('Nuevo Producto');
+        $('#modal-titulo').text('Nuevo Registro en Catálogo');
+        $('#modal-subtitulo').text('Registro y configuración inicial de producto o servicio');
+        $('#modal-codigo-badge').text('');
         $('#prod-id').val(0);
         $('#prod-codigo').val('');
         $('#prod-cod-ref').val('');
         $('#prod-descripcion').val('');
-        $('#prod-familia-id').val('');
         $('#prod-unidad-id').val('1');
         $('#prod-color-id').val('');
         $('#prod-peso-neto').val('0.00');
+        $('#prod-peso-bruto').val('0.00');
+        $('#prod-volumen').val('0.000');
+        $('#prod-valor-repo').val('0.00');
         $('#prod-master-pack').val('1');
+        $('#prod-tipo-igv').val('1');
+        $('#prod-estado-producto').val('1');
+        $('#prod-estado-com').val('1');
         $('#prod-estado').val('A');
+
+        $('#prod-es-perecible').prop('checked', false);
+        $('#prod-es-perecible-val').val('N');
+        $('#prod-detalle-req').prop('checked', false);
+        $('#prod-detalle-req-val').val('N');
+
+        // Habilitar campos jerárquicos
+        $('#tipo-prod-1, #tipo-prod-2, #prod-grupo-id, #prod-clase-id, #prod-familia-id').prop('disabled', false);
+        $('#alert-modo-edicion').addClass('d-none');
+
+        // Ocultar contenidos de pestañas hasta que se guarde el producto
+        $('#alert-pres-new, #alert-proc-new, #alert-det-new').removeClass('d-none');
+        $('#content-pres, #content-proc, #content-det').addClass('d-none');
+        $('#count-pres, #count-proc, #count-det').text('0');
+
+        // Predeterminar tipo según filtro activo
+        var tipoFiltro = '@tipoFiltro';
+        if (tipoFiltro === 'S') {
+            $('#tipo-prod-2').prop('checked', true);
+        } else {
+            $('#tipo-prod-1').prop('checked', true);
+        }
+
+        alCambiarTipoModal(function () {
+            // Seleccionar primer grupo si existe
+            var primerGrupo = $('#prod-grupo-id option:eq(1)').val();
+            if (primerGrupo) {
+                $('#prod-grupo-id').val(primerGrupo);
+                alCambiarGrupoModal('', function () {
+                    var primeraClase = $('#prod-clase-id option:eq(1)').val();
+                    if (primeraClase) {
+                        $('#prod-clase-id').val(primeraClase);
+                        alCambiarClaseModal();
+                    }
+                });
+            }
+        });
+
+        // Activar primera pestaña
+        bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-pres-btn')).show();
+
         var modal = new bootstrap.Modal(document.getElementById('modal-crud-producto'));
         modal.show();
-        setTimeout(function () { $('#prod-descripcion').focus(); }, 300);
+        setTimeout(function () { $('#prod-descripcion').focus(); }, 350);
     }
 
+    // ========================================================
+    // ABRIR MODAL EDITAR
+    // ========================================================
     function abrirModalEditar(id) {
         $.ajax({
             url: '@Url.Action("Obtener", "Producto", new { area = "MG" })',
@@ -236,22 +1085,76 @@
             data: { id: id },
             success: function (res) {
                 if (res && res.success && res.data) {
-                    $('#modal-titulo').text('Editar Producto #' + id);
-                    $('#prod-id').val(res.data.id || res.data.Id);
-                    $('#prod-codigo').val(res.data.codigo || res.data.Codigo || '');
-                    $('#prod-cod-ref').val(res.data.codReferencial || res.data.CodReferencial || '');
-                    $('#prod-descripcion').val(res.data.descripcion || res.data.Descripcion);
-                    $('#prod-familia-id').val(res.data.familiaId || res.data.FamiliaId);
-                    $('#prod-unidad-id').val(res.data.unidadMedidaId || res.data.UnidadMedidaId || 1);
-                    $('#prod-color-id').val(res.data.colorId || res.data.ColorId || '');
-                    $('#prod-peso-neto').val(res.data.pesoNeto !== undefined ? res.data.pesoNeto : res.data.PesoNeto);
-                    $('#prod-master-pack').val(res.data.masterPack || res.data.MasterPack || 1);
-                    $('#prod-estado').val(res.data.estado || res.data.Estado || 'A');
+                    var d = res.data;
+                    var esServicio = (d.tipoProductoId === 2 || d.tipoProductoCodigo === 'S');
+
+                    $('#modal-titulo').text(esServicio ? 'Editar Servicio' : 'Editar Producto');
+                    $('#modal-subtitulo').text('Edición de datos maestros, empaques y operaciones');
+                    $('#modal-codigo-badge').text(d.codigo || d.Codigo || ('ID #' + id));
+                    $('#prod-id').val(d.id || d.Id);
+                    $('#prod-codigo').val(d.codigo || d.Codigo || '');
+                    $('#prod-cod-ref').val(d.codReferencial || d.CodReferencial || '');
+                    $('#prod-descripcion').val(d.descripcion || d.Descripcion);
+                    $('#prod-unidad-id').val(d.unidadMedidaId || d.UnidadMedidaId || 1);
+                    $('#prod-color-id').val(d.colorId || d.ColorId || '');
+                    $('#prod-peso-neto').val(d.pesoNeto !== undefined ? d.pesoNeto : d.PesoNeto);
+                    $('#prod-peso-bruto').val(d.pesoBruto !== undefined ? d.pesoBruto : d.PesoBruto);
+                    $('#prod-volumen').val(d.volumen !== undefined ? d.volumen : d.Volumen);
+                    $('#prod-valor-repo').val(d.valorReposicion !== undefined ? d.valorReposicion : d.ValorReposicion);
+                    $('#prod-master-pack').val(d.masterPack || d.MasterPack || 1);
+                    $('#prod-tipo-igv').val(d.tipoIgvId || d.TipoIgvId || 1);
+                    $('#prod-estado-producto').val(d.estadoProductoId || d.EstadoProductoId || 1);
+                    $('#prod-estado-com').val(d.estadoComProdId || d.EstadoComProdId || 1);
+                    $('#prod-estado').val(d.estado || d.Estado || 'A');
+
+                    if (esServicio) {
+                        $('#tipo-prod-2').prop('checked', true);
+                    } else {
+                        $('#tipo-prod-1').prop('checked', true);
+                    }
+
+                    var perecible = (d.esPerecible || d.EsPerecible || 'N');
+                    $('#prod-es-perecible').prop('checked', perecible === 'S');
+                    $('#prod-es-perecible-val').val(perecible);
+
+                    var detReq = (d.detalleReq || d.DetalleReq || 'N');
+                    $('#prod-detalle-req').prop('checked', detReq === 'S');
+                    $('#prod-detalle-req-val').val(detReq);
+
+                    // Poblar jerarquía bloqueada en edición (Paridad con Legacy)
+                    $('#alert-modo-edicion').removeClass('d-none');
+                    $('#tipo-prod-1, #tipo-prod-2, #prod-grupo-id, #prod-clase-id, #prod-familia-id').prop('disabled', true);
+
+                    // Poblar opciones si no existen
+                    var gId = d.grupoId || d.GrupoId;
+                    var cId = d.claseId || d.ClaseId;
+                    var fId = d.familiaId || d.FamiliaId;
+
+                    $('#prod-grupo-id').val(gId);
+                    alCambiarGrupoModal(cId, function () {
+                        alCambiarClaseModal(fId);
+                    });
+
+                    // Mostrar pestañas con sus datos
+                    $('#alert-pres-new, #alert-proc-new, #alert-det-new').addClass('d-none');
+                    $('#content-pres, #content-proc, #content-det').removeClass('d-none');
+
+                    // Cargar datos de las 3 pestañas
+                    cargarPresentaciones(id);
+                    cargarProcesos(id);
+                    cargarDetalles(id);
+
+                    // Activar primera pestaña
+                    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-pres-btn')).show();
+
                     var modal = new bootstrap.Modal(document.getElementById('modal-crud-producto'));
                     modal.show();
-                    setTimeout(function () { $('#prod-descripcion').focus(); }, 300);
+
+                    setTimeout(function () {
+                        $('#prod-descripcion').focus();
+                    }, 350);
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el producto.' });
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el registro.' });
                 }
             },
             error: function () {
@@ -260,31 +1163,45 @@
         });
     }
 
+    // ========================================================
+    // GUARDAR PRODUCTO PRINCIPAL
+    // ========================================================
     function guardarProducto(e) {
         e.preventDefault();
-        var desc = $('#prod-descripcion').val().trim();
+        var desc = ($('#prod-descripcion').val() || '').trim();
         var fam = $('#prod-familia-id').val();
-        if (!desc || !fam) {
-            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor complete la descripción y seleccione la familia.' });
+        var tipoId = $('input[name="TipoProductoId"]:checked').val();
+
+        if (!desc) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor complete la descripción del producto o servicio.' });
+            return;
+        }
+        if (!fam) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor complete la jerarquía (Grupo, Clase y Familia).' });
             return;
         }
 
         var $btn = $('#btn-guardar-prod');
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
 
+        // Asegurar que campos disabled se envíen en el serialize
+        var disabledFields = $('#form-producto').find(':disabled');
+        disabledFields.prop('disabled', false);
         var formData = $('#form-producto').serialize();
+        disabledFields.prop('disabled', true);
+
         $.ajax({
             url: '@Url.Action("Guardar", "Producto", new { area = "MG" })',
             type: 'POST',
             data: formData,
             success: function (res) {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Producto');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
                 if (res && res.success) {
                     bootstrap.Modal.getInstance(document.getElementById('modal-crud-producto')).hide();
                     Swal.fire({
                         icon: 'success',
                         title: '¡Éxito!',
-                        text: res.message || 'Producto guardado correctamente.',
+                        text: res.message || 'Guardado correctamente.',
                         timer: 1500,
                         showConfirmButton: false
                     }).then(function () {
@@ -295,17 +1212,322 @@
                 }
             },
             error: function () {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Producto');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
             }
         });
     }
 
+    // ========================================================
+    // PESTAÑA 1: PRESENTACIÓN PARA LA VENTA (produ_p_vta)
+    // ========================================================
+    function cargarPresentaciones(productoId) {
+        $.get('@Url.Action("ListarPresentaciones", "Producto", new { area = "MG" })', { productoId: productoId }, function (res) {
+            var $tbody = $('#tbody-presentaciones');
+            $tbody.empty();
+            if (res && res.success && res.data && res.data.length > 0) {
+                $('#count-pres').text(res.data.length);
+                $.each(res.data, function (i, item) {
+                    var tr = '<tr>' +
+                        '<td class="text-body"><i class="bi bi-box me-1 text-body-secondary"></i>' + item.unidadMedidaNombre + '</td>' +
+                        '<td class="text-end font-monospace fw-semibold text-body">' + Number(item.cantidadEquivalente).toFixed(2) + '</td>' +
+                        '<td class="text-end">' +
+                            '<button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" title="Eliminar" onclick="eliminarPresentacion(' + item.id + ');">' +
+                                '<i class="bi bi-trash"></i>' +
+                            '</button>' +
+                        '</td>' +
+                    '</tr>';
+                    $tbody.append(tr);
+                });
+            } else {
+                $('#count-pres').text('0');
+                $tbody.append('<tr><td colspan="3" class="text-center text-body-secondary py-3 small"><i class="bi bi-info-circle me-1"></i>No hay presentaciones de venta adicionales configuradas.</td></tr>');
+            }
+        });
+    }
+
+    function mostrarFormNuevaPres() {
+        $('#pres-id').val(0);
+        $('#pres-cant-equiv').val('1.00');
+        $('#form-inline-pres').removeClass('d-none');
+    }
+
+    function cancelarFormPres() {
+        $('#form-inline-pres').addClass('d-none');
+    }
+
+    function guardarPresentacion() {
+        var prodId = parseInt($('#prod-id').val()) || 0;
+        var umId = parseInt($('#pres-um-id').val()) || 0;
+        var cant = parseFloat($('#pres-cant-equiv').val()) || 0;
+
+        if (umId <= 0 || cant <= 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Seleccione una unidad de medida y especifique una cantidad mayor a cero.' });
+            return;
+        }
+
+        $.post('@Url.Action("GuardarPresentacion", "Producto", new { area = "MG" })', {
+            Id: $('#pres-id').val(),
+            ProductoId: prodId,
+            UnidadMedidaId: umId,
+            CantidadEquivalente: cant
+        }, function (res) {
+            if (res && res.success) {
+                cancelarFormPres();
+                cargarPresentaciones(prodId);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar la presentación.' });
+            }
+        });
+    }
+
+    function eliminarPresentacion(id) {
+        Swal.fire({
+            title: '¿Eliminar presentación?',
+            text: 'Esta presentación ya no estará disponible para ventas.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("EliminarPresentacion", "Producto", new { area = "MG" })', { id: id }, function (res) {
+                    if (res && res.success) {
+                        cargarPresentaciones($('#prod-id').val());
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo eliminar.' });
+                    }
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // PESTAÑA 2: PROCESOS DE PRODUCCIÓN (produ_s_p_p)
+    // ========================================================
+    function cargarSubProcesosDropdown(callback) {
+        if (subProcesosCache) {
+            if (callback) callback(subProcesosCache);
+            return;
+        }
+        $.get('@Url.Action("SubProcesosLookup", "Producto", new { area = "MG" })', function (res) {
+            if (res && res.success && res.data) {
+                subProcesosCache = res.data;
+                var $sel = $('#proc-subproceso-id');
+                $sel.html('<option value="">-- Seleccionar Sub-Proceso --</option>');
+                $.each(res.data, function (i, sp) {
+                    $sel.append('<option value="' + sp.subProcesoId + '">[' + sp.procesoNombre + '] - ' + sp.nombre + '</option>');
+                });
+                if (callback) callback(subProcesosCache);
+            }
+        });
+    }
+
+    function cargarProcesos(productoId) {
+        $.get('@Url.Action("ListarProcesos", "Producto", new { area = "MG" })', { productoId: productoId }, function (res) {
+            var $tbody = $('#tbody-procesos');
+            $tbody.empty();
+            if (res && res.success && res.data && res.data.length > 0) {
+                $('#count-proc').text(res.data.length);
+                $.each(res.data, function (i, item) {
+                    var tr = '<tr>' +
+                        '<td><span class="badge bg-body-secondary text-body border border-secondary-subtle">' + item.procesoNombre + '</span></td>' +
+                        '<td class="text-body">' + item.subProcesoNombre + '</td>' +
+                        '<td class="text-end font-monospace text-body">' + item.orden + '</td>' +
+                        '<td class="text-end">' +
+                            '<button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" title="Eliminar" onclick="eliminarProceso(' + item.id + ');">' +
+                                '<i class="bi bi-trash"></i>' +
+                            '</button>' +
+                        '</td>' +
+                    '</tr>';
+                    $tbody.append(tr);
+                });
+            } else {
+                $('#count-proc').text('0');
+                $tbody.append('<tr><td colspan="4" class="text-center text-body-secondary py-3 small"><i class="bi bi-info-circle me-1"></i>No hay sub-procesos de producción asignados a este ítem.</td></tr>');
+            }
+        });
+    }
+
+    function mostrarFormNuevoProc() {
+        $('#proc-id').val(0);
+        $('#proc-orden').val('1');
+        cargarSubProcesosDropdown();
+        $('#form-inline-proc').removeClass('d-none');
+    }
+
+    function cancelarFormProc() {
+        $('#form-inline-proc').addClass('d-none');
+    }
+
+    function guardarProceso() {
+        var prodId = parseInt($('#prod-id').val()) || 0;
+        var subProcId = parseInt($('#proc-subproceso-id').val()) || 0;
+        var orden = parseInt($('#proc-orden').val()) || 1;
+
+        if (subProcId <= 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Seleccione un sub-proceso de producción.' });
+            return;
+        }
+
+        $.post('@Url.Action("GuardarProceso", "Producto", new { area = "MG" })', {
+            Id: $('#proc-id').val(),
+            ProductoId: prodId,
+            SubProcesoProduccionId: subProcId,
+            Orden: orden
+        }, function (res) {
+            if (res && res.success) {
+                cancelarFormProc();
+                cargarProcesos(prodId);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar el proceso.' });
+            }
+        });
+    }
+
+    function eliminarProceso(id) {
+        Swal.fire({
+            title: '¿Remover sub-proceso?',
+            text: 'Se desvinculará este paso de la ruta de fabricación del ítem.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, remover',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("EliminarProceso", "Producto", new { area = "MG" })', { id: id }, function (res) {
+                    if (res && res.success) {
+                        cargarProcesos($('#prod-id').val());
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo remover.' });
+                    }
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // PESTAÑA 3: DETALLES REQUERIDOS (produ_detalle)
+    // ========================================================
+    function cargarDetalles(productoId) {
+        $.get('@Url.Action("ListarDetalles", "Producto", new { area = "MG" })', { productoId: productoId }, function (res) {
+            var $tbody = $('#tbody-detalles');
+            $tbody.empty();
+            if (res && res.success && res.data && res.data.length > 0) {
+                $('#count-det').text(res.data.length);
+                $.each(res.data, function (i, item) {
+                    var tr = '<tr>' +
+                        '<td class="text-body"><i class="bi bi-tag me-1 text-body-secondary"></i>' + item.nombre + '</td>' +
+                        '<td class="text-end">' +
+                            '<button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" title="Eliminar" onclick="eliminarDetalle(' + item.id + ');">' +
+                                '<i class="bi bi-trash"></i>' +
+                            '</button>' +
+                        '</td>' +
+                    '</tr>';
+                    $tbody.append(tr);
+                });
+            } else {
+                $('#count-det').text('0');
+                $tbody.append('<tr><td colspan="2" class="text-center text-body-secondary py-3 small"><i class="bi bi-info-circle me-1"></i>No hay especificaciones de detalle registradas.</td></tr>');
+            }
+        });
+    }
+
+    function mostrarFormNuevoDet() {
+        $('#det-id').val(0);
+        $('#det-nombre').val('');
+        $('#form-inline-det').removeClass('d-none');
+        setTimeout(function () { $('#det-nombre').focus(); }, 150);
+    }
+
+    function cancelarFormDet() {
+        $('#form-inline-det').addClass('d-none');
+    }
+
+    function guardarDetalle() {
+        var prodId = parseInt($('#prod-id').val()) || 0;
+        var nom = ($('#det-nombre').val() || '').trim();
+
+        if (!nom) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Escriba el nombre o especificación del detalle.' });
+            return;
+        }
+
+        $.post('@Url.Action("GuardarDetalle", "Producto", new { area = "MG" })', {
+            Id: $('#det-id').val(),
+            ProductoId: prodId,
+            Nombre: nom
+        }, function (res) {
+            if (res && res.success) {
+                cancelarFormDet();
+                cargarDetalles(prodId);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar el detalle.' });
+            }
+        });
+    }
+
+    function eliminarDetalle(id) {
+        Swal.fire({
+            title: '¿Eliminar detalle?',
+            text: 'Se eliminará esta especificación de detalle.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("EliminarDetalle", "Producto", new { area = "MG" })', { id: id }, function (res) {
+                    if (res && res.success) {
+                        cargarDetalles($('#prod-id').val());
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo eliminar.' });
+                    }
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // CREACIÓN RÁPIDA DE COLOR
+    // ========================================================
+    function abrirModalColorRapido() {
+        $('#input-nuevo-color').val('');
+        var modal = new bootstrap.Modal(document.getElementById('modal-color-rapido'));
+        modal.show();
+        setTimeout(function () { $('#input-nuevo-color').focus(); }, 300);
+    }
+
+    function guardarColorRapido() {
+        var nom = ($('#input-nuevo-color').val() || '').trim().toUpperCase();
+        if (!nom) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Ingrese el nombre del color.' });
+            return;
+        }
+
+        $.post('@Url.Action("GuardarColorRapido", "Producto", new { area = "MG" })', { nombre: nom }, function (res) {
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-color-rapido')).hide();
+                // Agregar al select si no existe y seleccionarlo
+                var $sel = $('#prod-color-id');
+                if ($sel.find('option[value="' + res.id + '"]').length === 0) {
+                    $sel.append('<option value="' + res.id + '">' + res.nombre + '</option>');
+                }
+                $sel.val(res.id);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo registrar el color.' });
+            }
+        });
+    }
+
+    // ========================================================
+    // CAMBIO DE ESTADO DESDE LA BANDEJA (INDEX)
+    // ========================================================
     function cambiarEstado(id, estadoActual, descripcion) {
         var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
         Swal.fire({
             title: '¿Confirmar cambio de estado?',
-            text: '¿Desea ' + accion + ' el producto "' + descripcion + '"?',
+            text: '¿Desea ' + accion + ' "' + descripcion + '"?',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, ' + accion,
@@ -341,3 +1563,4 @@
     }
 </script>
 }
+

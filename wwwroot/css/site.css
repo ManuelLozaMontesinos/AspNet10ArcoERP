@@ -92,3 +92,53 @@ body {
 .btn-action-edit:hover, .btn-action-delete:hover, .btn-action-toggle:hover {
     transform: translateY(-1px);
 }
+
+/* ==========================================================================
+   LOGO CORPORATIVO ARCO (AdminLTE 4 Sidebar Brand)
+   ========================================================================== */
+.brand-link-arco {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.35rem 0.85rem !important;
+    height: 3.6rem !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.brand-link-arco:hover,
+.brand-link-arco:focus {
+    background: rgba(255, 255, 255, 0.04) !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+}
+.brand-link-arco .brand-logo-collapsed {
+    display: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    object-fit: contain !important;
+}
+.brand-link-arco .brand-logo-expanded {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+}
+.brand-link-arco .brand-image-full {
+    height: 38px !important;
+    width: auto !important;
+    max-width: 145px !important;
+    object-fit: contain !important;
+}
+
+/* Comportamiento al colapsar el menú lateral */
+body.sidebar-collapse .brand-link-arco .brand-logo-expanded,
+.sidebar-collapse .brand-link-arco .brand-logo-expanded {
+    display: none !important;
+}
+body.sidebar-collapse .brand-link-arco .brand-logo-collapsed,
+.sidebar-collapse .brand-link-arco .brand-logo-collapsed {
+    display: block !important;
+    margin: 0 auto !important;
+}
