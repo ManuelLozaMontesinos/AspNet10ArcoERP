@@ -1,0 +1,320 @@
+@model List<AspNet10ArcoERP.Models.ComboProductoModel>
+@{
+    ViewData["Title"] = "Combos y Kits de Productos";
+    var productosLookup = ViewBag.ProductosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-collection-fill text-info me-2" style="font-size: 1.6rem;"></i>Combos y Kits de Producto
+                </h3>
+                <small class="text-muted">Estructura de combos comerciales, paquetes promocionales y artículos incluidos</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Combo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-body border-bottom py-3">
+                <div class="row g-2 align-items-center justify-content-between">
+                    <div class="col-md-5 d-flex align-items-center">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por producto principal o incluido..." onkeyup="filtrarTabla();" />
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end text-muted small">
+                        <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@Model.Count</strong> combinaciones</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0" id="tabla-combos">
+                    <thead class="table-header-custom border-bottom">
+                        <tr>
+                            <th style="width: 70px;" class="text-center">ID</th>
+                            <th>Producto Principal (Combo)</th>
+                            <th>Producto Incluido</th>
+                            <th style="width: 100px;" class="text-center">Cantidad</th>
+                            <th style="width: 110px;" class="text-center">% Precio</th>
+                            <th style="width: 110px;" class="text-center">Estado</th>
+                            <th style="width: 130px;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Count > 0)
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr id="fila-@item.Id" data-search="@item.ProductoPrincipal.ToLower() @item.ProductoIncluido.ToLower()">
+                                    <td class="text-center font-monospace text-muted small">@item.Id</td>
+                                    <td>
+                                        <div class="fw-semibold text-primary">@item.ProductoPrincipal</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-body">@item.ProductoIncluido</div>
+                                    </td>
+                                    <td class="text-center font-monospace fw-bold">
+                                        @item.Cantidad.ToString("N2")
+                                    </td>
+                                    <td class="text-center font-monospace">
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle">@item.PorcentajePrecio%</span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.Estado == "A")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.ProductoPrincipal');">
+                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                    <span>No se encontraron combinaciones de combos</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL CRUD: COMBO PRODUCTO                               -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-crud-combo" tabindex="-1" aria-labelledby="modalComboLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+                <h5 class="modal-title fw-bold" id="modalComboLabel">
+                    <i class="bi bi-collection text-info me-2"></i><span id="modal-titulo">Nuevo Combo</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="form-combo" onsubmit="guardarCombo(event);">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="combo-id" name="Id" value="0" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="combo-prod-padre" class="form-label fw-semibold">Producto Principal (Combo/Kit) <span class="text-danger">*</span></label>
+                        <select class="form-select" id="combo-prod-padre" name="ProductoId" required>
+                            <option value="">-- Seleccione el producto principal --</option>
+                            @foreach (var p in productosLookup)
+                            {
+                                <option value="@p.Id">@p.Nombre (@p.Codigo)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="combo-prod-hijo" class="form-label fw-semibold">Producto Incluido <span class="text-danger">*</span></label>
+                        <select class="form-select" id="combo-prod-hijo" name="ProdIncluId" required>
+                            <option value="">-- Seleccione el producto a incluir --</option>
+                            @foreach (var p in productosLookup)
+                            {
+                                <option value="@p.Id">@p.Nombre (@p.Codigo)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-4">
+                            <label for="combo-cantidad" class="form-label fw-semibold">Cantidad Incluida <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" id="combo-cantidad" name="Cantidad" placeholder="1.00" min="0.01" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="combo-porc" class="form-label fw-semibold">% de Precio</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control" id="combo-porc" name="PorcentajePrecio" placeholder="100.00" min="0" max="100" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="combo-estado" class="form-label fw-semibold">Estado</label>
+                            <select class="form-select" id="combo-estado" name="Estado">
+                                <option value="A">Activo</option>
+                                <option value="I">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-combo">
+                        <i class="bi bi-check-circle me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function filtrarTabla() {
+        var query = $('#filtro-tabla').val().toLowerCase().trim();
+        var visibles = 0;
+        $('#tabla-combos tbody tr').each(function () {
+            var $row = $(this);
+            var search = $row.data('search') || '';
+            if (!query || search.indexOf(query) >= 0) {
+                $row.removeClass('d-none');
+                visibles++;
+            } else {
+                $row.addClass('d-none');
+            }
+        });
+        $('#total-registros').text(visibles);
+    }
+
+    function abrirModalCrear() {
+        $('#modal-titulo').text('Nuevo Combo / Kit');
+        $('#combo-id').val(0);
+        $('#combo-prod-padre').val('').prop('disabled', false);
+        $('#combo-prod-hijo').val('').prop('disabled', false);
+        $('#combo-cantidad').val('1.00');
+        $('#combo-porc').val('100.00');
+        $('#combo-estado').val('A');
+        var modal = new bootstrap.Modal(document.getElementById('modal-crud-combo'));
+        modal.show();
+    }
+
+    function abrirModalEditar(id) {
+        $.ajax({
+            url: '@Url.Action("Obtener", "ComboProducto", new { area = "MG" })',
+            type: 'GET',
+            data: { id: id },
+            success: function (res) {
+                if (res && res.success && res.data) {
+                    $('#modal-titulo').text('Editar Combo #' + id);
+                    $('#combo-id').val(res.data.id || res.data.Id);
+                    $('#combo-prod-padre').val(res.data.productoId || res.data.ProductoId);
+                    $('#combo-prod-hijo').val(res.data.prodIncluId || res.data.ProdIncluId);
+                    $('#combo-cantidad').val(res.data.cantidad !== undefined ? res.data.cantidad : res.data.Cantidad);
+                    $('#combo-porc').val(res.data.porcentajePrecio !== undefined ? res.data.porcentajePrecio : res.data.PorcentajePrecio);
+                    $('#combo-estado').val(res.data.estado || res.data.Estado || 'A');
+                    var modal = new bootstrap.Modal(document.getElementById('modal-crud-combo'));
+                    modal.show();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el combo.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function guardarCombo(e) {
+        e.preventDefault();
+        var padre = $('#combo-prod-padre').val();
+        var hijo = $('#combo-prod-hijo').val();
+        var cant = parseFloat($('#combo-cantidad').val()) || 0;
+        if (!padre || !hijo || cant <= 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor seleccione ambos productos y especifique una cantidad válida.' });
+            return;
+        }
+
+        var $btn = $('#btn-guardar-combo');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
+
+        var formData = $('#form-combo').serialize();
+        $.ajax({
+            url: '@Url.Action("Guardar", "ComboProducto", new { area = "MG" })',
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                if (res && res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-combo')).hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: res.message || 'Combo guardado correctamente.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function cambiarEstado(id, estadoActual, nombre) {
+        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' esta combinación de combo?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("CambiarEstado", "ComboProducto", new { area = "MG" })',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Actualizado',
+                                text: res.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(function () {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                    }
+                });
+            }
+        });
+    }
+</script>
+}

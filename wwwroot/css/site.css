@@ -1,0 +1,94 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+/* ==========================================================================
+   CABECERAS DE TABLA PARA MODO CLARO Y OSCURO (UNIFICADO)
+   ========================================================================== */
+.table-header-custom {
+    background-color: var(--bs-tertiary-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-bottom: 2px solid var(--bs-border-color) !important;
+}
+.table-header-custom th {
+    background-color: inherit !important;
+    color: inherit !important;
+    border-color: inherit !important;
+    font-size: 0.825rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 700;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+[data-bs-theme="dark"] .table-header-custom,
+[data-bs-theme="dark"] .table thead.table-header-custom th {
+    background-color: #1e2227 !important;
+    color: #adb5bd !important;
+    border-color: #2c3138 !important;
+}
+[data-bs-theme="light"] .table-header-custom,
+[data-bs-theme="light"] .table thead.table-header-custom th {
+    background-color: #f1f3f5 !important;
+    color: #495057 !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Modal dark-mode adjustments */
+[data-bs-theme="dark"] .modal-content {
+    background-color: #1e2227;
+    border: 1px solid #2c3138;
+}
+[data-bs-theme="dark"] .modal-header {
+    border-bottom: 1px solid #2c3138;
+}
+[data-bs-theme="dark"] .modal-footer {
+    border-top: 1px solid #2c3138;
+}
+
+/* SweetAlert2 dark mode compatibility */
+[data-bs-theme="dark"] .swal2-popup {
+    background: #1e2227 !important;
+    color: #f8f9fa !important;
+    border: 1px solid #2c3138 !important;
+}
+[data-bs-theme="dark"] .swal2-title,
+[data-bs-theme="dark"] .swal2-html-container {
+    color: #e9ecef !important;
+}
+
+/* Estilos de botones de acción en filas */
+.btn-action-edit, .btn-action-delete, .btn-action-toggle {
+    transition: all 0.15s ease-in-out;
+}
+.btn-action-edit:hover, .btn-action-delete:hover, .btn-action-toggle:hover {
+    transform: translateY(-1px);
+}

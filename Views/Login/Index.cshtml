@@ -1,0 +1,137 @@
+@model AspNet10ArcoERP.Models.LoginViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Iniciar Sesión";
+}
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar Sesión - SIGANET ERP (ASP.NET Core 10)</title>
+    
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/plugins/adminlte/adminlte.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <script>
+        (function() {
+            var savedTheme = localStorage.getItem('arco_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
+</head>
+<body class="login-page bg-body-secondary d-flex align-items-center justify-content-center min-vh-100 position-relative">
+    
+    <!-- Dark Mode Toggle Button floating top right -->
+    <div class="position-absolute top-0 end-0 p-3">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 shadow-sm" id="btn-theme-toggle" title="Cambiar Tema">
+            <i class="bi bi-moon-stars-fill text-warning me-1" id="login-theme-icon"></i>
+            <span class="small fw-semibold" id="theme-label">Tema</span>
+        </button>
+    </div>
+
+    <div class="login-box shadow-lg rounded-4 overflow-hidden" style="width: 100%; max-width: 440px;">
+        <!-- Card Header with Gradient Brand -->
+        <div class="card card-outline card-primary border-0 mb-0">
+            <div class="card-header text-center bg-primary bg-gradient text-white py-4">
+                <div class="rounded-circle bg-white text-primary mx-auto mb-2 d-flex align-items-center justify-content-center shadow" style="width: 58px; height: 58px;">
+                    <i class="bi bi-shield-lock-fill fs-2"></i>
+                </div>
+                <h2 class="h3 fw-bold mb-0 text-white" style="letter-spacing: -0.02em;">ARCO ERP</h2>
+                <small class="text-white-50 fw-medium">SIGANET &mdash; ASP.NET Core 10 LTS</small>
+            </div>
+
+            <div class="card-body p-4 p-md-5">
+                <p class="login-box-msg text-center text-muted fw-semibold mb-4">Ingrese sus credenciales para acceder</p>
+
+                @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-4 shadow-sm" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+                        <div class="small fw-semibold">@ViewBag.ErrorMessage</div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <form asp-controller="Login" asp-action="Index" method="post" autocomplete="off">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    <!-- Usuario Input -->
+                    <div class="form-floating mb-3">
+                        <input asp-for="UserName" class="form-control" id="floatingUser" placeholder="Usuario" required autofocus />
+                        <label for="floatingUser"><i class="bi bi-person me-2 text-primary"></i>Usuario</label>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div class="form-floating mb-3 position-relative">
+                        <input asp-for="Password" type="password" class="form-control" id="floatingPassword" placeholder="Contraseña" required />
+                        <label for="floatingPassword"><i class="bi bi-lock me-2 text-primary"></i>Contraseña</label>
+                    </div>
+
+                    <!-- Recordarme & Submit -->
+                    <div class="row align-items-center mb-4">
+                        <div class="col-7">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" asp-for="RememberMe" id="rememberMe">
+                                <label class="form-check-label text-muted small user-select-none" for="rememberMe">
+                                    Recordar sesión
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-5 text-end">
+                            <span class="badge bg-secondary-subtle text-secondary small">esderp_v6</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm d-flex align-items-center justify-content-center">
+                            <i class="bi bi-box-arrow-in-right me-2 fs-5"></i>Ingresar al Sistema
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center pt-3 border-top">
+                    <small class="text-muted">
+                        <i class="bi bi-database-check text-success me-1"></i>Sincronizado con SQL Server <code>esderp_v6</code>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/plugins/jquery/jquery.min.js"></script>
+    <script src="~/plugins/bootstrap/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var currentTheme = localStorage.getItem('arco_theme') || 'light';
+            applyTheme(currentTheme);
+
+            $('#btn-theme-toggle').on('click', function() {
+                var active = document.documentElement.getAttribute('data-bs-theme');
+                var next = active === 'dark' ? 'light' : 'dark';
+                localStorage.setItem('arco_theme', next);
+                applyTheme(next);
+            });
+
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+                var $icon = $('#login-theme-icon');
+                var $label = $('#theme-label');
+                if (theme === 'dark') {
+                    $icon.removeClass('bi-moon-stars-fill').addClass('bi-sun-fill');
+                    $label.text('Modo Claro');
+                } else {
+                    $icon.removeClass('bi-sun-fill').addClass('bi-moon-stars-fill');
+                    $label.text('Modo Oscuro');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

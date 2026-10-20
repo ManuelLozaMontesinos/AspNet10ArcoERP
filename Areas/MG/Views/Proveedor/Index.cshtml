@@ -1,0 +1,359 @@
+@model List<AspNet10ArcoERP.Models.ProveedorModel>
+@{
+    ViewData["Title"] = "Directorio de Proveedores";
+    var tiposDoc = ViewBag.TiposDocLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-truck text-primary me-2" style="font-size: 1.6rem;"></i>Directorio de Proveedores
+                </h3>
+                <small class="text-muted">Gestión de proveedores, contratistas, transportistas y acreedores comerciales</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Proveedor
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-body border-bottom py-3">
+                <div class="row g-2 align-items-center justify-content-between">
+                    <div class="col-md-5 d-flex align-items-center">
+                        <form method="get" class="input-group input-group-sm w-100">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por RUC, razón social o código..." value="@ViewBag.Search" />
+                            <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+                            @if (!string.IsNullOrEmpty(ViewBag.Search as string))
+                            {
+                                <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
+                            }
+                        </form>
+                    </div>
+                    <div class="col-md-4 text-md-end text-muted small">
+                        <span>Mostrando: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6">@Model.Count</strong> proveedores</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0" id="tabla-proveedores">
+                    <thead class="table-header-custom border-bottom">
+                        <tr>
+                            <th style="width: 70px;" class="text-center">ID</th>
+                            <th style="width: 100px;" class="text-center">Código</th>
+                            <th>Razón Social / Nombre Comercial</th>
+                            <th style="width: 140px;" class="text-center">RUC / Doc</th>
+                            <th>Contacto / Teléfono</th>
+                            <th style="width: 110px;" class="text-center">Estado</th>
+                            <th style="width: 130px;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Count > 0)
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr id="fila-@item.Id">
+                                    <td class="text-center font-monospace text-muted small">@item.Id</td>
+                                    <td class="text-center font-monospace fw-bold text-primary">@item.Codigo</td>
+                                    <td>
+                                        <div class="fw-semibold text-body">@item.NombreCompleto</div>
+                                        @if (!string.IsNullOrEmpty(item.Email))
+                                        {
+                                            <small class="text-muted"><i class="bi bi-envelope me-1"></i>@item.Email</small>
+                                        }
+                                    </td>
+                                    <td class="text-center font-monospace">
+                                        <span class="badge bg-secondary-subtle text-secondary border">@item.Documento</span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.Contacto))
+                                        {
+                                            <div class="small fw-semibold">@item.Contacto</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.Telefono))
+                                        {
+                                            <small class="text-muted font-monospace"><i class="bi bi-telephone me-1"></i>@item.Telefono</small>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.Estado == "A")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.NombreCompleto');">
+                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                    <span>No se encontraron proveedores</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL CRUD: PROVEEDOR                                    -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-crud-proveedor" tabindex="-1" aria-labelledby="modalProvLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+                <h5 class="modal-title fw-bold" id="modalProvLabel">
+                    <i class="bi bi-truck text-primary me-2"></i><span id="modal-titulo">Nuevo Proveedor</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="form-proveedor" onsubmit="guardarProveedor(event);">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="prov-id" name="Id" value="0" />
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="prov-tipo-doc" class="form-label fw-semibold">Tipo Documento</label>
+                            <select class="form-select" id="prov-tipo-doc" name="TipoDocumentoIdentidadId">
+                                @foreach (var td in tiposDoc)
+                                {
+                                    <option value="@td.Id">@td.Nombre (@td.Codigo)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prov-ruc" class="form-label fw-semibold">RUC / N° Doc <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control font-monospace" id="prov-ruc" name="NumeroRuc" placeholder="Ej: 20100012345" maxlength="20" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prov-codigo" class="form-label fw-semibold">Código Proveedor</label>
+                            <input type="text" class="form-control font-monospace text-uppercase" id="prov-codigo" name="Codigo" placeholder="Automático" maxlength="7" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="prov-razon-social" class="form-label fw-semibold">Razón Social <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="prov-razon-social" name="RazonSocial" placeholder="Ej: DISTRIBUIDORA INDUSTRIAL S.A.C." maxlength="150" required />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="prov-nombres" class="form-label fw-semibold">Nombres (Si es persona)</label>
+                            <input type="text" class="form-control" id="prov-nombres" name="Nombres" maxlength="50" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prov-ape-pat" class="form-label fw-semibold">Apellido Paterno</label>
+                            <input type="text" class="form-control" id="prov-ape-pat" name="ApellidoPat" maxlength="50" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prov-ape-mat" class="form-label fw-semibold">Apellido Materno</label>
+                            <input type="text" class="form-control" id="prov-ape-mat" name="ApellidoMat" maxlength="50" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="prov-telefono" class="form-label fw-semibold">Teléfono</label>
+                            <input type="text" class="form-control" id="prov-telefono" name="Telefono" placeholder="Ej: 01-4458920" maxlength="15" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prov-email" class="form-label fw-semibold">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="prov-email" name="Email" placeholder="ventas@proveedor.com" maxlength="60" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prov-contacto" class="form-label fw-semibold">Persona de Contacto</label>
+                            <input type="text" class="form-control" id="prov-contacto" name="Contacto" placeholder="Ej: Juan Pérez" maxlength="150" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-8">
+                            <label for="prov-direccion" class="form-label fw-semibold">Dirección</label>
+                            <input type="text" class="form-control" id="prov-direccion" name="Direccion" placeholder="Av. Principal 123, Lima" maxlength="150" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prov-estado" class="form-label fw-semibold">Estado</label>
+                            <select class="form-select" id="prov-estado" name="Estado">
+                                <option value="A">Activo</option>
+                                <option value="I">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-prov">
+                        <i class="bi bi-check-circle me-1"></i>Guardar Proveedor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function abrirModalCrear() {
+        $('#modal-titulo').text('Nuevo Proveedor');
+        $('#prov-id').val(0);
+        $('#prov-codigo').val('');
+        $('#prov-ruc').val('');
+        $('#prov-razon-social').val('');
+        $('#prov-nombres').val('');
+        $('#prov-ape-pat').val('');
+        $('#prov-ape-mat').val('');
+        $('#prov-telefono').val('');
+        $('#prov-email').val('');
+        $('#prov-contacto').val('');
+        $('#prov-direccion').val('');
+        $('#prov-tipo-doc').val('6');
+        $('#prov-estado').val('A');
+        var modal = new bootstrap.Modal(document.getElementById('modal-crud-proveedor'));
+        modal.show();
+        setTimeout(function () { $('#prov-ruc').focus(); }, 300);
+    }
+
+    function abrirModalEditar(id) {
+        $.ajax({
+            url: '@Url.Action("Obtener", "Proveedor", new { area = "MG" })',
+            type: 'GET',
+            data: { id: id },
+            success: function (res) {
+                if (res && res.success && res.data) {
+                    $('#modal-titulo').text('Editar Proveedor #' + id);
+                    $('#prov-id').val(res.data.id || res.data.Id);
+                    $('#prov-codigo').val(res.data.codigo || res.data.Codigo || '');
+                    $('#prov-ruc').val(res.data.numeroRuc || res.data.NumeroRuc || res.data.documento || res.data.Documento || '');
+                    $('#prov-razon-social').val(res.data.razonSocial || res.data.RazonSocial || '');
+                    $('#prov-nombres').val(res.data.nombres || res.data.Nombres || '');
+                    $('#prov-ape-pat').val(res.data.apellidoPat || res.data.ApellidoPat || '');
+                    $('#prov-ape-mat').val(res.data.apellidoMat || res.data.ApellidoMat || '');
+                    $('#prov-telefono').val(res.data.telefono || res.data.Telefono || '');
+                    $('#prov-email').val(res.data.email || res.data.Email || '');
+                    $('#prov-contacto').val(res.data.contacto || res.data.Contacto || '');
+                    $('#prov-direccion').val(res.data.direccion || res.data.Direccion || '');
+                    $('#prov-tipo-doc').val(res.data.tipoDocumentoIdentidadId || res.data.TipoDocumentoIdentidadId || 6);
+                    $('#prov-estado').val(res.data.estado || res.data.Estado || 'A');
+                    var modal = new bootstrap.Modal(document.getElementById('modal-crud-proveedor'));
+                    modal.show();
+                    setTimeout(function () { $('#prov-razon-social').focus(); }, 300);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el proveedor.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function guardarProveedor(e) {
+        e.preventDefault();
+        var ruc = $('#prov-ruc').val().trim();
+        var rs = $('#prov-razon-social').val().trim();
+        if (!ruc || !rs) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor complete el RUC y la razón social.' });
+            return;
+        }
+
+        var $btn = $('#btn-guardar-prov');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
+
+        var formData = $('#form-proveedor').serialize();
+        $.ajax({
+            url: '@Url.Action("Guardar", "Proveedor", new { area = "MG" })',
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Proveedor');
+                if (res && res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-proveedor')).hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: res.message || 'Proveedor guardado correctamente.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Proveedor');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function cambiarEstado(id, estadoActual, nombre) {
+        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' al proveedor "' + nombre + '"?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("CambiarEstado", "Proveedor", new { area = "MG" })',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Actualizado',
+                                text: res.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(function () {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                    }
+                });
+            }
+        });
+    }
+</script>
+}

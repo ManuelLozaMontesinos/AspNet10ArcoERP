@@ -1,0 +1,278 @@
+@model List<AspNet10ArcoERP.Models.TipoCambioModel>
+@{
+    ViewData["Title"] = "Tipos de Cambio";
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-currency-exchange text-success me-2" style="font-size: 1.6rem;"></i>Tipos de Cambio
+                </h3>
+                <small class="text-muted">Parámetros de conversión monetaria y registro de monedas extranjeras</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Tipo de Cambio
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-body border-bottom py-3">
+                <div class="row g-2 align-items-center justify-content-between">
+                    <div class="col-md-5 d-flex align-items-center">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código o nombre..." onkeyup="filtrarTabla();" />
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end text-muted small">
+                        <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@Model.Count</strong> tipos de cambio registrados</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0" id="tabla-tipocambio">
+                    <thead class="table-header-custom border-bottom">
+                        <tr>
+                            <th style="width: 80px;" class="text-center">ID</th>
+                            <th style="width: 120px;" class="text-center">Código</th>
+                            <th>Descripción / Moneda</th>
+                            <th style="width: 120px;" class="text-center">Estado</th>
+                            <th style="width: 130px;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Count > 0)
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr id="fila-@item.Id" data-search="@item.Codigo.ToLower() @item.Nombre.ToLower()">
+                                    <td class="text-center font-monospace text-muted small">@item.Id</td>
+                                    <td class="text-center font-monospace fw-bold text-primary">@item.Codigo</td>
+                                    <td>
+                                        <span class="fw-semibold text-body">@item.Nombre</span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.Estado == "A")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Nombre');">
+                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                    <span>No se encontraron tipos de cambio</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL CRUD: TIPO DE CAMBIO                               -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-crud-tc" tabindex="-1" aria-labelledby="modalTcLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+                <h5 class="modal-title fw-bold" id="modalTcLabel">
+                    <i class="bi bi-currency-exchange text-success me-2"></i><span id="modal-titulo">Nuevo Tipo de Cambio</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="form-tc" onsubmit="guardarTc(event);">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="tc-id" name="Id" value="0" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="tc-codigo" class="form-label fw-semibold">Código (2 caracteres)</label>
+                        <input type="text" class="form-control text-uppercase" id="tc-codigo" name="Codigo" placeholder="TC" maxlength="2" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="tc-nombre" class="form-label fw-semibold">Descripción / Moneda <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="tc-nombre" name="Nombre" placeholder="Ej: Dólar Americano, Euro..." maxlength="50" required />
+                    </div>
+                    <div class="mb-2">
+                        <label for="tc-estado" class="form-label fw-semibold">Estado</label>
+                        <select class="form-select" id="tc-estado" name="Estado">
+                            <option value="A">Activo</option>
+                            <option value="I">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-tc">
+                        <i class="bi bi-check-circle me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function filtrarTabla() {
+        var query = $('#filtro-tabla').val().toLowerCase().trim();
+        var visibles = 0;
+        $('#tabla-tipocambio tbody tr').each(function () {
+            var $row = $(this);
+            var search = $row.data('search') || '';
+            if (!query || search.indexOf(query) >= 0) {
+                $row.removeClass('d-none');
+                visibles++;
+            } else {
+                $row.addClass('d-none');
+            }
+        });
+        $('#total-registros').text(visibles);
+    }
+
+    function abrirModalCrear() {
+        $('#modal-titulo').text('Nuevo Tipo de Cambio');
+        $('#tc-id').val(0);
+        $('#tc-codigo').val('');
+        $('#tc-nombre').val('');
+        $('#tc-estado').val('A');
+        var modal = new bootstrap.Modal(document.getElementById('modal-crud-tc'));
+        modal.show();
+        setTimeout(function () { $('#tc-nombre').focus(); }, 300);
+    }
+
+    function abrirModalEditar(id) {
+        $.ajax({
+            url: '@Url.Action("Obtener", "TipoCambio", new { area = "MG" })',
+            type: 'GET',
+            data: { id: id },
+            success: function (res) {
+                if (res && res.success && res.data) {
+                    $('#modal-titulo').text('Editar Tipo de Cambio #' + id);
+                    $('#tc-id').val(res.data.id || res.data.Id);
+                    $('#tc-codigo').val(res.data.codigo || res.data.Codigo || '');
+                    $('#tc-nombre').val(res.data.nombre || res.data.Nombre);
+                    $('#tc-estado').val(res.data.estado || res.data.Estado || 'A');
+                    var modal = new bootstrap.Modal(document.getElementById('modal-crud-tc'));
+                    modal.show();
+                    setTimeout(function () { $('#tc-nombre').focus(); }, 300);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el registro.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function guardarTc(e) {
+        e.preventDefault();
+        var nombre = $('#tc-nombre').val().trim();
+        if (!nombre) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'El nombre es obligatorio.' });
+            return;
+        }
+
+        var $btn = $('#btn-guardar-tc');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
+
+        var formData = $('#form-tc').serialize();
+        $.ajax({
+            url: '@Url.Action("Guardar", "TipoCambio", new { area = "MG" })',
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                if (res && res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-tc')).hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: res.message || 'Guardado correctamente.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function cambiarEstado(id, estadoActual, nombre) {
+        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' el tipo de cambio "' + nombre + '"?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("CambiarEstado", "TipoCambio", new { area = "MG" })',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Actualizado',
+                                text: res.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(function () {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                    }
+                });
+            }
+        });
+    }
+</script>
+}

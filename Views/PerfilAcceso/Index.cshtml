@@ -1,0 +1,85 @@
+@model AspNet10ArcoERP.Models.PerfilAccesoViewModel
+@{
+    ViewData["Title"] = "Seleccionar Empresa y Sede";
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold"><i class="bi bi-sliders text-primary me-2"></i>Configuración de Acceso</h3>
+            </div>
+            <div class="col-sm-6 text-end">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                    <i class="bi bi-person-check-fill me-1"></i>Sesión Activa
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8 col-12">
+                <div class="card card-primary card-outline shadow-sm border-0">
+                    <div class="card-header bg-body border-bottom py-3">
+                        <h5 class="card-title fw-bold mb-0">
+                            <i class="bi bi-building-gear text-primary me-2"></i>Seleccione Contexto de Trabajo
+                        </h5>
+                    </div>
+                    <form asp-controller="PerfilAcceso" asp-action="Grabar" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="card-body p-4">
+                            <p class="text-muted small mb-4">
+                                Seleccione el periodo de ejercicio contable, la empresa y la sede operativa donde realizará las operaciones.
+                            </p>
+
+                            <!-- Periodo -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold"><i class="bi bi-calendar3 text-primary me-1"></i>Periodo (Año):</label>
+                                <select name="periodoId" class="form-select form-select-lg shadow-sm">
+                                    @foreach (var p in Model.Periodos)
+                                    {
+                                        <option value="@p.Item1">Periodo Fiscal @p.Item2</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- Empresa -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold"><i class="bi bi-building text-primary me-1"></i>Empresa:</label>
+                                <select name="empresaId" class="form-select form-select-lg shadow-sm">
+                                    @foreach (var e in Model.Empresas)
+                                    {
+                                        <option value="@e.Item1">@e.Item2</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- Sede -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Sede Operativa:</label>
+                                <select name="empresaSedeId" class="form-select form-select-lg shadow-sm">
+                                    @foreach (var s in Model.Sedes)
+                                    {
+                                        <option value="@s.Item1">@s.Item2</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm">
+                                    <i class="bi bi-check-circle-fill me-2"></i>Confirmar y Continuar al Dashboard
+                                </button>
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
+                                    Cancelar y Volver
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

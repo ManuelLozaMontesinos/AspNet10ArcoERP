@@ -1,0 +1,337 @@
+@using System.Security.Claims
+@{
+    var userSessionJson = Context.Session.GetString("USER_SESSION");
+    var userLogon = User.Identity?.Name ?? "administrador";
+    var userNombre = User.FindFirst(ClaimTypes.GivenName)?.Value ?? "Administrador";
+    var empresaNombre = User.FindFirst("EmpresaNombre")?.Value ?? "ARCO";
+    var sedeNombre = User.FindFirst("SedeNombre")?.Value ?? "Sede Principal";
+    var periodoAnio = User.FindFirst("PeriodoAnio")?.Value ?? "2026";
+}
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SIGANET ERP (ASP.NET Core 10)</title>
+    
+    <!-- Google Fonts (Source Sans 3) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- FontAwesome 6 Free -->
+    <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" asp-append-version="true" />
+    
+    <!-- OverlayScrollbars -->
+    <link rel="stylesheet" href="~/plugins/overlayscrollbars/overlayscrollbars.min.css" asp-append-version="true" />
+    
+    <!-- AdminLTE 4 CSS -->
+    <link rel="stylesheet" href="~/plugins/adminlte/adminlte.min.css" asp-append-version="true" />
+    
+    <!-- Custom ERP CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <!-- Script de inicialización de tema oscuro para evitar flash blanco -->
+    <script>
+        (function() {
+            var savedTheme = localStorage.getItem('arco_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
+</head>
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+        
+        <!-- Header Navbar -->
+        <nav class="app-header navbar navbar-expand bg-body border-bottom shadow-sm">
+            <div class="container-fluid">
+                <!-- Start Navbar Links -->
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" title="Colapsar Menú">
+                            <i class="bi bi-list fs-4"></i>
+                        </a>
+                    </li>
+                    <li class="nav-item d-none d-md-block">
+                        <a asp-controller="Home" asp-action="Index" class="nav-link fw-semibold">
+                            <i class="bi bi-speedometer2 text-primary me-1"></i>Tablero
+                        </a>
+                    </li>
+                    <li class="nav-item d-none d-lg-block">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 ms-2">
+                            <i class="bi bi-building me-1"></i>@empresaNombre &mdash; @sedeNombre
+                        </span>
+                    </li>
+                    <li class="nav-item d-none d-lg-block">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 ms-1">
+                            <i class="bi bi-calendar3 me-1"></i>@periodoAnio
+                        </span>
+                    </li>
+                </ul>
+
+                <!-- End Navbar Links -->
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <!-- Sede / Perfil Selector -->
+                    <li class="nav-item">
+                        <a asp-controller="PerfilAcceso" asp-action="Index" class="nav-link px-2" title="Cambiar Sede / Periodo">
+                            <i class="bi bi-gear fs-5 text-secondary"></i>
+                        </a>
+                    </li>
+
+                    <!-- Dark Mode Toggle Button -->
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-link nav-link px-2" id="bd-theme-toggle" title="Cambiar Modo Claro/Oscuro">
+                            <i class="bi bi-moon-stars-fill fs-5 text-warning" id="theme-icon-active"></i>
+                        </button>
+                    </li>
+
+                    <!-- Fullscreen Toggle Button -->
+                    <li class="nav-item d-none d-sm-block">
+                        <a class="nav-link px-2" href="#" data-lte-toggle="fullscreen" title="Pantalla Completa">
+                            <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen fs-5"></i>
+                            <i data-lte-icon="minimize" class="bi bi-fullscreen-exit fs-5" style="display: none;"></i>
+                        </a>
+                    </li>
+
+                    <!-- User Profile Dropdown -->
+                    <li class="nav-item dropdown user-menu">
+                        <a href="#" class="nav-link dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2 shadow-sm" style="width: 32px; height: 32px; font-weight: bold; font-size: 0.85rem;">
+                                @(userLogon.Length > 0 ? userLogon.Substring(0, 1).ToUpper() : "U")
+                            </div>
+                            <span class="d-none d-md-inline fw-semibold">@userNombre</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end shadow">
+                            <li class="user-header text-bg-primary text-center p-3">
+                                <div class="rounded-circle bg-white text-primary mx-auto mb-2 d-flex align-items-center justify-content-center shadow" style="width: 54px; height: 54px; font-weight: bold; font-size: 1.4rem;">
+                                    @(userLogon.Length > 0 ? userLogon.Substring(0, 1).ToUpper() : "U")
+                                </div>
+                                <p class="mb-0 fw-bold">@userNombre</p>
+                                <small class="text-white-50">Usuario: @userLogon</small>
+                            </li>
+                            <li class="user-body p-3 border-bottom">
+                                <div class="row g-2 text-center text-muted small">
+                                    <div class="col-6 border-end">
+                                        <i class="bi bi-building d-block fs-5 text-primary mb-1"></i>
+                                        <span>@sedeNombre</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <i class="bi bi-calendar-check d-block fs-5 text-success mb-1"></i>
+                                        <span>Periodo @periodoAnio</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="user-footer d-flex justify-content-between p-2">
+                                <a asp-controller="PerfilAcceso" asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-sliders me-1"></i>Perfil
+                                </a>
+                                <form asp-controller="Login" asp-action="Logout" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-box-arrow-right me-1"></i>Cerrar Sesión
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Sidebar Container -->
+        <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+            <!-- Sidebar Brand -->
+            <div class="sidebar-brand border-bottom border-secondary-subtle">
+                <a asp-controller="Home" asp-action="Index" class="brand-link d-flex align-items-center px-3 py-2 text-decoration-none">
+                    <div class="rounded-3 bg-gradient bg-primary text-white p-2 d-flex align-items-center justify-content-center shadow-sm me-2" style="width: 38px; height: 38px;">
+                        <i class="bi bi-shield-check fs-4"></i>
+                    </div>
+                    <div>
+                        <span class="brand-text fw-bold text-white fs-5" style="letter-spacing: -0.02em;">ARCO ERP</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.65rem;">.NET 10 LTS</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Sidebar Content -->
+            <div class="sidebar-wrapper">
+                <nav class="mt-2">
+                    <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="false">
+                        
+                        <!-- Tablero Principal -->
+                        <li class="nav-item">
+                            <a asp-area="" asp-controller="Home" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                                <i class="nav-icon bi bi-speedometer2 text-info"></i>
+                                <p>Tablero Principal</p>
+                            </a>
+                        </li>
+
+                        <li class="nav-header text-uppercase text-muted fw-bold small px-3 mt-3 mb-1">MÓDULOS DEL SISTEMA</li>
+
+                        <!-- MENÚ MAESTROS (Mantenimientos Generales) -->
+                        <li class="nav-item menu-open">
+                            <a href="#" class="nav-link active">
+                                <i class="nav-icon bi bi-grid-3x3-gap-fill text-warning"></i>
+                                <p>
+                                    Maestros
+                                    <i class="nav-arrow bi bi-chevron-right"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview ps-2">
+                                <!-- 1. Cliente/Proveedor -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="Proveedor" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Proveedor" ? "active" : "")">
+                                        <i class="nav-icon bi bi-person-lines-fill"></i>
+                                        <p>Cliente/Proveedor</p>
+                                    </a>
+                                </li>
+
+                                <!-- 2. R.M.V. -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="RemMinVital" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RemMinVital" ? "active" : "")">
+                                        <i class="nav-icon bi bi-cash-stack"></i>
+                                        <p>R.M.V.</p>
+                                    </a>
+                                </li>
+
+                                <!-- 3. UIT -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="Uit" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Uit" ? "active" : "")">
+                                        <i class="nav-icon bi bi-calculator-fill"></i>
+                                        <p>UIT</p>
+                                    </a>
+                                </li>
+
+                                <!-- 4. Centro de Costo -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="CentroCosto" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CentroCosto" ? "active" : "")">
+                                        <i class="nav-icon bi bi-diagram-3-fill"></i>
+                                        <p>Centro de Costo</p>
+                                    </a>
+                                </li>
+
+                                <!-- 5. Tipo de Cambio -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="TipoCambio" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "TipoCambio" ? "active" : "")">
+                                        <i class="nav-icon bi bi-currency-exchange"></i>
+                                        <p>Tipo de Cambio</p>
+                                    </a>
+                                </li>
+
+                                <!-- 6. Submenú Productos -->
+                                <li class="nav-item">
+                                    <a href="#" class="nav-link">
+                                        <i class="nav-icon bi bi-box-seam-fill text-info"></i>
+                                        <p>
+                                            Productos
+                                            <i class="nav-arrow bi bi-chevron-right"></i>
+                                        </p>
+                                    </a>
+                                    <ul class="nav nav-treeview ps-3">
+                                        <li class="nav-item">
+                                            <a asp-area="MG" asp-controller="FamiliaProducto" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "FamiliaProducto" ? "active" : "")">
+                                                <i class="nav-icon bi bi-folder2-open"></i>
+                                                <p>Grupo/Clase/Familia</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="MG" asp-controller="Producto" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Producto" ? "active" : "")">
+                                                <i class="nav-icon bi bi-box"></i>
+                                                <p>Productos</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="MG" asp-controller="ComboProducto" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ComboProducto" ? "active" : "")">
+                                                <i class="nav-icon bi bi-collection-fill"></i>
+                                                <p>Combos de Productos</p>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+
+                                <!-- 7. Condición de Pago -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="CondPago" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CondPago" ? "active" : "")">
+                                        <i class="nav-icon bi bi-credit-card-2-front-fill"></i>
+                                        <p>Condición de Pago</p>
+                                    </a>
+                                </li>
+
+                                <!-- 8. Color -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="Color" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Color" ? "active" : "")">
+                                        <i class="nav-icon bi bi-palette-fill"></i>
+                                        <p>Color</p>
+                                    </a>
+                                </li>
+
+                                <!-- 9. Tablas Generales -->
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="TablaGeneral" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "TablaGeneral" ? "active" : "")">
+                                        <i class="nav-icon bi bi-table"></i>
+                                        <p>Tablas Generales</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            @RenderBody()
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer border-top py-2 px-3 bg-body text-muted small d-flex justify-content-between align-items-center">
+            <div>
+                <strong>&copy; 2026 <span class="text-primary fw-bold">ARCO ERP &mdash; SIGANET</span>.</strong> Todos los derechos reservados.
+            </div>
+            <div>
+                <span class="badge bg-secondary-subtle text-secondary me-2">AdminLTE 4.0</span>
+                <span class="badge bg-primary">.NET 10.0 LTS</span>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="~/plugins/jquery/jquery.min.js" asp-append-version="true"></script>
+    <script src="~/plugins/bootstrap/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/plugins/overlayscrollbars/overlayscrollbars.browser.es6.min.js" asp-append-version="true"></script>
+    <script src="~/plugins/adminlte/adminlte.min.js" asp-append-version="true"></script>
+    <script src="~/plugins/chart.js/chart.min.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Dark Mode Toggle & Treeview Scripts -->
+    <script>
+        $(document).ready(function() {
+            var currentTheme = localStorage.getItem('arco_theme') || 'light';
+            applyTheme(currentTheme);
+
+            $('#bd-theme-toggle').on('click', function() {
+                var active = document.documentElement.getAttribute('data-bs-theme');
+                var next = active === 'dark' ? 'light' : 'dark';
+                localStorage.setItem('arco_theme', next);
+                applyTheme(next);
+            });
+
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+                var $icon = $('#theme-icon-active');
+                if (theme === 'dark') {
+                    $icon.removeClass('bi-moon-stars-fill text-warning').addClass('bi-sun-fill text-warning');
+                } else {
+                    $icon.removeClass('bi-sun-fill text-warning').addClass('bi-moon-stars-fill text-warning');
+                }
+                $(document).trigger('themeChanged', [theme === 'dark']);
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

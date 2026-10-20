@@ -1,0 +1,343 @@
+@model List<AspNet10ArcoERP.Models.ProductoModel>
+@{
+    ViewData["Title"] = "Catálogo de Productos";
+    var familiasLookup = ViewBag.FamiliasLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var unidadesLookup = ViewBag.UnidadesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var coloresLookup = ViewBag.ColoresLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-box-seam-fill text-primary me-2" style="font-size: 1.6rem;"></i>Catálogo de Productos
+                </h3>
+                <small class="text-muted">Artículos, materias primas, insumos y productos terminados del ERP</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Producto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-body border-bottom py-3">
+                <div class="row g-2 align-items-center justify-content-between">
+                    <div class="col-md-5 d-flex align-items-center">
+                        <form method="get" class="input-group input-group-sm w-100">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código, descripción o ref..." value="@ViewBag.Search" />
+                            <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+                            @if (!string.IsNullOrEmpty(ViewBag.Search as string))
+                            {
+                                <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
+                            }
+                        </form>
+                    </div>
+                    <div class="col-md-4 text-md-end text-muted small">
+                        <span>Mostrando: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6">@Model.Count</strong> productos</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0" id="tabla-productos">
+                    <thead class="table-header-custom border-bottom">
+                        <tr>
+                            <th style="width: 70px;" class="text-center">ID</th>
+                            <th style="width: 130px;" class="text-center">Código</th>
+                            <th>Descripción del Producto</th>
+                            <th>Familia</th>
+                            <th style="width: 90px;" class="text-center">U.M.</th>
+                            <th style="width: 100px;" class="text-end">Peso (kg)</th>
+                            <th style="width: 100px;" class="text-center">Estado</th>
+                            <th style="width: 120px;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Count > 0)
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr id="fila-@item.Id">
+                                    <td class="text-center font-monospace text-muted small">@item.Id</td>
+                                    <td class="text-center font-monospace fw-bold text-primary">@item.Codigo</td>
+                                    <td>
+                                        <div class="fw-semibold text-body">@item.Descripcion</div>
+                                        @if (!string.IsNullOrEmpty(item.CodReferencial))
+                                        {
+                                            <small class="text-muted font-monospace"><i class="bi bi-tag me-1"></i>Ref: @item.CodReferencial</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary border">@item.FamiliaNombre</span>
+                                    </td>
+                                    <td class="text-center font-monospace">@item.UnidadMedida</td>
+                                    <td class="text-end font-monospace">@(item.PesoNeto?.ToString("N2") ?? "0.00")</td>
+                                    <td class="text-center">
+                                        @if (item.Estado == "A")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Descripcion');">
+                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                    <span>No se encontraron productos registrados</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL CRUD: PRODUCTO                                     -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-crud-producto" tabindex="-1" aria-labelledby="modalProdLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+                <h5 class="modal-title fw-bold" id="modalProdLabel">
+                    <i class="bi bi-box-seam text-primary me-2"></i><span id="modal-titulo">Nuevo Producto</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="form-producto" onsubmit="guardarProducto(event);">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="prod-id" name="Id" value="0" />
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="prod-codigo" class="form-label fw-semibold">Código Producto</label>
+                            <input type="text" class="form-control font-monospace text-uppercase" id="prod-codigo" name="Codigo" placeholder="Automático" maxlength="12" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prod-cod-ref" class="form-label fw-semibold">Código Referencial</label>
+                            <input type="text" class="form-control" id="prod-cod-ref" name="CodReferencial" placeholder="Ej: REF-001" maxlength="20" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prod-familia-id" class="form-label fw-semibold">Familia <span class="text-danger">*</span></label>
+                            <select class="form-select" id="prod-familia-id" name="FamiliaId" required>
+                                <option value="">-- Seleccionar --</option>
+                                @foreach (var f in familiasLookup)
+                                {
+                                    <option value="@f.Id">@f.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="prod-descripcion" class="form-label fw-semibold">Descripción / Nombre del Producto <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="prod-descripcion" name="Descripcion" placeholder="Ej: Esmalte Sintético Brillante Blanco Galón..." maxlength="150" required />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label for="prod-unidad-id" class="form-label fw-semibold">Unidad Medida</label>
+                            <select class="form-select" id="prod-unidad-id" name="UnidadMedidaId">
+                                @foreach (var u in unidadesLookup)
+                                {
+                                    <option value="@u.Id">@u.Nombre (@u.Codigo)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="prod-color-id" class="form-label fw-semibold">Color</label>
+                            <select class="form-select" id="prod-color-id" name="ColorId">
+                                <option value="">-- Sin Color --</option>
+                                @foreach (var col in coloresLookup)
+                                {
+                                    <option value="@col.Id">@col.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="prod-peso-neto" class="form-label fw-semibold">Peso Neto (kg)</label>
+                            <input type="number" step="0.01" class="form-control" id="prod-peso-neto" name="PesoNeto" placeholder="0.00" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="prod-master-pack" class="form-label fw-semibold">Master Pack</label>
+                            <input type="number" class="form-control" id="prod-master-pack" name="MasterPack" placeholder="1" min="1" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="prod-estado" class="form-label fw-semibold">Estado</label>
+                        <select class="form-select" id="prod-estado" name="Estado" style="max-width: 200px;">
+                            <option value="A">Activo</option>
+                            <option value="I">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-prod">
+                        <i class="bi bi-check-circle me-1"></i>Guardar Producto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function abrirModalCrear() {
+        $('#modal-titulo').text('Nuevo Producto');
+        $('#prod-id').val(0);
+        $('#prod-codigo').val('');
+        $('#prod-cod-ref').val('');
+        $('#prod-descripcion').val('');
+        $('#prod-familia-id').val('');
+        $('#prod-unidad-id').val('1');
+        $('#prod-color-id').val('');
+        $('#prod-peso-neto').val('0.00');
+        $('#prod-master-pack').val('1');
+        $('#prod-estado').val('A');
+        var modal = new bootstrap.Modal(document.getElementById('modal-crud-producto'));
+        modal.show();
+        setTimeout(function () { $('#prod-descripcion').focus(); }, 300);
+    }
+
+    function abrirModalEditar(id) {
+        $.ajax({
+            url: '@Url.Action("Obtener", "Producto", new { area = "MG" })',
+            type: 'GET',
+            data: { id: id },
+            success: function (res) {
+                if (res && res.success && res.data) {
+                    $('#modal-titulo').text('Editar Producto #' + id);
+                    $('#prod-id').val(res.data.id || res.data.Id);
+                    $('#prod-codigo').val(res.data.codigo || res.data.Codigo || '');
+                    $('#prod-cod-ref').val(res.data.codReferencial || res.data.CodReferencial || '');
+                    $('#prod-descripcion').val(res.data.descripcion || res.data.Descripcion);
+                    $('#prod-familia-id').val(res.data.familiaId || res.data.FamiliaId);
+                    $('#prod-unidad-id').val(res.data.unidadMedidaId || res.data.UnidadMedidaId || 1);
+                    $('#prod-color-id').val(res.data.colorId || res.data.ColorId || '');
+                    $('#prod-peso-neto').val(res.data.pesoNeto !== undefined ? res.data.pesoNeto : res.data.PesoNeto);
+                    $('#prod-master-pack').val(res.data.masterPack || res.data.MasterPack || 1);
+                    $('#prod-estado').val(res.data.estado || res.data.Estado || 'A');
+                    var modal = new bootstrap.Modal(document.getElementById('modal-crud-producto'));
+                    modal.show();
+                    setTimeout(function () { $('#prod-descripcion').focus(); }, 300);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el producto.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function guardarProducto(e) {
+        e.preventDefault();
+        var desc = $('#prod-descripcion').val().trim();
+        var fam = $('#prod-familia-id').val();
+        if (!desc || !fam) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor complete la descripción y seleccione la familia.' });
+            return;
+        }
+
+        var $btn = $('#btn-guardar-prod');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
+
+        var formData = $('#form-producto').serialize();
+        $.ajax({
+            url: '@Url.Action("Guardar", "Producto", new { area = "MG" })',
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Producto');
+                if (res && res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-producto')).hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: res.message || 'Producto guardado correctamente.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Producto');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function cambiarEstado(id, estadoActual, descripcion) {
+        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' el producto "' + descripcion + '"?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("CambiarEstado", "Producto", new { area = "MG" })',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Actualizado',
+                                text: res.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(function () {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                    }
+                });
+            }
+        });
+    }
+</script>
+}

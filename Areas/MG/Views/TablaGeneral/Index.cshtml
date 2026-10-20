@@ -1,0 +1,307 @@
+@model List<AspNet10ArcoERP.Models.TablaGeneralModel>
+@{
+    ViewData["Title"] = "Tablas Generales del Sistema";
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-table text-primary me-2" style="font-size: 1.6rem;"></i>Tablas Generales
+                </h3>
+                <small class="text-muted">Parámetros maestros del sistema, prefijos y correlativos de numeración</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm font-weight-600 px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nueva Tabla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-body border-bottom py-3">
+                <div class="row g-2 align-items-center justify-content-between">
+                    <div class="col-md-5 d-flex align-items-center">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por clave o nombre de tabla..." onkeyup="filtrarTabla();" />
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end text-muted small">
+                        <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@Model.Count</strong> tablas maestras</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0" id="tabla-generales">
+                    <thead class="table-header-custom border-bottom">
+                        <tr>
+                            <th style="width: 70px;" class="text-center">ID</th>
+                            <th style="width: 110px;" class="text-center">Clave / Cód</th>
+                            <th>Nombre de la Tabla</th>
+                            <th style="width: 110px;" class="text-center">Prefijo</th>
+                            <th style="width: 140px;" class="text-center">Correlativo</th>
+                            <th style="width: 110px;" class="text-center">Estado</th>
+                            <th style="width: 130px;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Count > 0)
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr id="fila-@item.Id" data-search="@item.Tabla.ToLower() @item.Nombre.ToLower() @item.Prefijo.ToLower()">
+                                    <td class="text-center font-monospace text-muted small">@item.Id</td>
+                                    <td class="text-center font-monospace fw-bold text-primary">@item.Tabla</td>
+                                    <td>
+                                        <span class="fw-semibold text-body">@item.Nombre</span>
+                                    </td>
+                                    <td class="text-center font-monospace">
+                                        @if (!string.IsNullOrEmpty(item.Prefijo))
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border">@item.Prefijo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">&mdash;</span>
+                                        }
+                                    </td>
+                                    <td class="text-center font-monospace fw-bold text-success">
+                                        @item.Correlativo.ToString("D6")
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.Estado == "A")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Nombre');">
+                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                    <span>No se encontraron tablas generales</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL CRUD: TABLA GENERAL                                -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-crud-tabla" tabindex="-1" aria-labelledby="modalTablaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+                <h5 class="modal-title fw-bold" id="modalTablaLabel">
+                    <i class="bi bi-table text-primary me-2"></i><span id="modal-titulo">Nueva Tabla General</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="form-tabla" onsubmit="guardarTabla(event);">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="tab-id" name="Id" value="0" />
+                <div class="modal-body p-4">
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label for="tab-codigo" class="form-label fw-semibold">Clave / Código</label>
+                            <input type="text" class="form-control font-monospace text-uppercase" id="tab-codigo" name="Tabla" placeholder="TAB" maxlength="4" />
+                        </div>
+                        <div class="col-4">
+                            <label for="tab-prefijo" class="form-label fw-semibold">Prefijo</label>
+                            <input type="text" class="form-control text-uppercase" id="tab-prefijo" name="Prefijo" placeholder="Ej: PRV" maxlength="10" />
+                        </div>
+                        <div class="col-4">
+                            <label for="tab-correlativo" class="form-label fw-semibold">Correlativo</label>
+                            <input type="number" class="form-control font-monospace" id="tab-correlativo" name="Correlativo" placeholder="1" min="1" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tab-nombre" class="form-label fw-semibold">Nombre de la Tabla <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="tab-nombre" name="Nombre" placeholder="Ej: Proveedores, Clientes, Facturas..." maxlength="100" required />
+                    </div>
+                    <div class="mb-2">
+                        <label for="tab-estado" class="form-label fw-semibold">Estado</label>
+                        <select class="form-select" id="tab-estado" name="Estado">
+                            <option value="A">Activo</option>
+                            <option value="I">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-tab">
+                        <i class="bi bi-check-circle me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function filtrarTabla() {
+        var query = $('#filtro-tabla').val().toLowerCase().trim();
+        var visibles = 0;
+        $('#tabla-generales tbody tr').each(function () {
+            var $row = $(this);
+            var search = $row.data('search') || '';
+            if (!query || search.indexOf(query) >= 0) {
+                $row.removeClass('d-none');
+                visibles++;
+            } else {
+                $row.addClass('d-none');
+            }
+        });
+        $('#total-registros').text(visibles);
+    }
+
+    function abrirModalCrear() {
+        $('#modal-titulo').text('Nueva Tabla General');
+        $('#tab-id').val(0);
+        $('#tab-codigo').val('');
+        $('#tab-prefijo').val('');
+        $('#tab-correlativo').val('1');
+        $('#tab-nombre').val('');
+        $('#tab-estado').val('A');
+        var modal = new bootstrap.Modal(document.getElementById('modal-crud-tabla'));
+        modal.show();
+        setTimeout(function () { $('#tab-nombre').focus(); }, 300);
+    }
+
+    function abrirModalEditar(id) {
+        $.ajax({
+            url: '@Url.Action("Obtener", "TablaGeneral", new { area = "MG" })',
+            type: 'GET',
+            data: { id: id },
+            success: function (res) {
+                if (res && res.success && res.data) {
+                    $('#modal-titulo').text('Editar Tabla #' + id);
+                    $('#tab-id').val(res.data.id || res.data.Id);
+                    $('#tab-codigo').val(res.data.tabla || res.data.Tabla || '');
+                    $('#tab-prefijo').val(res.data.prefijo || res.data.Prefijo || '');
+                    $('#tab-correlativo').val(res.data.correlativo !== undefined ? res.data.correlativo : res.data.Correlativo || 1);
+                    $('#tab-nombre').val(res.data.nombre || res.data.Nombre);
+                    $('#tab-estado').val(res.data.estado || res.data.Estado || 'A');
+                    var modal = new bootstrap.Modal(document.getElementById('modal-crud-tabla'));
+                    modal.show();
+                    setTimeout(function () { $('#tab-nombre').focus(); }, 300);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar la tabla.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function guardarTabla(e) {
+        e.preventDefault();
+        var nombre = $('#tab-nombre').val().trim();
+        if (!nombre) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'El nombre de la tabla es obligatorio.' });
+            return;
+        }
+
+        var $btn = $('#btn-guardar-tab');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
+
+        var formData = $('#form-tabla').serialize();
+        $.ajax({
+            url: '@Url.Action("Guardar", "TablaGeneral", new { area = "MG" })',
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                if (res && res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-tabla')).hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: res.message || 'Tabla guardada correctamente.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    function cambiarEstado(id, estadoActual, nombre) {
+        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' la tabla "' + nombre + '"?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("CambiarEstado", "TablaGeneral", new { area = "MG" })',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Actualizado',
+                                text: res.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(function () {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                    }
+                });
+            }
+        });
+    }
+</script>
+}
