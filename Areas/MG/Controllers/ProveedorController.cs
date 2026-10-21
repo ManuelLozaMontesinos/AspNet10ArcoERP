@@ -27,6 +27,8 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             }
         }
 
+        private int CurrentEmpresaId => int.TryParse(User.FindFirst("EmpresaId")?.Value, out var id) ? id : 1;
+
         public async Task<IActionResult> Index(
             string? search = null, 
             int? tipo = null, 
@@ -36,7 +38,7 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             string? dir = null,
             int top = 25)
         {
-            var list = await _maestrosService.GetProveedoresAsync(search, tipo, estado, naturaleza, sort, dir, top);
+            var list = await _maestrosService.GetProveedoresAsync(search, tipo, estado, naturaleza, sort, dir, top, CurrentEmpresaId);
 
             ViewBag.Search = search;
             ViewBag.Tipo = tipo;
@@ -50,7 +52,7 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             ViewBag.TiposVia = await _maestrosService.GetTiposViaLookupAsync();
             ViewBag.TiposZona = await _maestrosService.GetTiposZonaLookupAsync();
             ViewBag.TiposProveedor = await _maestrosService.GetTiposProveedorLookupAsync();
-            ViewBag.CondicionesPago = await _maestrosService.GetCondicionesPagoLookupAsync();
+            ViewBag.CondicionesPago = await _maestrosService.GetCondicionesPagoLookupAsync(CurrentEmpresaId);
             ViewBag.Departamentos = await _maestrosService.GetDepartamentosLookupAsync();
 
             return View(list);
@@ -59,7 +61,7 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         [HttpGet]
         public async Task<IActionResult> Obtener(int id)
         {
-            var item = await _maestrosService.GetProveedorByIdAsync(id);
+            var item = await _maestrosService.GetProveedorByIdAsync(id, CurrentEmpresaId);
             if (item == null)
                 return Json(new { success = false, message = "Registro no encontrado." });
 
@@ -96,7 +98,7 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             doc = doc.Trim();
 
             // 1. Buscar en BD local
-            var local = await _maestrosService.BuscarProveedorPorDocumentoAsync(doc);
+            var local = await _maestrosService.BuscarProveedorPorDocumentoAsync(doc, CurrentEmpresaId);
             if (local != null)
             {
                 return Json(new { 
@@ -143,21 +145,21 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         [HttpPost]
         public async Task<IActionResult> Guardar([FromForm] ProveedorModel model)
         {
-            var (success, message, id, codigo) = await _maestrosService.SaveProveedorAsync(model, CurrentUserId);
+            var (success, message, id, codigo) = await _maestrosService.SaveProveedorAsync(model, CurrentUserId, CurrentEmpresaId);
             return Json(new { success, message, id, codigo });
         }
 
         [HttpPost]
         public async Task<IActionResult> CambiarEstado(int id)
         {
-            var (success, message, nuevoEstado) = await _maestrosService.ToggleEstadoProveedorAsync(id, CurrentUserId);
+            var (success, message, nuevoEstado) = await _maestrosService.ToggleEstadoProveedorAsync(id, CurrentUserId, CurrentEmpresaId);
             return Json(new { success, message, nuevoEstado });
         }
 
         [HttpPost]
         public async Task<IActionResult> Eliminar(int id)
         {
-            var (success, message, _) = await _maestrosService.ToggleEstadoProveedorAsync(id, CurrentUserId);
+            var (success, message, _) = await _maestrosService.ToggleEstadoProveedorAsync(id, CurrentUserId, CurrentEmpresaId);
             return Json(new { success, message });
         }
     }

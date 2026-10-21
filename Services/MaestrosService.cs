@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using AspNet10ArcoERP.Models;
@@ -11,9 +12,64 @@ namespace AspNet10ArcoERP.Services
     {
         private readonly IDbConnectionFactory _dbConnectionFactory;
 
+        private sealed class SkuFamilyData
+        {
+            public string GrupoCodigo { get; set; } = string.Empty;
+            public string ClaseCodigo { get; set; } = string.Empty;
+            public string FamiliaCodigo { get; set; } = string.Empty;
+            public int Correlativo { get; set; }
+            public int MaximoAsignado { get; set; }
+        }
+
         public MaestrosService(IDbConnectionFactory dbConnectionFactory)
         {
             _dbConnectionFactory = dbConnectionFactory;
+        }
+
+        private async Task<(bool success, string message, string codigo)> GenerarCodigoSkuAsync(
+            IDbConnection conn,
+            IDbTransaction transaction,
+            int familiaId,
+            int? tipoProductoId,
+            bool requireComboGroup = false)
+        {
+            const string sql = @"
+                SELECT RTRIM(g.grupo_producto) AS GrupoCodigo,
+                       RTRIM(c.clase_producto) AS ClaseCodigo,
+                       RTRIM(f.familia_producto) AS FamiliaCodigo,
+                       ISNULL(f.correla, 0) AS Correlativo,
+                       ISNULL(MAX(TRY_CONVERT(int, RIGHT(RTRIM(p.producto), 3))), 0) AS MaximoAsignado
+                FROM familia_producto f WITH (UPDLOCK, HOLDLOCK)
+                INNER JOIN clase_producto c ON c.clase_producto_id = f.clase_producto_id
+                INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
+                LEFT JOIN producto p ON p.familia_producto_id = f.familia_producto_id
+                    AND LEFT(RTRIM(p.producto), 9) = RTRIM(g.grupo_producto) + RTRIM(c.clase_producto) + RTRIM(f.familia_producto)
+                WHERE f.familia_producto_id = @FamiliaId
+                    AND f.estado = 'A' AND c.estado = 'A' AND g.estado = 'A'
+                    AND (@TipoProductoId IS NULL OR g.tipo_producto_id = @TipoProductoId)
+                    AND (@RequireComboGroup = 0 OR g.es_combo = 'S')
+                GROUP BY g.grupo_producto, c.clase_producto, f.familia_producto, f.correla";
+            var family = await conn.QueryFirstOrDefaultAsync<SkuFamilyData>(
+                sql,
+                new { FamiliaId = familiaId, TipoProductoId = tipoProductoId, RequireComboGroup = requireComboGroup },
+                transaction);
+
+            if (family == null)
+                return (false, "La familia o su jerarquía no está activa o no corresponde al tipo seleccionado.", string.Empty);
+
+            int next = Math.Max(family.Correlativo, family.MaximoAsignado) + 1;
+            if (next > 999)
+                return (false, "La familia agotó su correlativo SKU de tres dígitos.", string.Empty);
+
+            string codigo = $"{family.GrupoCodigo}{family.ClaseCodigo}{family.FamiliaCodigo}{next:D3}";
+            if (codigo.Length != 12)
+                return (false, "La jerarquía de la familia no tiene códigos SKU válidos de tres caracteres.", string.Empty);
+
+            await conn.ExecuteAsync(
+                "UPDATE familia_producto SET correla = @Correlativo WHERE familia_producto_id = @FamiliaId",
+                new { Correlativo = next, FamiliaId = familiaId },
+                transaction);
+            return (true, string.Empty, codigo);
         }
 
         // =========================================================================
@@ -215,7 +271,7 @@ namespace AspNet10ArcoERP.Services
         // =========================================================================
         // 4. CENTRO DE COSTO
         // =========================================================================
-        public async Task<List<CentroCostoModel>> GetCentrosCostoAsync()
+        public async Task<List<CentroCostoModel>> GetCentrosCostoAsync(int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = @"
@@ -226,20 +282,21 @@ namespace AspNet10ArcoERP.Services
                     sigla AS Sigla,
                     estado AS Estado
                 FROM centro_costo
+                WHERE empresa_id = @EmpresaId
                 ORDER BY nombre ASC";
 
-            var rows = await conn.QueryAsync<CentroCostoModel>(sql);
+            var rows = await conn.QueryAsync<CentroCostoModel>(sql, new { EmpresaId = empresaId });
             return rows.ToList();
         }
 
-        public async Task<CentroCostoModel?> GetCentroCostoByIdAsync(int id)
+        public async Task<CentroCostoModel?> GetCentroCostoByIdAsync(int id, int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            const string sql = "SELECT centro_costo_id AS Id, empresa_id AS EmpresaId, nombre AS Nombre, sigla AS Sigla, estado AS Estado FROM centro_costo WHERE centro_costo_id = @Id";
-            return await conn.QueryFirstOrDefaultAsync<CentroCostoModel>(sql, new { Id = id });
+            const string sql = "SELECT centro_costo_id AS Id, empresa_id AS EmpresaId, nombre AS Nombre, sigla AS Sigla, estado AS Estado FROM centro_costo WHERE centro_costo_id = @Id AND empresa_id = @EmpresaId";
+            return await conn.QueryFirstOrDefaultAsync<CentroCostoModel>(sql, new { Id = id, EmpresaId = empresaId });
         }
 
-        public async Task<(bool success, string message, int id)> SaveCentroCostoAsync(CentroCostoModel model, int userId)
+        public async Task<(bool success, string message, int id)> SaveCentroCostoAsync(CentroCostoModel model, int userId, int empresaId = 1)
         {
             if (string.IsNullOrWhiteSpace(model.Nombre))
                 return (false, "El nombre del centro de costo es obligatorio.", 0);
@@ -252,7 +309,7 @@ namespace AspNet10ArcoERP.Services
                     INSERT INTO centro_costo (centro_costo_id, empresa_id, nombre, sigla, estado, usuario_creacion_id, fecha_creacion)
                     VALUES (@newId, @EmpresaId, @Nombre, @Sigla, @Estado, @UserId, GETDATE());
                     SELECT @newId;";
-                int newId = await conn.ExecuteScalarAsync<int>(sql, new { EmpresaId = model.EmpresaId > 0 ? model.EmpresaId : 1, Nombre = model.Nombre.Trim(), Sigla = (model.Sigla ?? "").Trim(), Estado = model.Estado ?? "A", UserId = userId });
+                int newId = await conn.ExecuteScalarAsync<int>(sql, new { EmpresaId = empresaId, Nombre = model.Nombre.Trim(), Sigla = (model.Sigla ?? "").Trim(), Estado = model.Estado ?? "A", UserId = userId });
                 return (true, "Centro de costo registrado exitosamente.", newId);
             }
             else
@@ -260,28 +317,28 @@ namespace AspNet10ArcoERP.Services
                 const string sql = @"
                     UPDATE centro_costo 
                     SET nombre = @Nombre, sigla = @Sigla, estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
-                    WHERE centro_costo_id = @Id";
-                await conn.ExecuteAsync(sql, new { Id = model.Id, Nombre = model.Nombre.Trim(), Sigla = (model.Sigla ?? "").Trim(), Estado = model.Estado ?? "A", UserId = userId });
-                return (true, "Centro de costo actualizado exitosamente.", model.Id);
+                    WHERE centro_costo_id = @Id AND empresa_id = @EmpresaId";
+                int updated = await conn.ExecuteAsync(sql, new { Id = model.Id, EmpresaId = empresaId, Nombre = model.Nombre.Trim(), Sigla = (model.Sigla ?? "").Trim(), Estado = model.Estado ?? "A", UserId = userId });
+                return updated == 0 ? (false, "Centro de costo no encontrado para la empresa activa.", 0) : (true, "Centro de costo actualizado exitosamente.", model.Id);
             }
         }
 
-        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCentroCostoAsync(int id, int userId)
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCentroCostoAsync(int id, int userId, int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            var item = await conn.QueryFirstOrDefaultAsync<CentroCostoModel>("SELECT centro_costo_id AS Id, estado AS Estado FROM centro_costo WHERE centro_costo_id = @Id", new { Id = id });
+            var item = await conn.QueryFirstOrDefaultAsync<CentroCostoModel>("SELECT centro_costo_id AS Id, estado AS Estado FROM centro_costo WHERE centro_costo_id = @Id AND empresa_id = @EmpresaId", new { Id = id, EmpresaId = empresaId });
             if (item == null) return (false, "Registro no encontrado.", "I");
 
             string nuevoEstado = item.Estado == "A" ? "I" : "A";
-            const string sql = "UPDATE centro_costo SET estado = @NuevoEstado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE centro_costo_id = @Id";
-            await conn.ExecuteAsync(sql, new { Id = id, NuevoEstado = nuevoEstado, UserId = userId });
+            const string sql = "UPDATE centro_costo SET estado = @NuevoEstado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE centro_costo_id = @Id AND empresa_id = @EmpresaId";
+            await conn.ExecuteAsync(sql, new { Id = id, EmpresaId = empresaId, NuevoEstado = nuevoEstado, UserId = userId });
             return (true, $"Centro de costo {(nuevoEstado == "A" ? "activado" : "desactivado")} exitosamente.", nuevoEstado);
         }
 
         // =========================================================================
         // 5. CONDICIÓN DE PAGO
         // =========================================================================
-        public async Task<List<CondPagoModel>> GetCondicionesPagoAsync()
+        public async Task<List<CondPagoModel>> GetCondicionesPagoAsync(int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = @"
@@ -290,26 +347,31 @@ namespace AspNet10ArcoERP.Services
                     cond_pago AS Codigo,
                     nombre AS Nombre,
                     tipo_c_pago_id AS TipoCondicionPagoId,
+                    ISNULL(tcp.nombre, '') AS TipoCondicionPagoNombre,
                     dia AS Dias,
                     estado AS Estado
-                FROM cond_pago
-                ORDER BY dia ASC";
+                FROM cond_pago cp
+                INNER JOIN tipo_c_pago tcp ON tcp.tipo_c_pago_id = cp.tipo_c_pago_id
+                WHERE cp.empresa_id = @EmpresaId
+                ORDER BY cp.dia ASC";
 
-            var rows = await conn.QueryAsync<CondPagoModel>(sql);
+            var rows = await conn.QueryAsync<CondPagoModel>(sql, new { EmpresaId = empresaId });
             return rows.ToList();
         }
 
-        public async Task<CondPagoModel?> GetCondPagoByIdAsync(int id)
+        public async Task<CondPagoModel?> GetCondPagoByIdAsync(int id, int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            const string sql = "SELECT cond_pago_id AS Id, cond_pago AS Codigo, nombre AS Nombre, tipo_c_pago_id AS TipoCondicionPagoId, dia AS Dias, estado AS Estado FROM cond_pago WHERE cond_pago_id = @Id";
-            return await conn.QueryFirstOrDefaultAsync<CondPagoModel>(sql, new { Id = id });
+            const string sql = "SELECT cp.cond_pago_id AS Id, cp.cond_pago AS Codigo, cp.nombre AS Nombre, cp.tipo_c_pago_id AS TipoCondicionPagoId, ISNULL(tcp.nombre, '') AS TipoCondicionPagoNombre, cp.dia AS Dias, cp.estado AS Estado FROM cond_pago cp INNER JOIN tipo_c_pago tcp ON tcp.tipo_c_pago_id = cp.tipo_c_pago_id WHERE cp.cond_pago_id = @Id AND cp.empresa_id = @EmpresaId";
+            return await conn.QueryFirstOrDefaultAsync<CondPagoModel>(sql, new { Id = id, EmpresaId = empresaId });
         }
 
-        public async Task<(bool success, string message, int id)> SaveCondPagoAsync(CondPagoModel model, int userId)
+        public async Task<(bool success, string message, int id)> SaveCondPagoAsync(CondPagoModel model, int userId, int empresaId = 1)
         {
             if (string.IsNullOrWhiteSpace(model.Nombre))
                 return (false, "El nombre de la condición de pago es obligatorio.", 0);
+            if (model.TipoCondicionPagoId <= 0)
+                return (false, "Debe seleccionar el tipo de condición de pago.", 0);
 
             using var conn = _dbConnectionFactory.CreateConnection();
             if (model.Id == 0)
@@ -323,32 +385,40 @@ namespace AspNet10ArcoERP.Services
                 const string sql = @"
                     DECLARE @newId INT = NEXT VALUE FOR cond_pago_seq;
                     INSERT INTO cond_pago (cond_pago_id, empresa_id, cond_pago, nombre, tipo_c_pago_id, dia, estado, usuario_creacion_id, fecha_creacion)
-                    VALUES (@newId, 1, @Codigo, @Nombre, @TipoCondicionPagoId, @Dias, @Estado, @UserId, GETDATE());
+                    VALUES (@newId, @EmpresaId, @Codigo, @Nombre, @TipoCondicionPagoId, @Dias, @Estado, @UserId, GETDATE());
                     SELECT @newId;";
-                int newId = await conn.ExecuteScalarAsync<int>(sql, new { Codigo = codigo, Nombre = model.Nombre.Trim(), TipoCondicionPagoId = model.TipoCondicionPagoId > 0 ? model.TipoCondicionPagoId : 1, Dias = model.Dias, Estado = model.Estado ?? "A", UserId = userId });
+                int newId = await conn.ExecuteScalarAsync<int>(sql, new { EmpresaId = empresaId, Codigo = codigo, Nombre = model.Nombre.Trim(), TipoCondicionPagoId = model.TipoCondicionPagoId > 0 ? model.TipoCondicionPagoId : 1, Dias = model.Dias, Estado = model.Estado ?? "A", UserId = userId });
                 return (true, "Condición de pago registrada exitosamente.", newId);
             }
             else
             {
                 const string sql = @"
                     UPDATE cond_pago 
-                    SET nombre = @Nombre, dia = @Dias, estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
-                    WHERE cond_pago_id = @Id";
-                await conn.ExecuteAsync(sql, new { Id = model.Id, Nombre = model.Nombre.Trim(), Dias = model.Dias, Estado = model.Estado ?? "A", UserId = userId });
-                return (true, "Condición de pago actualizada exitosamente.", model.Id);
+                    SET nombre = @Nombre, tipo_c_pago_id = @TipoCondicionPagoId, dia = @Dias, estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                    WHERE cond_pago_id = @Id AND empresa_id = @EmpresaId";
+                int updated = await conn.ExecuteAsync(sql, new { Id = model.Id, EmpresaId = empresaId, Nombre = model.Nombre.Trim(), TipoCondicionPagoId = model.TipoCondicionPagoId, Dias = model.Dias, Estado = model.Estado ?? "A", UserId = userId });
+                return updated == 0 ? (false, "Condición de pago no encontrada para la empresa activa.", 0) : (true, "Condición de pago actualizada exitosamente.", model.Id);
             }
         }
 
-        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCondPagoAsync(int id, int userId)
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCondPagoAsync(int id, int userId, int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            var item = await conn.QueryFirstOrDefaultAsync<CondPagoModel>("SELECT cond_pago_id AS Id, estado AS Estado FROM cond_pago WHERE cond_pago_id = @Id", new { Id = id });
+            var item = await conn.QueryFirstOrDefaultAsync<CondPagoModel>("SELECT cond_pago_id AS Id, estado AS Estado FROM cond_pago WHERE cond_pago_id = @Id AND empresa_id = @EmpresaId", new { Id = id, EmpresaId = empresaId });
             if (item == null) return (false, "Registro no encontrado.", "I");
 
             string nuevoEstado = item.Estado == "A" ? "I" : "A";
-            const string sql = "UPDATE cond_pago SET estado = @NuevoEstado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE cond_pago_id = @Id";
-            await conn.ExecuteAsync(sql, new { Id = id, NuevoEstado = nuevoEstado, UserId = userId });
+            const string sql = "UPDATE cond_pago SET estado = @NuevoEstado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE cond_pago_id = @Id AND empresa_id = @EmpresaId";
+            await conn.ExecuteAsync(sql, new { Id = id, EmpresaId = empresaId, NuevoEstado = nuevoEstado, UserId = userId });
             return (true, $"Condición de pago {(nuevoEstado == "A" ? "activada" : "desactivada")} exitosamente.", nuevoEstado);
+        }
+
+        public async Task<List<LookupItemModel>> GetTiposCondicionPagoLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT tipo_c_pago_id AS Id, tipo_c_pago AS Codigo, nombre AS Nombre FROM tipo_c_pago WHERE estado = 'A' ORDER BY nombre";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql);
+            return rows.ToList();
         }
 
         // =========================================================================
@@ -358,7 +428,7 @@ namespace AspNet10ArcoERP.Services
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             var p = new DynamicParameters();
-            int safeTop = top > 0 ? top : 25;
+            int safeTop = top is 25 or 50 or 100 or 500 ? top : 25;
             string topClause = $"TOP ({safeTop}) ";
             string sql = $@"
                 SELECT {topClause}
@@ -513,6 +583,63 @@ namespace AspNet10ArcoERP.Services
             return rows.ToList();
         }
 
+        public async Task<List<TipoCambioMaestroModel>> GetTiposCambioMaestrosAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT tipo_cambio_id AS Id, tipo_cambio AS Codigo, nombre AS Nombre, estado AS Estado FROM tipo_cambio ORDER BY nombre";
+            var rows = await conn.QueryAsync<TipoCambioMaestroModel>(sql);
+            return rows.ToList();
+        }
+
+        public async Task<TipoCambioMaestroModel?> GetTipoCambioMaestroByIdAsync(int id)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT tipo_cambio_id AS Id, tipo_cambio AS Codigo, nombre AS Nombre, estado AS Estado FROM tipo_cambio WHERE tipo_cambio_id = @Id";
+            return await conn.QueryFirstOrDefaultAsync<TipoCambioMaestroModel>(sql, new { Id = id });
+        }
+
+        public async Task<(bool success, string message, int id)> SaveTipoCambioMaestroAsync(TipoCambioMaestroModel model, int userId)
+        {
+            if (string.IsNullOrWhiteSpace(model.Codigo) || string.IsNullOrWhiteSpace(model.Nombre))
+                return (false, "Código y nombre del tipo de cambio son obligatorios.", 0);
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            string codigo = SafeTruncate(model.Codigo.Trim().ToUpperInvariant(), 2);
+            int duplicate = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM tipo_cambio WHERE tipo_cambio = @Codigo AND tipo_cambio_id <> @Id",
+                new { Codigo = codigo, model.Id });
+            if (duplicate > 0)
+                return (false, "El código ya está asignado a otro tipo de cambio.", 0);
+            if (model.Id == 0)
+            {
+                const string sql = @"
+                    DECLARE @newId INT = NEXT VALUE FOR tipo_cambio_seq;
+                    INSERT INTO tipo_cambio (tipo_cambio_id, tipo_cambio, nombre, origen_registro_id, estado, usuario_creacion_id, fecha_creacion)
+                    VALUES (@newId, @Codigo, @Nombre, 2, @Estado, @UserId, GETDATE());
+                    SELECT @newId;";
+                int id = await conn.ExecuteScalarAsync<int>(sql, new { Codigo = codigo, Nombre = model.Nombre.Trim(), Estado = model.Estado == "I" ? "I" : "A", UserId = userId });
+                return (true, "Tipo de cambio registrado.", id);
+            }
+
+            const string updateSql = @"
+                UPDATE tipo_cambio
+                SET nombre = @Nombre, estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE tipo_cambio_id = @Id";
+            int updated = await conn.ExecuteAsync(updateSql, new { model.Id, Nombre = model.Nombre.Trim(), Estado = model.Estado == "I" ? "I" : "A", UserId = userId });
+            return updated == 0 ? (false, "Tipo de cambio no encontrado.", 0) : (true, "Tipo de cambio actualizado.", model.Id);
+        }
+
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoTipoCambioMaestroAsync(int id, int userId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                UPDATE tipo_cambio SET estado = CASE WHEN estado = 'A' THEN 'I' ELSE 'A' END,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                OUTPUT inserted.estado WHERE tipo_cambio_id = @Id";
+            string? state = await conn.QuerySingleOrDefaultAsync<string>(sql, new { Id = id, UserId = userId });
+            return state == null ? (false, "Tipo de cambio no encontrado.", "I") : (true, "Estado del tipo de cambio actualizado.", state);
+        }
+
         // =========================================================================
         // 7. FAMILIA DE PRODUCTO
         // =========================================================================
@@ -563,21 +690,33 @@ namespace AspNet10ArcoERP.Services
         {
             if (string.IsNullOrWhiteSpace(model.FamiliaNombre))
                 return (false, "El nombre de la familia es obligatorio.", 0);
+            if (model.FamiliaId == 0 && string.IsNullOrWhiteSpace(model.FamiliaCodigo))
+                return (false, "El código de la familia es obligatorio.", 0);
             if (model.ClaseId <= 0)
                 return (false, "Debe seleccionar una clase de producto.", 0);
 
             using var conn = _dbConnectionFactory.CreateConnection();
+            int activeClass = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM clase_producto WHERE clase_producto_id = @ClaseId AND estado = 'A'",
+                new { model.ClaseId });
+            if (activeClass == 0)
+                return (false, "La clase seleccionada no existe o está inactiva.", 0);
+
+            string familiaCodigo = SafeTruncate((model.FamiliaCodigo ?? string.Empty).Trim().ToUpperInvariant(), 3);
+            int duplicate = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM familia_producto WHERE clase_producto_id = @ClaseId AND familia_producto = @Codigo AND familia_producto_id <> @Id",
+                new { model.ClaseId, Codigo = familiaCodigo, Id = model.FamiliaId });
+            if (duplicate > 0)
+                return (false, "El código ya está asignado a otra familia de esta clase.", 0);
+
             if (model.FamiliaId == 0)
             {
-                string codigo = string.IsNullOrWhiteSpace(model.FamiliaCodigo) ? "FAM" : model.FamiliaCodigo.Trim().ToUpper();
-                if (codigo.Length > 3) codigo = codigo.Substring(0, 3);
-
                 const string sql = @"
                     DECLARE @newId INT = NEXT VALUE FOR familia_producto_seq;
                     INSERT INTO familia_producto (familia_producto_id, clase_producto_id, familia_producto, nombre, correla, estado, fecha_alta, usuario_creacion_id, fecha_creacion)
                     VALUES (@newId, @ClaseId, @Codigo, @Nombre, @Correlativo, @Estado, GETDATE(), @UserId, GETDATE());
                     SELECT @newId;";
-                int newId = await conn.ExecuteScalarAsync<int>(sql, new { ClaseId = model.ClaseId, Codigo = codigo, Nombre = model.FamiliaNombre.Trim(), Correlativo = model.Correlativo > 0 ? model.Correlativo : 1, Estado = model.Estado ?? "A", UserId = userId });
+                int newId = await conn.ExecuteScalarAsync<int>(sql, new { ClaseId = model.ClaseId, Codigo = familiaCodigo, Nombre = model.FamiliaNombre.Trim(), Correlativo = Math.Max(0, (int)model.Correlativo), Estado = model.Estado ?? "A", UserId = userId });
                 return (true, "Familia de producto registrada exitosamente.", newId);
             }
             else
@@ -586,8 +725,8 @@ namespace AspNet10ArcoERP.Services
                     UPDATE familia_producto 
                     SET nombre = @Nombre, clase_producto_id = @ClaseId, estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
                     WHERE familia_producto_id = @Id";
-                await conn.ExecuteAsync(sql, new { Id = model.FamiliaId, Nombre = model.FamiliaNombre.Trim(), ClaseId = model.ClaseId, Estado = model.Estado ?? "A", UserId = userId });
-                return (true, "Familia de producto actualizada exitosamente.", model.FamiliaId);
+                int updated = await conn.ExecuteAsync(sql, new { Id = model.FamiliaId, Nombre = model.FamiliaNombre.Trim(), ClaseId = model.ClaseId, Estado = model.Estado ?? "A", UserId = userId });
+                return updated == 0 ? (false, "Familia de producto no encontrada.", 0) : (true, "Familia de producto actualizada exitosamente.", model.FamiliaId);
             }
         }
 
@@ -612,6 +751,214 @@ namespace AspNet10ArcoERP.Services
                 WHERE estado = 'A' AND (@GrupoId IS NULL OR grupo_producto_id = @GrupoId)
                 ORDER BY nombre ASC";
             var rows = await conn.QueryAsync<LookupItemModel>(sql, new { GrupoId = (grupoId > 0) ? grupoId : null });
+            return rows.ToList();
+        }
+
+        public async Task<List<GrupoProductoModel>> GetGruposProductoAsync(int? tipoProductoId = null)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT g.grupo_producto_id AS Id, g.tipo_producto_id AS TipoProductoId,
+                       tp.nombre AS TipoProductoNombre, g.grupo_producto AS Codigo, g.nombre AS Nombre,
+                       g.correla AS Correlativo, g.usar_inc_fracc AS UsarIncrementoFraccion,
+                       g.es_combo AS EsCombo, g.es_insumo AS EsInsumo, g.estado AS Estado,
+                       g.fecha_alta AS FechaAlta, g.fecha_baja AS FechaBaja
+                FROM grupo_producto g
+                INNER JOIN tipo_producto tp ON tp.tipo_producto_id = g.tipo_producto_id
+                WHERE (@TipoProductoId IS NULL OR g.tipo_producto_id = @TipoProductoId)
+                ORDER BY tp.nombre, g.nombre";
+            var rows = await conn.QueryAsync<GrupoProductoModel>(sql, new { TipoProductoId = tipoProductoId > 0 ? tipoProductoId : null });
+            return rows.ToList();
+        }
+
+        public async Task<GrupoProductoModel?> GetGrupoProductoByIdAsync(int id)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT g.grupo_producto_id AS Id, g.tipo_producto_id AS TipoProductoId,
+                       tp.nombre AS TipoProductoNombre, g.grupo_producto AS Codigo, g.nombre AS Nombre,
+                       g.correla AS Correlativo, g.usar_inc_fracc AS UsarIncrementoFraccion,
+                       g.es_combo AS EsCombo, g.es_insumo AS EsInsumo, g.estado AS Estado,
+                       g.fecha_alta AS FechaAlta, g.fecha_baja AS FechaBaja
+                FROM grupo_producto g
+                INNER JOIN tipo_producto tp ON tp.tipo_producto_id = g.tipo_producto_id
+                WHERE g.grupo_producto_id = @Id";
+            return await conn.QueryFirstOrDefaultAsync<GrupoProductoModel>(sql, new { Id = id });
+        }
+
+        public async Task<(bool success, string message, int id)> SaveGrupoProductoAsync(GrupoProductoModel model, int userId)
+        {
+            if (model.TipoProductoId <= 0 || string.IsNullOrWhiteSpace(model.Codigo) || string.IsNullOrWhiteSpace(model.Nombre))
+                return (false, "Tipo, código y nombre de grupo son obligatorios.", 0);
+
+            string codigo = SafeTruncate(model.Codigo.ToUpperInvariant(), 3);
+            using var conn = _dbConnectionFactory.CreateConnection();
+            int activeType = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM tipo_producto WHERE tipo_producto_id = @TipoProductoId AND estado = 'A'",
+                new { model.TipoProductoId });
+            if (activeType == 0)
+                return (false, "El tipo de producto seleccionado no existe o está inactivo.", 0);
+            int duplicate = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM grupo_producto WHERE tipo_producto_id = @TipoProductoId AND grupo_producto = @Codigo AND grupo_producto_id <> @Id",
+                new { model.TipoProductoId, Codigo = codigo, model.Id });
+            if (duplicate > 0)
+                return (false, "El código ya está asignado a otro grupo de este tipo.", 0);
+            if (model.Id == 0)
+            {
+                const string sql = @"
+                    DECLARE @newId INT = NEXT VALUE FOR grupo_producto_seq;
+                    INSERT INTO grupo_producto
+                        (grupo_producto_id, tipo_producto_id, grupo_producto, nombre, correla, usar_inc_fracc, es_combo, es_insumo, estado, fecha_alta, usuario_creacion_id, fecha_creacion)
+                    VALUES
+                        (@newId, @TipoProductoId, @Codigo, @Nombre, @Correlativo, @UsarIncrementoFraccion, @EsCombo, @EsInsumo, @Estado, @FechaAlta, @UserId, GETDATE());
+                    SELECT @newId;";
+                int id = await conn.ExecuteScalarAsync<int>(sql, new
+                {
+                    model.TipoProductoId, Codigo = codigo, Nombre = model.Nombre.Trim(),
+                    Correlativo = model.Correlativo > 0 ? model.Correlativo : (short)1,
+                    UsarIncrementoFraccion = model.UsarIncrementoFraccion == "S" ? "S" : "N",
+                    EsCombo = model.EsCombo == "S" ? "S" : "N",
+                    EsInsumo = model.EsInsumo == "S" ? "S" : "N",
+                    Estado = model.Estado == "I" ? "I" : "A",
+                    FechaAlta = model.FechaAlta == default ? DateTime.Today : model.FechaAlta,
+                    UserId = userId
+                });
+                return (true, "Grupo de producto registrado.", id);
+            }
+
+            const string updateSql = @"
+                UPDATE grupo_producto
+                SET nombre = @Nombre, usar_inc_fracc = @UsarIncrementoFraccion,
+                    es_combo = @EsCombo, es_insumo = @EsInsumo, estado = @Estado,
+                    fecha_baja = CASE WHEN @Estado = 'I' THEN ISNULL(fecha_baja, GETDATE()) ELSE NULL END,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE grupo_producto_id = @Id";
+            int updated = await conn.ExecuteAsync(updateSql, new
+            {
+                model.Id, Nombre = model.Nombre.Trim(),
+                UsarIncrementoFraccion = model.UsarIncrementoFraccion == "S" ? "S" : "N",
+                EsCombo = model.EsCombo == "S" ? "S" : "N",
+                EsInsumo = model.EsInsumo == "S" ? "S" : "N",
+                Estado = model.Estado == "I" ? "I" : "A", UserId = userId
+            });
+            return updated == 0 ? (false, "Grupo no encontrado.", 0) : (true, "Grupo de producto actualizado.", model.Id);
+        }
+
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoGrupoProductoAsync(int id, int userId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                UPDATE grupo_producto
+                SET estado = CASE WHEN estado = 'A' THEN 'I' ELSE 'A' END,
+                    fecha_baja = CASE WHEN estado = 'A' THEN ISNULL(fecha_baja, GETDATE()) ELSE NULL END,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                OUTPUT inserted.estado
+                WHERE grupo_producto_id = @Id";
+            string? state = await conn.QuerySingleOrDefaultAsync<string>(sql, new { Id = id, UserId = userId });
+            return state == null ? (false, "Grupo no encontrado.", "I") : (true, "Estado del grupo actualizado.", state);
+        }
+
+        public async Task<List<ClaseProductoModel>> GetClasesProductoAsync(int? grupoId = null)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT c.clase_producto_id AS Id, c.grupo_producto_id AS GrupoId, g.nombre AS GrupoNombre,
+                       c.clase_producto AS Codigo, c.nombre AS Nombre, c.correla AS Correlativo,
+                       c.tipo_detrac_id AS TipoDetraccionId, ISNULL(td.nombre, '') AS TipoDetraccionNombre,
+                       c.estado AS Estado, c.fecha_alta AS FechaAlta, c.fecha_baja AS FechaBaja
+                FROM clase_producto c
+                INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
+                LEFT JOIN tipo_detrac td ON td.tipo_detrac_id = c.tipo_detrac_id
+                WHERE (@GrupoId IS NULL OR c.grupo_producto_id = @GrupoId)
+                ORDER BY g.nombre, c.nombre";
+            var rows = await conn.QueryAsync<ClaseProductoModel>(sql, new { GrupoId = grupoId > 0 ? grupoId : null });
+            return rows.ToList();
+        }
+
+        public async Task<ClaseProductoModel?> GetClaseProductoByIdAsync(int id)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT c.clase_producto_id AS Id, c.grupo_producto_id AS GrupoId, g.nombre AS GrupoNombre,
+                       c.clase_producto AS Codigo, c.nombre AS Nombre, c.correla AS Correlativo,
+                       c.tipo_detrac_id AS TipoDetraccionId, ISNULL(td.nombre, '') AS TipoDetraccionNombre,
+                       c.estado AS Estado, c.fecha_alta AS FechaAlta, c.fecha_baja AS FechaBaja
+                FROM clase_producto c
+                INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
+                LEFT JOIN tipo_detrac td ON td.tipo_detrac_id = c.tipo_detrac_id
+                WHERE c.clase_producto_id = @Id";
+            return await conn.QueryFirstOrDefaultAsync<ClaseProductoModel>(sql, new { Id = id });
+        }
+
+        public async Task<(bool success, string message, int id)> SaveClaseProductoAsync(ClaseProductoModel model, int userId)
+        {
+            if (model.GrupoId <= 0 || string.IsNullOrWhiteSpace(model.Codigo) || string.IsNullOrWhiteSpace(model.Nombre))
+                return (false, "Grupo, código y nombre de clase son obligatorios.", 0);
+
+            string codigo = SafeTruncate(model.Codigo.ToUpperInvariant(), 3);
+            using var conn = _dbConnectionFactory.CreateConnection();
+            int activeGroup = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM grupo_producto WHERE grupo_producto_id = @GrupoId AND estado = 'A'",
+                new { model.GrupoId });
+            if (activeGroup == 0)
+                return (false, "El grupo seleccionado no existe o está inactivo.", 0);
+            int duplicate = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM clase_producto WHERE grupo_producto_id = @GrupoId AND clase_producto = @Codigo AND clase_producto_id <> @Id",
+                new { model.GrupoId, Codigo = codigo, model.Id });
+            if (duplicate > 0)
+                return (false, "El código ya está asignado a otra clase de este grupo.", 0);
+            if (model.Id == 0)
+            {
+                const string sql = @"
+                    DECLARE @newId INT = NEXT VALUE FOR clase_producto_seq;
+                    INSERT INTO clase_producto
+                        (clase_producto_id, grupo_producto_id, clase_producto, nombre, correla, tipo_detrac_id, estado, fecha_alta, usuario_creacion_id, fecha_creacion)
+                    VALUES
+                        (@newId, @GrupoId, @Codigo, @Nombre, @Correlativo, @TipoDetraccionId, @Estado, @FechaAlta, @UserId, GETDATE());
+                    SELECT @newId;";
+                int id = await conn.ExecuteScalarAsync<int>(sql, new
+                {
+                    model.GrupoId, Codigo = codigo, Nombre = model.Nombre.Trim(),
+                    Correlativo = model.Correlativo > 0 ? model.Correlativo : (short)1,
+                    model.TipoDetraccionId, Estado = model.Estado == "I" ? "I" : "A",
+                    FechaAlta = model.FechaAlta == default ? DateTime.Today : model.FechaAlta, UserId = userId
+                });
+                return (true, "Clase de producto registrada.", id);
+            }
+
+            const string updateSql = @"
+                UPDATE clase_producto
+                SET nombre = @Nombre, tipo_detrac_id = @TipoDetraccionId, estado = @Estado,
+                    fecha_baja = CASE WHEN @Estado = 'I' THEN ISNULL(fecha_baja, GETDATE()) ELSE NULL END,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE clase_producto_id = @Id";
+            int updated = await conn.ExecuteAsync(updateSql, new
+            {
+                model.Id, Nombre = model.Nombre.Trim(), model.TipoDetraccionId,
+                Estado = model.Estado == "I" ? "I" : "A", UserId = userId
+            });
+            return updated == 0 ? (false, "Clase no encontrada.", 0) : (true, "Clase de producto actualizada.", model.Id);
+        }
+
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoClaseProductoAsync(int id, int userId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                UPDATE clase_producto
+                SET estado = CASE WHEN estado = 'A' THEN 'I' ELSE 'A' END,
+                    fecha_baja = CASE WHEN estado = 'A' THEN ISNULL(fecha_baja, GETDATE()) ELSE NULL END,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                OUTPUT inserted.estado
+                WHERE clase_producto_id = @Id";
+            string? state = await conn.QuerySingleOrDefaultAsync<string>(sql, new { Id = id, UserId = userId });
+            return state == null ? (false, "Clase no encontrada.", "I") : (true, "Estado de la clase actualizado.", state);
+        }
+
+        public async Task<List<LookupItemModel>> GetTiposDetraccionLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT tipo_detrac_id AS Id, tipo_detrac AS Codigo, nombre AS Nombre FROM tipo_detrac WHERE estado = 'A' ORDER BY nombre";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql);
             return rows.ToList();
         }
 
@@ -648,7 +995,7 @@ namespace AspNet10ArcoERP.Services
                 _ => dir == "asc" ? "p.producto_id ASC" : "p.producto_id DESC"
             };
 
-            int safeTop = top > 0 ? top : 25;
+            int safeTop = top is 25 or 50 or 100 or 500 ? top : 25;
             string topClause = $"TOP ({safeTop})";
 
             string sql = $@"
@@ -815,12 +1162,16 @@ namespace AspNet10ArcoERP.Services
                 return (false, "La descripción del producto o servicio es obligatoria.", 0);
 
             using var conn = _dbConnectionFactory.CreateConnection();
+            if (conn.State != ConnectionState.Open)
+                conn.Open();
+            using var transaction = conn.BeginTransaction();
 
             // Si es servicio y no tiene familia seleccionada, buscar la familia de servicios (192)
             if (model.TipoProductoId == 2 && model.FamiliaId <= 0)
             {
                 var famSvc = await conn.QueryFirstOrDefaultAsync<int?>(
-                    "SELECT TOP 1 f.familia_producto_id FROM familia_producto f INNER JOIN clase_producto c ON f.clase_producto_id = c.clase_producto_id INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id WHERE g.tipo_producto_id = 2 AND f.estado = 'A'");
+                    "SELECT TOP 1 f.familia_producto_id FROM familia_producto f INNER JOIN clase_producto c ON f.clase_producto_id = c.clase_producto_id INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id WHERE g.tipo_producto_id = 2 AND f.estado = 'A' AND c.estado = 'A' AND g.estado = 'A' ORDER BY f.familia_producto_id",
+                    transaction: transaction);
                 model.FamiliaId = famSvc ?? 192;
             }
 
@@ -831,32 +1182,10 @@ namespace AspNet10ArcoERP.Services
 
             if (model.Id == 0)
             {
-                string codigo = model.Codigo?.Trim().ToUpper() ?? "";
-                if (string.IsNullOrWhiteSpace(codigo) || codigo == "AUTOMÁTICO" || codigo == "AUTOMATICO")
-                {
-                    const string seqSql = @"
-                        SELECT g.grupo_producto AS Grupo, c.clase_producto AS Clase, f.familia_producto AS Fam, f.correla AS Corr
-                        FROM familia_producto f
-                        INNER JOIN clase_producto c ON f.clase_producto_id = c.clase_producto_id
-                        INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id
-                        WHERE f.familia_producto_id = @FamiliaId";
-                    var famInfo = await conn.QueryFirstOrDefaultAsync(seqSql, new { FamiliaId = model.FamiliaId });
-                    if (famInfo != null)
-                    {
-                        int nextCorr = ((int)famInfo.Corr) + 1;
-                        string gCod = ((string)famInfo.Grupo).Trim();
-                        string cCod = ((string)famInfo.Clase).Trim();
-                        string fCod = ((string)famInfo.Fam).Trim();
-                        codigo = $"{gCod}{cCod}{fCod}{nextCorr:D3}";
-
-                        await conn.ExecuteAsync("UPDATE familia_producto SET correla = @NextCorr WHERE familia_producto_id = @FamiliaId", new { NextCorr = nextCorr, FamiliaId = model.FamiliaId });
-                    }
-                    else
-                    {
-                        codigo = (esServicio ? "SVC" : "PRD") + DateTime.Now.ToString("yyMMddHHmm");
-                    }
-                }
-                if (codigo.Length > 12) codigo = codigo.Substring(0, 12);
+                var sku = await GenerarCodigoSkuAsync(conn, transaction, model.FamiliaId, model.TipoProductoId);
+                if (!sku.success)
+                    return (false, sku.message, 0);
+                string codigo = sku.codigo;
 
                 const string sql = @"
                     DECLARE @newId INT = NEXT VALUE FOR producto_seq;
@@ -895,11 +1224,21 @@ namespace AspNet10ArcoERP.Services
                     EstadoComProdId = model.EstadoComProdId > 0 ? model.EstadoComProdId : 1,
                     Estado = model.Estado ?? "A",
                     UserId = userId
-                });
+                }, transaction);
+                transaction.Commit();
                 return (true, $"{(esServicio ? "Servicio" : "Producto")} registrado exitosamente.", newId);
             }
             else
             {
+                int? familiaActual = await conn.QueryFirstOrDefaultAsync<int?>(
+                    "SELECT familia_producto_id FROM producto WHERE producto_id = @Id",
+                    new { model.Id },
+                    transaction);
+                if (!familiaActual.HasValue)
+                    return (false, "Producto no encontrado.", 0);
+                if (familiaActual.Value != model.FamiliaId)
+                    return (false, "No se puede modificar la jerarquía del producto porque forma parte de su SKU.", 0);
+
                 const string sql = @"
                     UPDATE producto 
                     SET descripcion = @Descripcion,
@@ -945,7 +1284,8 @@ namespace AspNet10ArcoERP.Services
                     EstadoComProdId = model.EstadoComProdId > 0 ? model.EstadoComProdId : 1,
                     Estado = model.Estado ?? "A",
                     UserId = userId
-                });
+                }, transaction);
+                transaction.Commit();
                 return (true, $"{(esServicio ? "Servicio" : "Producto")} actualizado exitosamente.", model.Id);
             }
         }
@@ -1327,18 +1667,12 @@ namespace AspNet10ArcoERP.Services
             int? tipoNaturalezaId = null, 
             string? sort = null, 
             string? dir = null, 
-            int top = 25)
+            int top = 25,
+            int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
 
-            int limit = top switch
-            {
-                25 => 25,
-                50 => 50,
-                100 => 100,
-                500 => 500,
-                _ => (top > 0 ? top : 25)
-            };
+            int limit = top is 25 or 50 or 100 or 500 ? top : 25;
 
             string orderColumn = (sort?.ToLower()) switch
             {
@@ -1418,7 +1752,8 @@ namespace AspNet10ArcoERP.Services
                 LEFT JOIN departamento dep ON pro.departamento_id = dep.departamento_id
                 LEFT JOIN tipo_prove tp ON p.tipo_prove_id = tp.tipo_prove_id
                 LEFT JOIN cond_pago cp ON p.cond_pago_id = cp.cond_pago_id
-                WHERE (@Search IS NULL 
+                WHERE p.empresa_id = @EmpresaId
+                  AND (@Search IS NULL
                        OR p.razon_social LIKE '%' + @Search + '%' 
                        OR p.nombres LIKE '%' + @Search + '%' 
                        OR p.apellido_pat LIKE '%' + @Search + '%'
@@ -1432,6 +1767,7 @@ namespace AspNet10ArcoERP.Services
 
             var rows = await conn.QueryAsync<ProveedorModel>(sql, new { 
                 Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+                EmpresaId = empresaId,
                 TipoProveedorId = tipoProveedorId > 0 ? tipoProveedorId : null,
                 Estado = string.IsNullOrWhiteSpace(estado) ? null : estado.Trim(),
                 TipoNaturalezaId = tipoNaturalezaId > 0 ? tipoNaturalezaId : null
@@ -1439,7 +1775,7 @@ namespace AspNet10ArcoERP.Services
             return rows.ToList();
         }
 
-        public async Task<ProveedorModel?> GetProveedorByIdAsync(int id)
+        public async Task<ProveedorModel?> GetProveedorByIdAsync(int id, int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = @"
@@ -1505,11 +1841,11 @@ namespace AspNet10ArcoERP.Services
                 LEFT JOIN departamento dep ON pro.departamento_id = dep.departamento_id
                 LEFT JOIN tipo_prove tp ON p.tipo_prove_id = tp.tipo_prove_id
                 LEFT JOIN cond_pago cp ON p.cond_pago_id = cp.cond_pago_id
-                WHERE p.proveedor_id = @Id";
-            return await conn.QueryFirstOrDefaultAsync<ProveedorModel>(sql, new { Id = id });
+                WHERE p.proveedor_id = @Id AND p.empresa_id = @EmpresaId";
+            return await conn.QueryFirstOrDefaultAsync<ProveedorModel>(sql, new { Id = id, EmpresaId = empresaId });
         }
 
-        public async Task<ProveedorModel?> BuscarProveedorPorDocumentoAsync(string doc)
+        public async Task<ProveedorModel?> BuscarProveedorPorDocumentoAsync(string doc, int empresaId = 1)
         {
             if (string.IsNullOrWhiteSpace(doc)) return null;
             doc = doc.Trim();
@@ -1558,13 +1894,13 @@ namespace AspNet10ArcoERP.Services
                 LEFT JOIN distrito dis ON p.distrito_id = dis.distrito_id
                 LEFT JOIN provincia pro ON dis.provincia_id = pro.provincia_id
                 LEFT JOIN departamento dep ON pro.departamento_id = dep.departamento_id
-                WHERE p.numero_ruc = @Doc OR p.num_doc_iden = @Doc
+                WHERE p.empresa_id = @EmpresaId AND (p.numero_ruc = @Doc OR p.num_doc_iden = @Doc)
                 ORDER BY p.proveedor_id DESC";
 
-            return await conn.QueryFirstOrDefaultAsync<ProveedorModel>(sql, new { Doc = doc });
+            return await conn.QueryFirstOrDefaultAsync<ProveedorModel>(sql, new { Doc = doc, EmpresaId = empresaId });
         }
 
-        public async Task<(bool success, string message, int id, string codigo)> SaveProveedorAsync(ProveedorModel model, int userId)
+        public async Task<(bool success, string message, int id, string codigo)> SaveProveedorAsync(ProveedorModel model, int userId, int empresaId = 1)
         {
             // Lógica de Naturaleza Jurídica (Natural vs. Jurídica)
             bool esNatural = model.TipoNaturalezaJuridicaId == 1;
@@ -1626,7 +1962,7 @@ namespace AspNet10ArcoERP.Services
                             usuario_creacion_id, fecha_creacion
                         )
                         VALUES (
-                            @newId, 1, @Codigo, @TipoNatJuriId, @RazonSocial, @Abrev, 
+                            @newId, @EmpresaId, @Codigo, @TipoNatJuriId, @RazonSocial, @Abrev,
                             @ApellidoPat, @ApellidoMat, @Nombres, @TipoDocId, @Doc, @Ruc, 
                             @NumeroCCI, @Contacto, @TipoViaId, @NombreVia, @NumeroVia, @Dpto, @Interior, 
                             @Manzana, @Lote, @Kilometro, @Block, @Etapa, @TipoZonaId, @NombreZona, @Referencia, 
@@ -1637,6 +1973,7 @@ namespace AspNet10ArcoERP.Services
                         SELECT @newId;";
 
                     int newId = await conn.ExecuteScalarAsync<int>(sqlInsert, new {
+                        EmpresaId = empresaId,
                         Codigo = codigoFinal,
                         TipoNatJuriId = model.TipoNaturalezaJuridicaId > 0 ? model.TipoNaturalezaJuridicaId : (esNatural ? 1 : 2),
                         RazonSocial = SafeTruncate(razonSocialFinal, 150),
@@ -1716,10 +2053,11 @@ namespace AspNet10ArcoERP.Services
                             estado = @Estado,
                             usuario_modifica_id = @UserId,
                             fecha_modifica = GETDATE()
-                        WHERE proveedor_id = @Id";
+                        WHERE proveedor_id = @Id AND empresa_id = @EmpresaId";
 
                     await conn.ExecuteAsync(sqlUpdate, new {
                         Id = model.Id,
+                        EmpresaId = empresaId,
                         TipoNatJuriId = model.TipoNaturalezaJuridicaId > 0 ? model.TipoNaturalezaJuridicaId : (esNatural ? 1 : 2),
                         RazonSocial = SafeTruncate(razonSocialFinal, 150),
                         Abrev = SafeTruncate(model.Abreviatura, 50),
@@ -1767,15 +2105,15 @@ namespace AspNet10ArcoERP.Services
             }
         }
 
-        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoProveedorAsync(int id, int userId)
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoProveedorAsync(int id, int userId, int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            var item = await conn.QueryFirstOrDefaultAsync<ProveedorModel>("SELECT proveedor_id AS Id, estado AS Estado FROM proveedor WHERE proveedor_id = @Id", new { Id = id });
+            var item = await conn.QueryFirstOrDefaultAsync<ProveedorModel>("SELECT proveedor_id AS Id, estado AS Estado FROM proveedor WHERE proveedor_id = @Id AND empresa_id = @EmpresaId", new { Id = id, EmpresaId = empresaId });
             if (item == null) return (false, "Registro no encontrado.", "I");
 
             string nuevoEstado = item.Estado == "A" ? "I" : "A";
-            const string sql = "UPDATE proveedor SET estado = @NuevoEstado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE proveedor_id = @Id";
-            await conn.ExecuteAsync(sql, new { Id = id, NuevoEstado = nuevoEstado, UserId = userId });
+            const string sql = "UPDATE proveedor SET estado = @NuevoEstado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE proveedor_id = @Id AND empresa_id = @EmpresaId";
+            await conn.ExecuteAsync(sql, new { Id = id, EmpresaId = empresaId, NuevoEstado = nuevoEstado, UserId = userId });
             return (true, $"Registro {(nuevoEstado == "A" ? "activado" : "desactivado")} exitosamente.", nuevoEstado);
         }
 
@@ -1832,11 +2170,11 @@ namespace AspNet10ArcoERP.Services
             return rows.ToList();
         }
 
-        public async Task<List<LookupItemModel>> GetCondicionesPagoLookupAsync()
+        public async Task<List<LookupItemModel>> GetCondicionesPagoLookupAsync(int empresaId = 1)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            const string sql = "SELECT cond_pago_id AS Id, CAST(cond_pago_id AS VARCHAR) AS Codigo, nombre AS Nombre FROM cond_pago WHERE estado = 'A' ORDER BY cond_pago_id";
-            var rows = await conn.QueryAsync<LookupItemModel>(sql);
+            const string sql = "SELECT cond_pago_id AS Id, CAST(cond_pago_id AS VARCHAR) AS Codigo, nombre AS Nombre FROM cond_pago WHERE estado = 'A' AND empresa_id = @EmpresaId ORDER BY cond_pago_id";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql, new { EmpresaId = empresaId });
             return rows.ToList();
         }
 
@@ -2113,32 +2451,15 @@ namespace AspNet10ArcoERP.Services
                 return (false, "Debe seleccionar la familia del combo.", 0, "");
 
             using var conn = _dbConnectionFactory.CreateConnection();
+            if (conn.State != ConnectionState.Open)
+                conn.Open();
+            using var transaction = conn.BeginTransaction();
             if (model.Id == 0)
             {
-                // Autogenerar código de combo SKU correlativo basado en la familia seleccionada
-                string codigo = "";
-                var famData = await conn.QueryFirstOrDefaultAsync<dynamic>(@"
-                    SELECT f.familia_producto AS FamCod, f.correla AS Correla, c.clase_producto AS ClaseCod, g.grupo_producto AS GrupoCod
-                    FROM familia_producto f
-                    INNER JOIN clase_producto c ON f.clase_producto_id = c.clase_producto_id
-                    INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id
-                    WHERE f.familia_producto_id = @FamiliaId", new { FamiliaId = model.FamiliaId });
-
-                if (famData != null)
-                {
-                    string gCod = ((string)famData.GrupoCod ?? "CMB").PadRight(3, '0').Substring(0, 3).ToUpper();
-                    string cCod = ((string)famData.ClaseCod ?? "001").PadRight(3, '0').Substring(0, 3).ToUpper();
-                    string fCod = ((string)famData.FamCod ?? "001").PadRight(3, '0').Substring(0, 3).ToUpper();
-                    int nextCorr = Convert.ToInt32(famData.Correla ?? 0) + 1;
-                    codigo = $"{gCod}{cCod}{fCod}{nextCorr:D3}";
-
-                    await conn.ExecuteAsync("UPDATE familia_producto SET correla = @NextCorr WHERE familia_producto_id = @FamiliaId", new { NextCorr = nextCorr, FamiliaId = model.FamiliaId });
-                }
-                else
-                {
-                    codigo = "CMB" + DateTime.Now.ToString("yyMMddHHmm");
-                }
-                if (codigo.Length > 12) codigo = codigo.Substring(0, 12);
+                var sku = await GenerarCodigoSkuAsync(conn, transaction, model.FamiliaId, null, requireComboGroup: true);
+                if (!sku.success)
+                    return (false, sku.message, 0, string.Empty);
+                string codigo = sku.codigo;
 
                 const string sql = @"
                     DECLARE @newId INT = NEXT VALUE FOR producto_seq;
@@ -2165,12 +2486,27 @@ namespace AspNet10ArcoERP.Services
                     EstadoComProdId = model.EstadoComProdId > 0 ? model.EstadoComProdId : 1,
                     Estado = model.Estado ?? "A",
                     UserId = userId
-                });
+                }, transaction);
 
+                transaction.Commit();
                 return (true, "Combo registrado exitosamente.", newId, codigo);
             }
             else
             {
+                int? familiaActual = await conn.QueryFirstOrDefaultAsync<int?>(
+                    @"SELECT p.familia_producto_id
+                      FROM producto p
+                      INNER JOIN familia_producto f ON f.familia_producto_id = p.familia_producto_id
+                      INNER JOIN clase_producto c ON c.clase_producto_id = f.clase_producto_id
+                      INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
+                      WHERE p.producto_id = @Id AND g.es_combo = 'S'",
+                    new { model.Id },
+                    transaction);
+                if (!familiaActual.HasValue)
+                    return (false, "Combo no encontrado.", 0, string.Empty);
+                if (familiaActual.Value != model.FamiliaId)
+                    return (false, "No se puede modificar la jerarquía del combo porque forma parte de su SKU.", 0, string.Empty);
+
                 const string sql = @"
                     UPDATE producto 
                     SET descripcion = @Descripcion,
@@ -2190,8 +2526,9 @@ namespace AspNet10ArcoERP.Services
                     EstadoComProdId = model.EstadoComProdId > 0 ? model.EstadoComProdId : 1,
                     Estado = model.Estado ?? "A",
                     UserId = userId
-                });
+                }, transaction);
 
+                transaction.Commit();
                 return (true, "Combo actualizado exitosamente.", model.Id, model.Codigo ?? "");
             }
         }
@@ -2323,6 +2660,215 @@ namespace AspNet10ArcoERP.Services
                   AND (@Search IS NULL OR p.producto LIKE '%' + @Search + '%' OR p.descripcion LIKE '%' + @Search + '%')
                 ORDER BY p.descripcion ASC";
             var rows = await conn.QueryAsync<LookupItemModel>(sql, new { Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim() });
+            return rows.ToList();
+        }
+
+        public async Task<List<TransportistaModel>> GetTransportistasAsync(string? search = null, string? estado = null, int top = 25, int empresaId = 1)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            int limit = top is 25 or 50 or 100 or 500 ? top : 25;
+            const string sql = @"
+                SELECT TOP (@Limit) transpo_id AS Id, empresa_id AS EmpresaId, numero_ruc AS NumeroRuc,
+                       razon_social AS RazonSocial, num_ins_vehic AS NumeroInscripcionVehicular, estado AS Estado
+                FROM transpo
+                WHERE empresa_id = @EmpresaId
+                  AND (@Search IS NULL OR razon_social LIKE '%' + @Search + '%' OR numero_ruc LIKE '%' + @Search + '%' OR num_ins_vehic LIKE '%' + @Search + '%')
+                  AND (@Estado IS NULL OR estado = @Estado)
+                ORDER BY razon_social";
+            var rows = await conn.QueryAsync<TransportistaModel>(sql, new
+            {
+                Limit = limit, EmpresaId = empresaId,
+                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+                Estado = string.IsNullOrWhiteSpace(estado) ? null : estado.Trim().ToUpperInvariant()
+            });
+            return rows.ToList();
+        }
+
+        public async Task<TransportistaModel?> GetTransportistaByIdAsync(int id, int empresaId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT transpo_id AS Id, empresa_id AS EmpresaId, numero_ruc AS NumeroRuc,
+                       razon_social AS RazonSocial, num_ins_vehic AS NumeroInscripcionVehicular, estado AS Estado
+                FROM transpo WHERE transpo_id = @Id AND empresa_id = @EmpresaId";
+            return await conn.QueryFirstOrDefaultAsync<TransportistaModel>(sql, new { Id = id, EmpresaId = empresaId });
+        }
+
+        public async Task<(bool success, string message, int id)> SaveTransportistaAsync(TransportistaModel model, int userId, int empresaId)
+        {
+            if (string.IsNullOrWhiteSpace(model.RazonSocial) || string.IsNullOrWhiteSpace(model.NumeroInscripcionVehicular))
+                return (false, "Razón social y número de inscripción vehicular son obligatorios.", 0);
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (model.Id == 0)
+            {
+                const string sql = @"
+                    DECLARE @newId INT = NEXT VALUE FOR transpo_seq;
+                    INSERT INTO transpo (transpo_id, empresa_id, numero_ruc, razon_social, num_ins_vehic, estado, usuario_creacion_id, fecha_creacion)
+                    VALUES (@newId, @EmpresaId, @NumeroRuc, @RazonSocial, @Inscripcion, @Estado, @UserId, GETDATE());
+                    SELECT @newId;";
+                int id = await conn.ExecuteScalarAsync<int>(sql, new
+                {
+                    EmpresaId = empresaId, NumeroRuc = SafeTruncate(model.NumeroRuc, 35),
+                    RazonSocial = SafeTruncate(model.RazonSocial, 150),
+                    Inscripcion = SafeTruncate(model.NumeroInscripcionVehicular, 25),
+                    Estado = model.Estado == "I" ? "I" : "A", UserId = userId
+                });
+                return (true, "Transportista registrado.", id);
+            }
+
+            const string updateSql = @"
+                UPDATE transpo
+                SET numero_ruc = @NumeroRuc, razon_social = @RazonSocial, num_ins_vehic = @Inscripcion,
+                    estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE transpo_id = @Id AND empresa_id = @EmpresaId";
+            int updated = await conn.ExecuteAsync(updateSql, new
+            {
+                model.Id, EmpresaId = empresaId,
+                NumeroRuc = SafeTruncate(model.NumeroRuc, 35),
+                RazonSocial = SafeTruncate(model.RazonSocial, 150),
+                Inscripcion = SafeTruncate(model.NumeroInscripcionVehicular, 25),
+                Estado = model.Estado == "I" ? "I" : "A", UserId = userId
+            });
+            return updated == 0 ? (false, "Transportista no encontrado para la empresa activa.", 0) : (true, "Transportista actualizado.", model.Id);
+        }
+
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoTransportistaAsync(int id, int userId, int empresaId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                UPDATE transpo SET estado = CASE WHEN estado = 'A' THEN 'I' ELSE 'A' END,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                OUTPUT inserted.estado WHERE transpo_id = @Id AND empresa_id = @EmpresaId";
+            string? state = await conn.QuerySingleOrDefaultAsync<string>(sql, new { Id = id, UserId = userId, EmpresaId = empresaId });
+            return state == null ? (false, "Transportista no encontrado.", "I") : (true, "Estado del transportista actualizado.", state);
+        }
+
+        public async Task<List<TransportistaUnidadModel>> GetTransportistaUnidadesAsync(int transportistaId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT transp_unid_id AS Id, transpo_id AS TransportistaId, marca AS Marca, modelo AS Modelo,
+                       placa AS Placa, placa_2 AS Placa2, estado AS Estado
+                FROM transp_unid WHERE transpo_id = @TransportistaId ORDER BY marca, modelo, placa";
+            var rows = await conn.QueryAsync<TransportistaUnidadModel>(sql, new { TransportistaId = transportistaId });
+            return rows.ToList();
+        }
+
+        public async Task<(bool success, string message, int id)> SaveTransportistaUnidadAsync(TransportistaUnidadModel model, int userId)
+        {
+            if (model.TransportistaId <= 0 || string.IsNullOrWhiteSpace(model.Marca) || string.IsNullOrWhiteSpace(model.Placa))
+                return (false, "Transportista, marca y placa son obligatorios.", 0);
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (model.Id == 0)
+            {
+                const string sql = @"
+                    DECLARE @newId INT = NEXT VALUE FOR transp_unid_seq;
+                    INSERT INTO transp_unid (transp_unid_id, transpo_id, marca, modelo, placa, placa_2, estado, usuario_creacion_id, fecha_creacion)
+                    VALUES (@newId, @TransportistaId, @Marca, @Modelo, @Placa, @Placa2, 'A', @UserId, GETDATE());
+                    SELECT @newId;";
+                int id = await conn.ExecuteScalarAsync<int>(sql, new
+                {
+                    model.TransportistaId, Marca = SafeTruncate(model.Marca, 20),
+                    Modelo = SafeTruncate(model.Modelo, 20), Placa = SafeTruncate(model.Placa.ToUpperInvariant(), 6),
+                    Placa2 = SafeTruncate(model.Placa2.ToUpperInvariant(), 6), UserId = userId
+                });
+                return (true, "Unidad registrada.", id);
+            }
+
+            const string updateSql = @"
+                UPDATE transp_unid SET marca = @Marca, modelo = @Modelo, placa = @Placa, placa_2 = @Placa2,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE transp_unid_id = @Id AND transpo_id = @TransportistaId AND estado = 'A'";
+            int updated = await conn.ExecuteAsync(updateSql, new
+            {
+                model.Id, model.TransportistaId, Marca = SafeTruncate(model.Marca, 20),
+                Modelo = SafeTruncate(model.Modelo, 20), Placa = SafeTruncate(model.Placa.ToUpperInvariant(), 6),
+                Placa2 = SafeTruncate(model.Placa2.ToUpperInvariant(), 6), UserId = userId
+            });
+            return updated == 0 ? (false, "Unidad no encontrada.", 0) : (true, "Unidad actualizada.", model.Id);
+        }
+
+        public async Task<(bool success, string message)> DeleteTransportistaUnidadAsync(int id, int userId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            int updated = await conn.ExecuteAsync(
+                "UPDATE transp_unid SET estado = 'I', usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE transp_unid_id = @Id AND estado = 'A'",
+                new { Id = id, UserId = userId });
+            return updated == 0 ? (false, "Unidad no encontrada o ya inactiva.") : (true, "Unidad desactivada.");
+        }
+
+        public async Task<List<TransportistaConductorModel>> GetTransportistaConductoresAsync(int transportistaId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT c.transp_condu_id AS Id, c.transpo_id AS TransportistaId,
+                       c.apellido_pat AS ApellidoPaterno, c.apellido_mat AS ApellidoMaterno, c.nombres AS Nombres,
+                       c.tipo_doc_iden_id AS TipoDocumentoIdentidadId, d.nombre AS TipoDocumentoNombre,
+                       c.num_doc_iden AS NumeroDocumentoIdentidad, c.num_licencia AS NumeroLicencia,
+                       c.telefono AS Telefono, c.estado AS Estado
+                FROM transp_condu c
+                INNER JOIN tipo_doc_iden d ON d.tipo_doc_iden_id = c.tipo_doc_iden_id
+                WHERE c.transpo_id = @TransportistaId ORDER BY c.apellido_pat, c.apellido_mat, c.nombres";
+            var rows = await conn.QueryAsync<TransportistaConductorModel>(sql, new { TransportistaId = transportistaId });
+            return rows.ToList();
+        }
+
+        public async Task<(bool success, string message, int id)> SaveTransportistaConductorAsync(TransportistaConductorModel model, int userId)
+        {
+            if (model.TransportistaId <= 0 || model.TipoDocumentoIdentidadId <= 0
+                || string.IsNullOrWhiteSpace(model.ApellidoPaterno) || string.IsNullOrWhiteSpace(model.Nombres)
+                || string.IsNullOrWhiteSpace(model.NumeroDocumentoIdentidad) || string.IsNullOrWhiteSpace(model.NumeroLicencia))
+                return (false, "Complete conductor, documento de identidad y licencia.", 0);
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (model.Id == 0)
+            {
+                const string sql = @"
+                    DECLARE @newId INT = NEXT VALUE FOR transp_condu_seq;
+                    INSERT INTO transp_condu (transp_condu_id, transpo_id, apellido_pat, apellido_mat, nombres, tipo_doc_iden_id, num_doc_iden, num_licencia, telefono, estado, usuario_creacion_id, fecha_creacion)
+                    VALUES (@newId, @TransportistaId, @ApellidoPaterno, @ApellidoMaterno, @Nombres, @TipoDocumentoIdentidadId, @Documento, @Licencia, @Telefono, 'A', @UserId, GETDATE());
+                    SELECT @newId;";
+                int id = await conn.ExecuteScalarAsync<int>(sql, new
+                {
+                    model.TransportistaId, ApellidoPaterno = SafeTruncate(model.ApellidoPaterno, 50),
+                    ApellidoMaterno = SafeTruncate(model.ApellidoMaterno, 50), Nombres = SafeTruncate(model.Nombres, 50),
+                    model.TipoDocumentoIdentidadId, Documento = SafeTruncate(model.NumeroDocumentoIdentidad, 35),
+                    Licencia = SafeTruncate(model.NumeroLicencia, 20), Telefono = SafeTruncate(model.Telefono, 15), UserId = userId
+                });
+                return (true, "Conductor registrado.", id);
+            }
+
+            const string updateSql = @"
+                UPDATE transp_condu
+                SET apellido_pat = @ApellidoPaterno, apellido_mat = @ApellidoMaterno, nombres = @Nombres,
+                    tipo_doc_iden_id = @TipoDocumentoIdentidadId, num_doc_iden = @Documento,
+                    num_licencia = @Licencia, telefono = @Telefono,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE transp_condu_id = @Id AND transpo_id = @TransportistaId AND estado = 'A'";
+            int updated = await conn.ExecuteAsync(updateSql, new
+            {
+                model.Id, model.TransportistaId, ApellidoPaterno = SafeTruncate(model.ApellidoPaterno, 50),
+                ApellidoMaterno = SafeTruncate(model.ApellidoMaterno, 50), Nombres = SafeTruncate(model.Nombres, 50),
+                model.TipoDocumentoIdentidadId, Documento = SafeTruncate(model.NumeroDocumentoIdentidad, 35),
+                Licencia = SafeTruncate(model.NumeroLicencia, 20), Telefono = SafeTruncate(model.Telefono, 15), UserId = userId
+            });
+            return updated == 0 ? (false, "Conductor no encontrado.", 0) : (true, "Conductor actualizado.", model.Id);
+        }
+
+        public async Task<(bool success, string message)> DeleteTransportistaConductorAsync(int id, int userId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            int updated = await conn.ExecuteAsync(
+                "UPDATE transp_condu SET estado = 'I', usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE transp_condu_id = @Id AND estado = 'A'",
+                new { Id = id, UserId = userId });
+            return updated == 0 ? (false, "Conductor no encontrado o ya inactivo.") : (true, "Conductor desactivado.");
+        }
+
+        public async Task<List<TipoDocIdentidadLookupModel>> GetDocumentosTransportistaLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT tipo_doc_iden_id AS Id, tipo_doc_iden AS Codigo, nombre AS Nombre, abrev AS Abreviatura, formato_valida AS FormatoValidacion FROM tipo_doc_iden WHERE estado = 'A' ORDER BY nombre";
+            var rows = await conn.QueryAsync<TipoDocIdentidadLookupModel>(sql);
             return rows.ToList();
         }
 

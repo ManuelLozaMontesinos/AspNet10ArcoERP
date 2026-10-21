@@ -27,16 +27,18 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             }
         }
 
+        private int CurrentEmpresaId => int.TryParse(User.FindFirst("EmpresaId")?.Value, out var id) ? id : 1;
+
         public async Task<IActionResult> Index()
         {
-            var list = await _maestrosService.GetCentrosCostoAsync();
+            var list = await _maestrosService.GetCentrosCostoAsync(CurrentEmpresaId);
             return View(list);
         }
 
         [HttpGet]
         public async Task<IActionResult> Obtener(int id)
         {
-            var item = await _maestrosService.GetCentroCostoByIdAsync(id);
+            var item = await _maestrosService.GetCentroCostoByIdAsync(id, CurrentEmpresaId);
             if (item == null)
                 return Json(new { success = false, message = "Centro de costo no encontrado." });
 
@@ -46,21 +48,21 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         [HttpPost]
         public async Task<IActionResult> Guardar([FromForm] CentroCostoModel model)
         {
-            var (success, message, id) = await _maestrosService.SaveCentroCostoAsync(model, CurrentUserId);
+            var (success, message, id) = await _maestrosService.SaveCentroCostoAsync(model, CurrentUserId, CurrentEmpresaId);
             return Json(new { success, message, id });
         }
 
         [HttpPost]
         public async Task<IActionResult> CambiarEstado(int id)
         {
-            var (success, message, nuevoEstado) = await _maestrosService.ToggleEstadoCentroCostoAsync(id, CurrentUserId);
+            var (success, message, nuevoEstado) = await _maestrosService.ToggleEstadoCentroCostoAsync(id, CurrentUserId, CurrentEmpresaId);
             return Json(new { success, message, nuevoEstado });
         }
 
         [HttpPost]
         public async Task<IActionResult> Eliminar(int id)
         {
-            var (success, message, _) = await _maestrosService.ToggleEstadoCentroCostoAsync(id, CurrentUserId);
+            var (success, message, _) = await _maestrosService.ToggleEstadoCentroCostoAsync(id, CurrentUserId, CurrentEmpresaId);
             return Json(new { success, message });
         }
     }

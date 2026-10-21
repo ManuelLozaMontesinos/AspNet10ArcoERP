@@ -157,6 +157,75 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
     }
 
+    public class GrupoProductoModel
+    {
+        public int Id { get; set; }
+        public int TipoProductoId { get; set; } = 1;
+        public string TipoProductoNombre { get; set; } = string.Empty;
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public short Correlativo { get; set; } = 1;
+        public string UsarIncrementoFraccion { get; set; } = "N";
+        public string EsCombo { get; set; } = "N";
+        public string EsInsumo { get; set; } = "N";
+        public string Estado { get; set; } = "A";
+        public DateTime FechaAlta { get; set; } = DateTime.Today;
+        public DateTime? FechaBaja { get; set; }
+    }
+
+    public class ClaseProductoModel
+    {
+        public int Id { get; set; }
+        public int GrupoId { get; set; }
+        public string GrupoNombre { get; set; } = string.Empty;
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public short Correlativo { get; set; } = 1;
+        public int TipoDetraccionId { get; set; } = 1;
+        public string TipoDetraccionNombre { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+        public DateTime FechaAlta { get; set; } = DateTime.Today;
+        public DateTime? FechaBaja { get; set; }
+    }
+
+    public class TransportistaModel
+    {
+        public int Id { get; set; }
+        public int EmpresaId { get; set; }
+        public string NumeroRuc { get; set; } = string.Empty;
+        public string RazonSocial { get; set; } = string.Empty;
+        public string NumeroInscripcionVehicular { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+        public List<TransportistaUnidadModel> Unidades { get; set; } = new();
+        public List<TransportistaConductorModel> Conductores { get; set; } = new();
+    }
+
+    public class TransportistaUnidadModel
+    {
+        public int Id { get; set; }
+        public int TransportistaId { get; set; }
+        public string Marca { get; set; } = string.Empty;
+        public string Modelo { get; set; } = string.Empty;
+        public string Placa { get; set; } = string.Empty;
+        public string Placa2 { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+    }
+
+    public class TransportistaConductorModel
+    {
+        public int Id { get; set; }
+        public int TransportistaId { get; set; }
+        public string ApellidoPaterno { get; set; } = string.Empty;
+        public string ApellidoMaterno { get; set; } = string.Empty;
+        public string Nombres { get; set; } = string.Empty;
+        public int TipoDocumentoIdentidadId { get; set; }
+        public string TipoDocumentoNombre { get; set; } = string.Empty;
+        public string NumeroDocumentoIdentidad { get; set; } = string.Empty;
+        public string NumeroLicencia { get; set; } = string.Empty;
+        public string Telefono { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+    }
+
     public class TipoCambioModel
     {
         public int Id { get; set; }
@@ -176,6 +245,14 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+    }
+
+    public class TipoCambioMaestroModel
+    {
+        public int Id { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
     }
 
     public class MonedaCatalogoItem
@@ -199,7 +276,7 @@ namespace AspNet10ArcoERP.Models
         public int FamiliaId { get; set; }
         public string FamiliaCodigo { get; set; } = string.Empty;
         public string FamiliaNombre { get; set; } = string.Empty;
-        public short Correlativo { get; set; } = 1;
+        public short Correlativo { get; set; }
 
         public string Estado { get; set; } = "A";
     }
@@ -350,6 +427,7 @@ namespace AspNet10ArcoERP.Models
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
         public int TipoCondicionPagoId { get; set; } = 1;
+        public string TipoCondicionPagoNombre { get; set; } = string.Empty;
         public int Dias { get; set; }
         public string Estado { get; set; } = "A";
     }

@@ -1,6 +1,7 @@
 @model List<AspNet10ArcoERP.Models.CondPagoModel>
 @{
     ViewData["Title"] = "Condiciones de Pago";
+    var tiposCondicionPago = ViewBag.TiposCondicionPago as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
 }
 
 <style>
@@ -133,6 +134,7 @@
                                     <td class="text-center font-monospace fw-bold text-primary">@item.Codigo</td>
                                     <td>
                                         <span class="fw-semibold text-body">@item.Nombre</span>
+                                        <span class="d-block small text-body-secondary">@item.TipoCondicionPagoNombre</span>
                                     </td>
                                     <td class="text-center font-monospace">
                                         @if (item.Dias == 0)
@@ -211,6 +213,16 @@
                         </div>
                     </div>
                     <div class="mb-3">
+                        <label for="cp-tipo" class="form-label fw-semibold">Tipo de Condición <span class="text-danger">*</span></label>
+                        <select class="form-select" id="cp-tipo" name="TipoCondicionPagoId" required>
+                            <option value="">-- Seleccione tipo --</option>
+                            @foreach (var tipo in tiposCondicionPago)
+                            {
+                                <option value="@tipo.Id">@tipo.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label for="cp-nombre" class="form-label fw-semibold">Descripción / Nombre <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="cp-nombre" name="Nombre" placeholder="Ej: Contado Inmediato, Crédito 30 Días..." maxlength="100" required />
                     </div>
@@ -243,7 +255,7 @@
     function sonCamposRequeridosValidos() {
         var nom = ($('#cp-nombre').val() || '').trim();
         var dias = $('#cp-dias').val();
-        return (nom !== '' && dias !== '');
+        return (nom !== '' && dias !== '' && $('#cp-tipo').val() !== '');
     }
 
     function actualizarEstadoBotonGuardar() {
@@ -354,6 +366,7 @@
         $('#cp-codigo').val('');
         $('#cp-nombre').val('');
         $('#cp-dias').val(0);
+        $('#cp-tipo').val('');
         $('#cp-estado').val('A');
 
         formInitialState = "";
@@ -376,6 +389,7 @@
                     $('#cp-codigo').val(res.data.codigo || res.data.Codigo || '');
                     $('#cp-nombre').val(res.data.nombre || res.data.Nombre);
                     $('#cp-dias').val(res.data.dias !== undefined ? res.data.dias : res.data.Dias);
+                    $('#cp-tipo').val(res.data.tipoCondicionPagoId || res.data.TipoCondicionPagoId || '');
                     $('#cp-estado').val(res.data.estado || res.data.Estado || 'A');
 
                     var modal = new bootstrap.Modal(document.getElementById('modal-crud-condpago'));
@@ -400,8 +414,8 @@
         e.preventDefault();
         var nombre = $('#cp-nombre').val().trim();
         var dias = $('#cp-dias').val();
-        if (!nombre || dias === '') {
-            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Por favor complete el nombre y los días de plazo.' });
+        if (!nombre || dias === '' || !$('#cp-tipo').val()) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Complete nombre, tipo de condición y días de plazo.' });
             return;
         }
 

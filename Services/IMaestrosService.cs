@@ -25,16 +25,17 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoRemMinVitalAsync(int id, int userId);
 
         // 4. Centro de Costo
-        Task<List<CentroCostoModel>> GetCentrosCostoAsync();
-        Task<CentroCostoModel?> GetCentroCostoByIdAsync(int id);
-        Task<(bool success, string message, int id)> SaveCentroCostoAsync(CentroCostoModel model, int userId);
-        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCentroCostoAsync(int id, int userId);
+        Task<List<CentroCostoModel>> GetCentrosCostoAsync(int empresaId = 1);
+        Task<CentroCostoModel?> GetCentroCostoByIdAsync(int id, int empresaId = 1);
+        Task<(bool success, string message, int id)> SaveCentroCostoAsync(CentroCostoModel model, int userId, int empresaId = 1);
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCentroCostoAsync(int id, int userId, int empresaId = 1);
 
         // 5. Condición de Pago
-        Task<List<CondPagoModel>> GetCondicionesPagoAsync();
-        Task<CondPagoModel?> GetCondPagoByIdAsync(int id);
-        Task<(bool success, string message, int id)> SaveCondPagoAsync(CondPagoModel model, int userId);
-        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCondPagoAsync(int id, int userId);
+        Task<List<CondPagoModel>> GetCondicionesPagoAsync(int empresaId = 1);
+        Task<CondPagoModel?> GetCondPagoByIdAsync(int id, int empresaId = 1);
+        Task<(bool success, string message, int id)> SaveCondPagoAsync(CondPagoModel model, int userId, int empresaId = 1);
+        Task<List<LookupItemModel>> GetTiposCondicionPagoLookupAsync();
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCondPagoAsync(int id, int userId, int empresaId = 1);
 
         // 6. Tipo de Cambio
         Task<List<TipoCambioModel>> GetTiposCambioAsync(string? search = null, int? tipo = null, string? estado = null, int top = 25);
@@ -43,6 +44,10 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoTipoCambioAsync(int id, int userId);
         Task<List<TipoCambioCatalogoItem>> GetTiposCambioCatalogoAsync();
         Task<List<MonedaCatalogoItem>> GetMonedasCatalogoAsync();
+        Task<List<TipoCambioMaestroModel>> GetTiposCambioMaestrosAsync();
+        Task<TipoCambioMaestroModel?> GetTipoCambioMaestroByIdAsync(int id);
+        Task<(bool success, string message, int id)> SaveTipoCambioMaestroAsync(TipoCambioMaestroModel model, int userId);
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoTipoCambioMaestroAsync(int id, int userId);
 
         // 7. Familia de Producto
         Task<List<GrupoClaseFamiliaModel>> GetFamiliasProductoAsync();
@@ -50,6 +55,15 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message, int id)> SaveFamiliaProductoAsync(GrupoClaseFamiliaModel model, int userId);
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoFamiliaProductoAsync(int id, int userId);
         Task<List<LookupItemModel>> GetClasesProductoLookupAsync(int? grupoId = null);
+        Task<List<GrupoProductoModel>> GetGruposProductoAsync(int? tipoProductoId = null);
+        Task<GrupoProductoModel?> GetGrupoProductoByIdAsync(int id);
+        Task<(bool success, string message, int id)> SaveGrupoProductoAsync(GrupoProductoModel model, int userId);
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoGrupoProductoAsync(int id, int userId);
+        Task<List<ClaseProductoModel>> GetClasesProductoAsync(int? grupoId = null);
+        Task<ClaseProductoModel?> GetClaseProductoByIdAsync(int id);
+        Task<(bool success, string message, int id)> SaveClaseProductoAsync(ClaseProductoModel model, int userId);
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoClaseProductoAsync(int id, int userId);
+        Task<List<LookupItemModel>> GetTiposDetraccionLookupAsync();
 
         // 8. Producto y Servicio
         Task<List<ProductoModel>> GetProductosAsync(
@@ -103,17 +117,18 @@ namespace AspNet10ArcoERP.Services
             int? tipoNaturalezaId = null, 
             string? sort = null, 
             string? dir = null, 
-            int top = 25);
-        Task<ProveedorModel?> GetProveedorByIdAsync(int id);
-        Task<ProveedorModel?> BuscarProveedorPorDocumentoAsync(string doc);
-        Task<(bool success, string message, int id, string codigo)> SaveProveedorAsync(ProveedorModel model, int userId);
-        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoProveedorAsync(int id, int userId);
+            int top = 25,
+            int empresaId = 1);
+        Task<ProveedorModel?> GetProveedorByIdAsync(int id, int empresaId = 1);
+        Task<ProveedorModel?> BuscarProveedorPorDocumentoAsync(string doc, int empresaId = 1);
+        Task<(bool success, string message, int id, string codigo)> SaveProveedorAsync(ProveedorModel model, int userId, int empresaId = 1);
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoProveedorAsync(int id, int userId, int empresaId = 1);
         Task<List<LookupItemModel>> GetTiposNaturalezaJuridicaLookupAsync();
         Task<List<TipoDocIdentidadLookupModel>> GetTiposDocumentoIdentidadLookupAsync(int? tipoNaturalezaJuridicaId = null);
         Task<List<LookupItemModel>> GetTiposViaLookupAsync();
         Task<List<LookupItemModel>> GetTiposZonaLookupAsync();
         Task<List<LookupItemModel>> GetTiposProveedorLookupAsync();
-        Task<List<LookupItemModel>> GetCondicionesPagoLookupAsync();
+        Task<List<LookupItemModel>> GetCondicionesPagoLookupAsync(int empresaId = 1);
         Task<List<LookupItemModel>> GetDepartamentosLookupAsync();
         Task<List<UbigeoLookupModel>> GetProvinciasLookupAsync(int departamentoId);
         Task<List<UbigeoLookupModel>> GetDistritosLookupAsync(int provinciaId);
@@ -124,6 +139,19 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message, int id)> SaveComboProductoAsync(ComboProductoModel model, int userId);
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoComboProductoAsync(int id, int userId);
         Task<List<LookupItemModel>> GetProductosLookupAsync();
+
+        // Transportistas and related vehicles/drivers
+        Task<List<TransportistaModel>> GetTransportistasAsync(string? search = null, string? estado = null, int top = 25, int empresaId = 1);
+        Task<TransportistaModel?> GetTransportistaByIdAsync(int id, int empresaId);
+        Task<(bool success, string message, int id)> SaveTransportistaAsync(TransportistaModel model, int userId, int empresaId);
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoTransportistaAsync(int id, int userId, int empresaId);
+        Task<List<TransportistaUnidadModel>> GetTransportistaUnidadesAsync(int transportistaId);
+        Task<(bool success, string message, int id)> SaveTransportistaUnidadAsync(TransportistaUnidadModel model, int userId);
+        Task<(bool success, string message)> DeleteTransportistaUnidadAsync(int id, int userId);
+        Task<List<TransportistaConductorModel>> GetTransportistaConductoresAsync(int transportistaId);
+        Task<(bool success, string message, int id)> SaveTransportistaConductorAsync(TransportistaConductorModel model, int userId);
+        Task<(bool success, string message)> DeleteTransportistaConductorAsync(int id, int userId);
+        Task<List<TipoDocIdentidadLookupModel>> GetDocumentosTransportistaLookupAsync();
 
         // 10.1 Gestión Integral de Combos / Kits (Cabecera y Detalle)
         Task<List<ProductoComboModel>> GetCombosBandejaAsync(string? search, int? grupoId, int? claseId, int? familiaId, string? estado, string? sort, string? dir, int top = 25);

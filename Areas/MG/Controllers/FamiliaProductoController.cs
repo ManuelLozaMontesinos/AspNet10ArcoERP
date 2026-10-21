@@ -31,7 +31,61 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         {
             var list = await _maestrosService.GetFamiliasProductoAsync();
             ViewBag.ClasesLookup = await _maestrosService.GetClasesProductoLookupAsync();
+            ViewBag.Grupos = await _maestrosService.GetGruposProductoAsync();
+            ViewBag.Clases = await _maestrosService.GetClasesProductoAsync();
+            ViewBag.TiposProducto = await _maestrosService.GetTiposProductoLookupAsync();
+            ViewBag.TiposDetraccion = await _maestrosService.GetTiposDetraccionLookupAsync();
             return View(list);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ListarGrupos(int? tipoProductoId = null) =>
+            Json(new { success = true, data = await _maestrosService.GetGruposProductoAsync(tipoProductoId) });
+
+        [HttpGet]
+        public async Task<IActionResult> ObtenerGrupo(int id)
+        {
+            var item = await _maestrosService.GetGrupoProductoByIdAsync(id);
+            return item == null ? Json(new { success = false, message = "Grupo no encontrado." }) : Json(new { success = true, data = item });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GuardarGrupo([FromForm] GrupoProductoModel model)
+        {
+            var (success, message, id) = await _maestrosService.SaveGrupoProductoAsync(model, CurrentUserId);
+            return Json(new { success, message, id });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CambiarEstadoGrupo(int id)
+        {
+            var (success, message, nuevoEstado) = await _maestrosService.ToggleEstadoGrupoProductoAsync(id, CurrentUserId);
+            return Json(new { success, message, nuevoEstado });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ListarClases(int? grupoId = null) =>
+            Json(new { success = true, data = await _maestrosService.GetClasesProductoAsync(grupoId) });
+
+        [HttpGet]
+        public async Task<IActionResult> ObtenerClase(int id)
+        {
+            var item = await _maestrosService.GetClaseProductoByIdAsync(id);
+            return item == null ? Json(new { success = false, message = "Clase no encontrada." }) : Json(new { success = true, data = item });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GuardarClase([FromForm] ClaseProductoModel model)
+        {
+            var (success, message, id) = await _maestrosService.SaveClaseProductoAsync(model, CurrentUserId);
+            return Json(new { success, message, id });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CambiarEstadoClase(int id)
+        {
+            var (success, message, nuevoEstado) = await _maestrosService.ToggleEstadoClaseProductoAsync(id, CurrentUserId);
+            return Json(new { success, message, nuevoEstado });
         }
 
         [HttpGet]

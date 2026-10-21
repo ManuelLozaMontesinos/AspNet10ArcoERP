@@ -33,7 +33,7 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             string? estado = null,
             int top = 25)
         {
-            int safeTop = top > 0 ? top : 25;
+            int safeTop = top is 25 or 50 or 100 or 500 ? top : 25;
             var list = await _maestrosService.GetTiposCambioAsync(search, tipo, estado, safeTop);
             ViewBag.Search = search;
             ViewBag.Tipo = tipo;
@@ -41,7 +41,31 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             ViewBag.Top = safeTop;
             ViewBag.TiposCambio = await _maestrosService.GetTiposCambioCatalogoAsync();
             ViewBag.Monedas = await _maestrosService.GetMonedasCatalogoAsync();
+            ViewBag.TiposCambioMaestros = await _maestrosService.GetTiposCambioMaestrosAsync();
             return View(list);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ObtenerTipoCambioMaestro(int id)
+        {
+            var item = await _maestrosService.GetTipoCambioMaestroByIdAsync(id);
+            return item == null
+                ? Json(new { success = false, message = "Tipo de cambio no encontrado." })
+                : Json(new { success = true, data = item });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GuardarTipoCambioMaestro([FromForm] TipoCambioMaestroModel model)
+        {
+            var (success, message, id) = await _maestrosService.SaveTipoCambioMaestroAsync(model, CurrentUserId);
+            return Json(new { success, message, id });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CambiarEstadoTipoCambioMaestro(int id)
+        {
+            var (success, message, nuevoEstado) = await _maestrosService.ToggleEstadoTipoCambioMaestroAsync(id, CurrentUserId);
+            return Json(new { success, message, nuevoEstado });
         }
 
         [HttpGet]

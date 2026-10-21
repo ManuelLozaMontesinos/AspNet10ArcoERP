@@ -1,0 +1,308 @@
+@model List<AspNet10ArcoERP.Models.TransportistaModel>
+@{
+    ViewData["Title"] = "Transportistas";
+    var documentos = ViewBag.Documentos as List<AspNet10ArcoERP.Models.TipoDocIdentidadLookupModel> ?? new();
+    var top = ViewBag.Top as int? ?? 25;
+}
+
+<style>
+    #modal-crud-transportista .modal-content { max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+    #modal-crud-transportista .modal-body { max-height: calc(90vh - 135px) !important; overflow-y: auto !important; flex: 1 1 auto; scrollbar-width: thin; scrollbar-color: rgba(140, 150, 165, 0.4) transparent; scroll-behavior: smooth; }
+    #modal-crud-transportista .modal-body::-webkit-scrollbar { width: 7px; }
+    #modal-crud-transportista .modal-body::-webkit-scrollbar-track { background: transparent; }
+    #modal-crud-transportista .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
+    #modal-crud-transportista .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
+</style>
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-7">
+                <h3 class="mb-0 fw-bold"><i class="bi bi-truck text-primary me-2"></i>Transportistas</h3>
+                <small class="text-muted">Maestro de transportistas, unidades vehiculares y conductores</small>
+            </div>
+            <div class="col-sm-5 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Transportista
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2">
+                <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="input-group input-group-sm flex-grow-1" style="min-width:320px;max-width:440px;">
+                        <span class="input-group-text bg-body-tertiary"><i class="bi bi-search"></i></span>
+                        <input class="form-control" type="search" name="search" value="@ViewBag.Search" placeholder="Buscar razón social, RUC o inscripción..." />
+                    </div>
+                    <select class="form-select form-select-sm" name="estado" style="width:auto;min-width:150px;" onchange="this.form.submit();">
+                        <option value="">Todos los estados</option>
+                        <option value="A" selected="@(ViewBag.Estado as string == "A")">Activos</option>
+                        <option value="I" selected="@(ViewBag.Estado as string == "I")">Inactivos</option>
+                    </select>
+                    <select class="form-select form-select-sm" name="top" style="width:auto;" onchange="this.form.submit();">
+                        @foreach (var count in new[] { 25, 50, 100, 500 })
+                        {
+                            <option value="@count" selected="@(top == count)">Mostrando: @count</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Buscar</button>
+                </form>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
+                    <thead>
+                        <tr><th>RUC</th><th>Razón Social</th><th>Inscripción Vehicular</th><th>Estado</th><th class="text-end">Acciones</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="font-monospace">@item.NumeroRuc</td>
+                                <td class="fw-semibold">@item.RazonSocial</td>
+                                <td class="font-monospace">@item.NumeroInscripcionVehicular</td>
+                                <td>
+                                    @if (item.Estado == "A") { <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span> }
+                                    else { <span class="badge bg-secondary-subtle text-secondary border">Inactivo</span> }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Editar" onclick="abrirModalEditar(@item.Id)"><i class="bi bi-pencil"></i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Cambiar estado" data-estado="@item.Estado" data-nombre="@item.RazonSocial" onclick="cambiarEstado(@item.Id, this.dataset.estado, this.dataset.nombre)"><i class="bi bi-toggle-on"></i></button>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-4">No se encontraron transportistas.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-crud-transportista" tabindex="-1" aria-labelledby="transportista-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form class="modal-content" id="form-transportista" onsubmit="guardarTransportista(event);">
+            @Html.AntiForgeryToken()
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <div>
+                    <h5 class="modal-title fw-bold" id="transportista-title">Nuevo Transportista</h5>
+                    <small class="text-muted">Datos generales y relaciones del transportista</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tr-id" name="Id" value="0" />
+                <input type="hidden" id="tr-estado" name="Estado" value="A" />
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tr-tab-general" type="button">Datos Generales</button></li>
+                    <li class="nav-item"><button class="nav-link" id="tr-tab-unidades-btn" data-bs-toggle="tab" data-bs-target="#tr-tab-unidades" type="button" disabled>Unidades</button></li>
+                    <li class="nav-item"><button class="nav-link" id="tr-tab-conductores-btn" data-bs-toggle="tab" data-bs-target="#tr-tab-conductores" type="button" disabled>Conductores</button></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tr-tab-general">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="tr-ruc">RUC</label>
+                                <input class="form-control" id="tr-ruc" name="NumeroRuc" maxlength="35" />
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold" for="tr-razon">Razón Social <span class="text-danger">*</span></label>
+                                <input class="form-control" id="tr-razon" name="RazonSocial" maxlength="150" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="tr-inscripcion">Número de Inscripción Vehicular <span class="text-danger">*</span></label>
+                                <input class="form-control" id="tr-inscripcion" name="NumeroInscripcionVehicular" maxlength="25" required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="tr-tab-unidades">
+                        <div class="row g-2 align-items-end mb-3">
+                            <input type="hidden" id="unidad-id" value="0" />
+                            <div class="col-md-3"><label class="form-label">Marca *</label><input class="form-control form-control-sm" id="unidad-marca" maxlength="20" /></div>
+                            <div class="col-md-3"><label class="form-label">Modelo</label><input class="form-control form-control-sm" id="unidad-modelo" maxlength="20" /></div>
+                            <div class="col-md-2"><label class="form-label">Placa *</label><input class="form-control form-control-sm text-uppercase" id="unidad-placa" maxlength="6" /></div>
+                            <div class="col-md-2"><label class="form-label">Placa adicional</label><input class="form-control form-control-sm text-uppercase" id="unidad-placa2" maxlength="6" /></div>
+                            <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100" type="button" onclick="guardarUnidad();">Agregar / Guardar</button></div>
+                        </div>
+                        <div class="table-responsive"><table class="table table-sm table-striped align-middle"><thead><tr><th>Marca</th><th>Modelo</th><th>Placa</th><th>Placa adicional</th><th></th></tr></thead><tbody id="unidades-body"></tbody></table></div>
+                    </div>
+                    <div class="tab-pane fade" id="tr-tab-conductores">
+                        <div class="row g-2 mb-2">
+                            <input type="hidden" id="conductor-id" value="0" />
+                            <div class="col-md-2"><label class="form-label">Apellido paterno *</label><input class="form-control form-control-sm" id="cond-apellido-pat" maxlength="50" /></div>
+                            <div class="col-md-2"><label class="form-label">Apellido materno</label><input class="form-control form-control-sm" id="cond-apellido-mat" maxlength="50" /></div>
+                            <div class="col-md-2"><label class="form-label">Nombres *</label><input class="form-control form-control-sm" id="cond-nombres" maxlength="50" /></div>
+                            <div class="col-md-2"><label class="form-label">Documento *</label><select class="form-select form-select-sm" id="cond-tipo-doc"><option value="">Tipo documento</option>@foreach (var doc in documentos) { <option value="@doc.Id">@doc.Nombre</option> }</select></div>
+                            <div class="col-md-2"><label class="form-label">Número *</label><input class="form-control form-control-sm" id="cond-documento" maxlength="35" /></div>
+                            <div class="col-md-2"><label class="form-label">Licencia *</label><input class="form-control form-control-sm" id="cond-licencia" maxlength="20" /></div>
+                            <div class="col-md-2"><label class="form-label">Teléfono</label><input class="form-control form-control-sm" id="cond-telefono" maxlength="15" /></div>
+                            <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100" type="button" onclick="guardarConductor();">Agregar / Guardar</button></div>
+                        </div>
+                        <div class="table-responsive"><table class="table table-sm table-striped align-middle"><thead><tr><th>Conductor</th><th>Documento</th><th>Licencia</th><th>Teléfono</th><th></th></tr></thead><tbody id="conductores-body"></tbody></table></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary fw-semibold" id="tr-save"><i class="bi bi-check-circle me-1"></i>Guardar Transportista</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let trModal;
+    let currentTransportistaId = 0;
+    let transportistaModificado = false;
+    const unidadesPorId = new Map();
+    const conductoresPorId = new Map();
+    const trUrl = '@Url.Action("Guardar", "Transportista", new { area = "MG" })';
+    const trGetUrl = '@Url.Action("Obtener", "Transportista", new { area = "MG" })';
+    const unidadesUrl = '@Url.Action("GuardarUnidad", "Transportista", new { area = "MG" })';
+    const conductoresUrl = '@Url.Action("GuardarConductor", "Transportista", new { area = "MG" })';
+    const token = () => $('#form-transportista input[name="__RequestVerificationToken"]').val();
+
+    function abrirModalCrear() {
+        $('#form-transportista')[0].reset();
+        $('#tr-id').val(0); $('#tr-estado').val('A'); currentTransportistaId = 0;
+        transportistaModificado = false;
+        $('#unidades-body, #conductores-body').empty();
+        $('#transportista-title').text('Nuevo Transportista');
+        $('#tr-tab-unidades-btn, #tr-tab-conductores-btn').prop('disabled', true);
+        bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target="#tr-tab-general"]')).show();
+        trModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-crud-transportista'));
+        trModal.show();
+    }
+
+    function abrirModalEditar(id) {
+        transportistaModificado = false;
+        $.get(trGetUrl, { id }, function (res) {
+            if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message }); return; }
+            const d = res.data;
+            currentTransportistaId = d.id || d.Id;
+            $('#tr-id').val(currentTransportistaId);
+            $('#tr-ruc').val(d.numeroRuc || d.NumeroRuc || '');
+            $('#tr-razon').val(d.razonSocial || d.RazonSocial || '');
+            $('#tr-inscripcion').val(d.numeroInscripcionVehicular || d.NumeroInscripcionVehicular || '');
+            $('#tr-estado').val(d.estado || d.Estado || 'A');
+            $('#transportista-title').text('Editar Transportista #' + currentTransportistaId);
+            $('#tr-tab-unidades-btn, #tr-tab-conductores-btn').prop('disabled', false);
+            cargarUnidades(); cargarConductores();
+            trModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-crud-transportista'));
+            trModal.show();
+            bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target="#tr-tab-general"]')).show();
+        }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el transportista.' }); });
+    }
+
+    function guardarTransportista(e) {
+        e.preventDefault();
+        $.post(trUrl, $('#form-transportista').serialize(), function (res) {
+            if (!res.success) { Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: res.message }); return; }
+            currentTransportistaId = res.id;
+            $('#tr-id').val(res.id);
+            $('#tr-tab-unidades-btn, #tr-tab-conductores-btn').prop('disabled', false);
+            if (res.id) {
+                $('#transportista-title').text('Editar Transportista #' + res.id);
+                transportistaModificado = true;
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 1800 });
+            }
+        }).fail(function (xhr) { Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON?.message || 'Error de comunicación con el servidor.' }); });
+    }
+
+    function cargarUnidades() {
+        $.get('@Url.Action("ListarUnidades", "Transportista", new { area = "MG" })', { transportistaId: currentTransportistaId }, function (res) {
+            if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudieron cargar las unidades.' }); return; }
+            const rows = res.data.filter(x => (x.estado || x.Estado) === 'A');
+            unidadesPorId.clear();
+            rows.forEach(x => unidadesPorId.set(Number(x.id || x.Id), x));
+            $('#unidades-body').html(rows.map(x => `<tr><td>${esc(x.marca || x.Marca)}</td><td>${esc(x.modelo || x.Modelo)}</td><td>${esc(x.placa || x.Placa)}</td><td>${esc(x.placa2 || x.Placa2)}</td><td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" type="button" onclick="editarUnidad(${x.id || x.Id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" type="button" onclick="eliminarRelacion('Unidad',${x.id || x.Id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''));
+        }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar las unidades.' }); });
+    }
+
+    function editarUnidad(id) {
+        const x = unidadesPorId.get(Number(id));
+        if (!x) return;
+        $('#unidad-id').val(x.id || x.Id); $('#unidad-marca').val(x.marca || x.Marca);
+        $('#unidad-modelo').val(x.modelo || x.Modelo); $('#unidad-placa').val(x.placa || x.Placa);
+        $('#unidad-placa2').val(x.placa2 || x.Placa2);
+    }
+
+    function guardarUnidad() {
+        if (!currentTransportistaId) return;
+        $.post(unidadesUrl, { __RequestVerificationToken: token(), Id: $('#unidad-id').val(), TransportistaId: currentTransportistaId, Marca: $('#unidad-marca').val(), Modelo: $('#unidad-modelo').val(), Placa: $('#unidad-placa').val(), Placa2: $('#unidad-placa2').val() }, function (res) {
+            if (!res.success) { Swal.fire({ icon: 'warning', title: 'Datos requeridos', text: res.message }); return; }
+            $('#unidad-id, #unidad-marca, #unidad-modelo, #unidad-placa, #unidad-placa2').val('');
+            transportistaModificado = true;
+            cargarUnidades();
+        }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar la unidad.' }); });
+    }
+
+    function cargarConductores() {
+        $.get('@Url.Action("ListarConductores", "Transportista", new { area = "MG" })', { transportistaId: currentTransportistaId }, function (res) {
+            if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudieron cargar los conductores.' }); return; }
+            const rows = res.data.filter(x => (x.estado || x.Estado) === 'A');
+            conductoresPorId.clear();
+            rows.forEach(x => conductoresPorId.set(Number(x.id || x.Id), x));
+            $('#conductores-body').html(rows.map(x => `<tr><td>${esc((x.apellidoPaterno || x.ApellidoPaterno) + ' ' + (x.apellidoMaterno || x.ApellidoMaterno) + ' ' + (x.nombres || x.Nombres))}</td><td>${esc(x.numeroDocumentoIdentidad || x.NumeroDocumentoIdentidad)}</td><td>${esc(x.numeroLicencia || x.NumeroLicencia)}</td><td>${esc(x.telefono || x.Telefono)}</td><td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" type="button" onclick="editarConductor(${x.id || x.Id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" type="button" onclick="eliminarRelacion('Conductor',${x.id || x.Id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''));
+        }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los conductores.' }); });
+    }
+
+    function editarConductor(id) {
+        const x = conductoresPorId.get(Number(id));
+        if (!x) return;
+        $('#conductor-id').val(x.id || x.Id); $('#cond-apellido-pat').val(x.apellidoPaterno || x.ApellidoPaterno);
+        $('#cond-apellido-mat').val(x.apellidoMaterno || x.ApellidoMaterno); $('#cond-nombres').val(x.nombres || x.Nombres);
+        $('#cond-tipo-doc').val(x.tipoDocumentoIdentidadId || x.TipoDocumentoIdentidadId);
+        $('#cond-documento').val(x.numeroDocumentoIdentidad || x.NumeroDocumentoIdentidad);
+        $('#cond-licencia').val(x.numeroLicencia || x.NumeroLicencia); $('#cond-telefono').val(x.telefono || x.Telefono);
+    }
+
+    function guardarConductor() {
+        if (!currentTransportistaId) return;
+        $.post(conductoresUrl, { __RequestVerificationToken: token(), Id: $('#conductor-id').val(), TransportistaId: currentTransportistaId, ApellidoPaterno: $('#cond-apellido-pat').val(), ApellidoMaterno: $('#cond-apellido-mat').val(), Nombres: $('#cond-nombres').val(), TipoDocumentoIdentidadId: $('#cond-tipo-doc').val(), NumeroDocumentoIdentidad: $('#cond-documento').val(), NumeroLicencia: $('#cond-licencia').val(), Telefono: $('#cond-telefono').val() }, function (res) {
+            if (!res.success) { Swal.fire({ icon: 'warning', title: 'Datos requeridos', text: res.message }); return; }
+            $('#conductor-id, #cond-apellido-pat, #cond-apellido-mat, #cond-nombres, #cond-documento, #cond-licencia, #cond-telefono').val('');
+            $('#cond-tipo-doc').val('');
+            transportistaModificado = true;
+            cargarConductores();
+        }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar el conductor.' }); });
+    }
+
+    function eliminarRelacion(tipo, id) {
+        Swal.fire({ title: '¿Desactivar registro?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, desactivar', cancelButtonText: 'Cancelar' }).then(result => {
+            if (!result.isConfirmed) return;
+            const unidad = tipo === 'Unidad';
+            $.post('@Url.Action("EliminarUnidad", "Transportista", new { area = "MG" })'.replace('EliminarUnidad', unidad ? 'EliminarUnidad' : 'EliminarConductor'), { __RequestVerificationToken: token(), id, transportistaId: currentTransportistaId }, function (res) {
+                if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message }); return; }
+                transportistaModificado = true;
+                unidad ? cargarUnidades() : cargarConductores();
+            }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo desactivar el registro.' }); });
+        });
+    }
+
+    function cambiarEstado(id, estado, nombre) {
+        Swal.fire({ title: estado === 'A' ? '¿Desactivar transportista?' : '¿Activar transportista?', text: nombre, icon: 'question', showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar' }).then(result => {
+            if (!result.isConfirmed) return;
+            $.post('@Url.Action("CambiarEstado", "Transportista", new { area = "MG" })', { id, __RequestVerificationToken: token() }, function (res) {
+                if (res.success) { transportistaModificado = true; location.reload(); }
+                else Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+            }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo actualizar el estado.' }); });
+        });
+    }
+
+    function esc(value) { return $('<div>').text(value || '').html(); }
+    document.getElementById('modal-crud-transportista').addEventListener('hidden.bs.modal', function () {
+        if (transportistaModificado) location.reload();
+    });
+</script>
+}

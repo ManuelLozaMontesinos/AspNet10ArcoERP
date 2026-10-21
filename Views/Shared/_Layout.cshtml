@@ -188,6 +188,13 @@
                                     </a>
                                 </li>
 
+                                <li class="nav-item">
+                                    <a asp-area="MG" asp-controller="Transportista" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Transportista" ? "active" : "")">
+                                        <i class="nav-icon bi bi-truck"></i>
+                                        <p>Transportistas</p>
+                                    </a>
+                                </li>
+
                                 <!-- 2. R.M.V. -->
                                 <li class="nav-item">
                                     <a asp-area="MG" asp-controller="RemMinVital" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RemMinVital" ? "active" : "")">

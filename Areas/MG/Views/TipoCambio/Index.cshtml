@@ -3,6 +3,7 @@
     ViewData["Title"] = "Tipos de Cambio Diarios";
     var tiposCatalogo = ViewBag.TiposCambio as List<AspNet10ArcoERP.Models.TipoCambioCatalogoItem> ?? new List<AspNet10ArcoERP.Models.TipoCambioCatalogoItem>();
     var monedasCatalogo = ViewBag.Monedas as List<AspNet10ArcoERP.Models.MonedaCatalogoItem> ?? new List<AspNet10ArcoERP.Models.MonedaCatalogoItem>();
+    var tiposCambioMaestros = ViewBag.TiposCambioMaestros as List<AspNet10ArcoERP.Models.TipoCambioMaestroModel> ?? new();
 
     int currentTop = ViewBag.Top != null ? (int)ViewBag.Top : 25;
     string currentSearch = ViewBag.Search as string ?? "";
@@ -11,6 +12,18 @@
 }
 
 <style>
+    #modal-crud-tc .modal-content { max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+    #modal-crud-tc .modal-body { max-height: calc(90vh - 135px) !important; overflow-y: auto !important; flex: 1 1 auto; scrollbar-width: thin; scrollbar-color: rgba(140, 150, 165, 0.4) transparent; scroll-behavior: smooth; }
+    #modal-crud-tc .modal-body::-webkit-scrollbar { width: 7px; }
+    #modal-crud-tc .modal-body::-webkit-scrollbar-track { background: transparent; }
+    #modal-crud-tc .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
+    #modal-crud-tc .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
+    #modal-tipo-cambio-maestro .modal-content { max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+    #modal-tipo-cambio-maestro .modal-body { max-height: calc(90vh - 135px) !important; overflow-y: auto !important; flex: 1 1 auto; scrollbar-width: thin; scrollbar-color: rgba(140, 150, 165, 0.4) transparent; scroll-behavior: smooth; }
+    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar { width: 7px; }
+    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar-track { background: transparent; }
+    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
+    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
     /* Estabilidad y altura fija compacta en cabecera de la tabla */
     .table-fixed-header {
         table-layout: auto;
@@ -48,6 +61,9 @@
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
                 <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
                     <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Tipo de Cambio
+                </button>
+                <button type="button" class="btn btn-outline-primary shadow-sm fw-semibold px-3 ms-1" onclick="abrirModalTipoCambioMaestro();">
+                    <i class="bi bi-gear-fill me-1"></i>Tipos de Cambio
                 </button>
             </div>
         </div>
@@ -235,6 +251,32 @@
                 </table>
             </div>
         </div>
+        <div class="card border-0 shadow-sm rounded-3 mt-3" id="tipo-cambio-catalogo">
+            <div class="card-header bg-body d-flex justify-content-between align-items-center">
+                <div><h5 class="mb-0 fw-semibold">Catálogo de tipos de cambio</h5><small class="text-muted">Paridades disponibles para cotizaciones diarias</small></div>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="nuevoTipoCambioMaestro()"><i class="bi bi-plus-circle me-1"></i>Nuevo tipo</button>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead><tr><th>Código</th><th>Nombre</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+                    <tbody>
+                        @foreach (var tipoMaestro in tiposCambioMaestros)
+                        {
+                            <tr>
+                                <td><span class="badge bg-secondary-subtle text-secondary border font-monospace">@tipoMaestro.Codigo</span></td>
+                                <td>@tipoMaestro.Nombre</td>
+                                <td>@if (tipoMaestro.Estado == "A") { <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span> } else { <span class="badge bg-secondary-subtle text-secondary border">Inactivo</span> }</td>
+                                <td class="text-end text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarTipoCambioMaestro(@tipoMaestro.Id)" title="Editar"><i class="bi bi-pencil"></i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cambiarEstadoTipoCambioMaestro(@tipoMaestro.Id, '@tipoMaestro.Estado', this.dataset.nombre)" data-nombre="@tipoMaestro.Nombre" title="Cambiar estado"><i class="bi bi-toggle-on"></i></button>
+                                </td>
+                            </tr>
+                        }
+                        @if (tiposCambioMaestros.Count == 0) { <tr><td colspan="4" class="text-center text-muted py-3">No hay tipos de cambio definidos.</td></tr> }
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -242,17 +284,16 @@
 <!-- MODAL CRUD: TIPO DE CAMBIO DIARIO                        -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-crud-tc" tabindex="-1" aria-labelledby="modalTcLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow border-0 rounded-4">
-            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form class="modal-content shadow border-0 rounded-4" id="form-tc" onsubmit="guardarTc(event);">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="tc-id" name="Id" value="0" />
+            <div class="modal-header sticky-top bg-body-tertiary border-bottom py-3 px-4">
                 <h5 class="modal-title fw-bold" id="modalTcLabel">
                     <i class="bi bi-currency-exchange text-success me-2"></i><span id="modal-titulo">Nuevo Tipo de Cambio</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="form-tc" onsubmit="guardarTc(event);">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="tc-id" name="Id" value="0" />
                 <div class="modal-body p-4">
                     
                     <div class="row g-2 mb-3">
@@ -311,14 +352,37 @@
                     </div>
 
                 </div>
-                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+                <div class="modal-footer sticky-bottom border-top py-3 px-4 bg-body-tertiary">
                     <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-tc" disabled>
                         <i class="bi bi-check-circle me-1"></i>Guardar Cotización
                     </button>
                 </div>
-            </form>
-        </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-tipo-cambio-maestro" tabindex="-1" aria-labelledby="tipoCambioMaestroLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form class="modal-content border-0 shadow rounded-4" id="form-tipo-cambio-maestro" onsubmit="guardarTipoCambioMaestro(event);">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="tipo-maestro-id" name="Id" value="0" />
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <h5 class="modal-title fw-bold" id="tipoCambioMaestroLabel"><i class="bi bi-currency-exchange me-2"></i><span id="tipo-maestro-titulo">Nuevo tipo de cambio</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label fw-semibold" for="tipo-maestro-codigo">Código *</label><input class="form-control text-uppercase font-monospace" id="tipo-maestro-codigo" name="Codigo" maxlength="2" required /></div>
+                    <div class="col-md-7"><label class="form-label fw-semibold" for="tipo-maestro-nombre">Nombre *</label><input class="form-control" id="tipo-maestro-nombre" name="Nombre" maxlength="100" required /></div>
+                    <div class="col-md-2"><label class="form-label fw-semibold" for="tipo-maestro-estado">Estado</label><select class="form-select" id="tipo-maestro-estado" name="Estado"><option value="A">Activo</option><option value="I">Inactivo</option></select></div>
+                </div>
+            </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary fw-semibold">Guardar tipo</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -328,6 +392,7 @@
     var sortColIdx = -1;
     var sortAsc = true;
     var formInitialState = "";
+    const tipoMaestroToken = () => $('#form-tipo-cambio-maestro input[name="__RequestVerificationToken"]').val();
 
     function sonCamposRequeridosValidos() {
         var fecha = ($('#tc-fecha').val() || '').trim();
@@ -553,6 +618,52 @@
                             });
                         } else {
                             Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
+                        }
+
+                        function abrirModalTipoCambioMaestro() {
+                            document.getElementById('tipo-cambio-catalogo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+
+                        function nuevoTipoCambioMaestro() {
+                            $('#form-tipo-cambio-maestro')[0].reset();
+                            $('#tipo-maestro-id').val(0);
+                            $('#tipo-maestro-codigo').prop('disabled', false);
+                            $('#tipo-maestro-titulo').text('Nuevo tipo de cambio');
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-tipo-cambio-maestro')).show();
+                        }
+
+                        function editarTipoCambioMaestro(id) {
+                            $.get('@Url.Action("ObtenerTipoCambioMaestro", "TipoCambio", new { area = "MG" })', { id }, function (res) {
+                                if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message }); return; }
+                                const d = res.data;
+                                $('#tipo-maestro-id').val(d.id || d.Id);
+                                $('#tipo-maestro-codigo').val(d.codigo || d.Codigo).prop('readonly', true);
+                                $('#tipo-maestro-nombre').val(d.nombre || d.Nombre);
+                                $('#tipo-maestro-estado').val(d.estado || d.Estado);
+                                $('#tipo-maestro-titulo').text('Editar tipo de cambio #' + id);
+                                bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-tipo-cambio-maestro')).show();
+                            }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el tipo de cambio.' }); });
+                        }
+
+                        function guardarTipoCambioMaestro(e) {
+                            e.preventDefault();
+                            $.post('@Url.Action("GuardarTipoCambioMaestro", "TipoCambio", new { area = "MG" })', $('#form-tipo-cambio-maestro').serialize(), function (res) {
+                                if (!res.success) { Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: res.message }); return; }
+                                bootstrap.Modal.getInstance(document.getElementById('modal-tipo-cambio-maestro')).hide();
+                                Swal.fire({ icon: 'success', title: 'Guardado', text: res.message, timer: 1300, showConfirmButton: false }).then(function () { location.reload(); });
+                            }).fail(function (xhr) {
+                                Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON?.message || 'No se pudo guardar el tipo de cambio.' });
+                            });
+                        }
+
+                        function cambiarEstadoTipoCambioMaestro(id, estado, nombre) {
+                            Swal.fire({ title: estado === 'A' ? '¿Desactivar tipo de cambio?' : '¿Activar tipo de cambio?', text: nombre, icon: 'question', showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar' }).then(function (result) {
+                                if (!result.isConfirmed) return;
+                                $.post('@Url.Action("CambiarEstadoTipoCambioMaestro", "TipoCambio", new { area = "MG" })', { id, __RequestVerificationToken: tipoMaestroToken() }, function (res) {
+                                    if (res.success) location.reload();
+                                    else Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+                                }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cambiar el estado.' }); });
+                            });
                         }
                     },
                     error: function () {
