@@ -2,6 +2,10 @@
 @{
     ViewData["Title"] = "Tablero Principal";
     var userSession = ViewBag.UserSession as AspNet10ArcoERP.Models.UserSessionDto;
+    bool esAdmin = ViewBag.EsAdmin != null ? (bool)ViewBag.EsAdmin : true;
+    string rolActualCodigo = ViewBag.RolActualCodigo as string ?? "S0001";
+    var listaVendedores = Model?.ListaVendedores ?? new List<AspNet10ArcoERP.Models.VendedorDto>();
+    var listaRoles = Model?.ListaRoles ?? new List<AspNet10ArcoERP.Models.RolDto>();
 }
 
 <!-- Content Header (Page header) -->
@@ -14,19 +18,25 @@
                 </h1>
                 <small class="text-muted">SIGANET ERP &mdash; Métricas en Tiempo Real (Sincronizado con BD <code>esderp_v6</code>)</small>
             </div>
-            <div class="d-flex align-items-center" style="gap: 8px;">
-                <button type="button" class="btn btn-outline-primary btn-sm shadow-sm" onclick="sincronizarDashboard();" id="btn-sync" title="Actualizar métricas ahora">
-                    <i class="bi bi-arrow-repeat me-1" id="icon-sync"></i>Actualizar
+            <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                @if (esAdmin)
+                {
+                    <button type="button" class="btn btn-outline-primary btn-sm shadow-sm fw-semibold px-3 py-1 d-inline-flex align-items-center" id="btn-gestionar-dashboard-rol" data-bs-toggle="modal" data-bs-target="#modal-gestionar-dashboard-rol">
+                        <i class="bi bi-shield-lock me-1"></i>Gestionar por Rol
+                    </button>
+                }
+                <button type="button" class="btn btn-primary btn-sm shadow-sm fw-semibold px-3 py-1 d-inline-flex align-items-center" id="btn-gestionar-dashboard" data-bs-toggle="modal" data-bs-target="#modal-gestionar-dashboard">
+                    <i class="bi bi-sliders me-1"></i>Gestionar Dashboard
                 </button>
-                <button type="button" class="btn btn-primary btn-sm shadow-sm font-weight-600 px-3 py-1 d-inline-flex align-items-center" id="btn-gestionar-dashboard" data-bs-toggle="modal" data-bs-target="#modal-gestionar-dashboard" style="border-radius: 6px;">
-                    <i class="bi bi-sliders me-2"></i>Gestionar Dashboard
+                <button type="button" class="btn btn-outline-secondary btn-sm shadow-sm" onclick="sincronizarDashboard();" id="btn-sync" title="Actualizar métricas ahora">
+                    <i class="bi bi-arrow-repeat me-1" id="icon-sync"></i>Actualizar
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Estilos unificados para AdminLTE 4 -->
+<!-- Estilos visuales estandarizados para AdminLTE 4 / Bootstrap 5.3 -->
 <style>
     /* Estilos de botones de acceso rápido (btn-app) */
     .btn-app {
@@ -35,9 +45,9 @@
         border: 1px solid var(--bs-border-color, #dee2e6);
         color: var(--bs-body-color, #212529);
         font-size: 0.78rem;
-        height: 68px;
-        min-width: 86px;
-        padding: 10px 6px;
+        height: 72px;
+        min-width: 90px;
+        padding: 10px 8px;
         text-align: center;
         position: relative;
         display: inline-flex;
@@ -54,7 +64,7 @@
         color: #0d6efd;
     }
     .btn-app > i {
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         margin-bottom: 4px;
     }
 
@@ -76,7 +86,7 @@
         padding: 1rem 1rem 0.75rem 1rem;
     }
     .small-box h3 {
-        font-size: 1.7rem;
+        font-size: 1.65rem;
         font-weight: 700;
         margin: 0 0 0.35rem 0;
         white-space: nowrap;
@@ -86,14 +96,14 @@
         font-size: 0.875rem;
         margin-bottom: 0;
         font-weight: 500;
-        opacity: 0.92;
+        opacity: 0.95;
     }
     .small-box .small-box-icon {
         position: absolute;
         top: 10px;
         right: 15px;
         z-index: 0;
-        font-size: 3.8rem;
+        font-size: 3.6rem;
         line-height: 1;
         color: rgba(255, 255, 255, 0.22);
         transition: transform 0.3s ease;
@@ -107,7 +117,7 @@
     .small-box > .small-box-footer {
         background-color: rgba(0, 0, 0, 0.1);
         display: block;
-        padding: 5px 0;
+        padding: 6px 12px;
         position: relative;
         text-align: center;
         z-index: 10;
@@ -119,11 +129,17 @@
         background-color: rgba(0, 0, 0, 0.18);
     }
 
+    /* Tarjeta KPI 6 (Gradiente Azul Pedidos Mes) */
+    .small-box-gradient-pedidos {
+        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+        color: #ffffff !important;
+    }
+
     /* Filtros Sedes (Central vs Ilo) */
     .btn-sede-filter {
         display: inline-flex;
         align-items: center;
-        padding: 2px 10px;
+        padding: 3px 10px;
         font-size: 0.8rem;
         border-radius: 6px;
         transition: all 0.2s ease-in-out;
@@ -164,7 +180,7 @@
         border: 1px solid #0dcaf0;
         color: #0dcaf0;
         font-weight: 700;
-        padding: 1px 8px;
+        padding: 2px 8px;
         font-size: 0.75rem;
         border-radius: 4px;
         transition: all 0.2s ease;
@@ -203,7 +219,7 @@
         background-color: var(--bs-tertiary-bg);
     }
 
-    /* Cabecera de tablas dark-mode friendly */
+    /* Tablas Dark-Mode Friendly */
     .table-header-custom {
         background-color: var(--bs-tertiary-bg) !important;
         color: var(--bs-body-color) !important;
@@ -213,24 +229,21 @@
         background-color: inherit !important;
         color: inherit !important;
         border-color: inherit !important;
-        font-size: 0.825rem;
+        font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.03em;
         font-weight: 700;
-        padding-top: 0.65rem;
-        padding-bottom: 0.65rem;
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
     }
-    [data-bs-theme="dark"] .table-header-custom,
-    [data-bs-theme="dark"] .table thead.table-header-custom th {
-        background-color: #1e2227 !important;
-        color: #adb5bd !important;
-        border-color: #2c3138 !important;
+
+    /* Fila clicable de drilldown */
+    .dashboard-drilldown-row {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
     }
-    [data-bs-theme="light"] .table-header-custom,
-    [data-bs-theme="light"] .table thead.table-header-custom th {
-        background-color: #f1f3f5 !important;
-        color: #495057 !important;
-        border-color: #dee2e6 !important;
+    .dashboard-drilldown-row:hover {
+        background-color: var(--bs-primary-bg-subtle, rgba(13, 110, 253, 0.07)) !important;
     }
 
     /* Modal Gestionar Dashboard */
@@ -241,80 +254,100 @@
         border-color: #0d6efd !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     }
+
+    /* Medallas de Ranking */
+    .badge-rank-1 { background-color: #ffd700; color: #5c4300; font-weight: 700; border: 1px solid #e6c200; }
+    .badge-rank-2 { background-color: #e0e0e0; color: #424242; font-weight: 700; border: 1px solid #bdbdbd; }
+    .badge-rank-3 { background-color: #cd7f32; color: #ffffff; font-weight: 700; border: 1px solid #b87333; }
 </style>
 
 <!-- Main content -->
 <div class="app-content py-3">
     <div class="container-fluid">
 
-        <!-- 1. FILA DE TARJETAS KPI (AdminLTE 4 Small-Boxes con separación inferior) -->
-        <div class="row g-3 mb-4 pb-2" id="row-kpis-metricas">
+        <!-- 1. FILA DE TARJETAS KPI (6 tarjetas sincronizadas con BD) -->
+        <div class="row g-3 mb-4 pb-1" id="row-kpis-metricas">
             <!-- 1. Facturación del Mes -->
-            <div class="col-xl col-lg-4 col-md-6 col-12">
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="card-kpi-facturacion">
                 <div class="small-box text-bg-info shadow-sm h-100">
                     <div class="inner">
-                        <h3 id="kpi-ventas">@Model.FacturacionMes</h3>
+                        <h3 id="kpi-ventas">@(Model?.FacturacionMes ?? "S/ 0.00")</h3>
                         <p>Facturación del Mes</p>
                     </div>
                     <i class="small-box-icon bi bi-cart3"></i>
-                    <a href="javascript:void(0);" onclick="alert('Módulo de Comprobantes');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Comprobantes de Pago / Facturación');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Comprobantes <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
             </div>
 
             <!-- 2. Pedidos Activos -->
-            <div class="col-xl col-lg-4 col-md-6 col-12">
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="card-kpi-pedidos-activos">
                 <div class="small-box text-bg-primary shadow-sm h-100">
                     <div class="inner">
-                        <h3 id="kpi-pedidos">@Model.PedidosActivos</h3>
+                        <h3 id="kpi-pedidos">@(Model?.PedidosActivos ?? "0")</h3>
                         <p>Pedidos Activos</p>
                     </div>
                     <i class="small-box-icon bi bi-box-seam"></i>
-                    <a href="javascript:void(0);" onclick="alert('Módulo de Pedidos');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Pedidos');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Pedidos <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
             </div>
 
             <!-- 3. Cotizaciones Activas -->
-            <div class="col-xl col-lg-4 col-md-6 col-12">
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="card-kpi-cotizaciones">
                 <div class="small-box text-bg-success shadow-sm h-100">
                     <div class="inner">
-                        <h3 id="kpi-cotizaciones">@Model.CotizacionesActivas</h3>
+                        <h3 id="kpi-cotizaciones">@(Model?.CotizacionesActivas ?? "0")</h3>
                         <p>Cotizaciones Activas</p>
                     </div>
                     <i class="small-box-icon bi bi-file-earmark-text"></i>
-                    <a href="javascript:void(0);" onclick="alert('Módulo de Cotizaciones');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Cotizaciones');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Cotizaciones <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
             </div>
 
             <!-- 4. Órdenes de Producción del Mes -->
-            <div class="col-xl col-lg-6 col-md-6 col-12">
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="card-kpi-produccion">
                 <div class="small-box text-bg-warning shadow-sm h-100">
                     <div class="inner">
-                        <h3 id="kpi-produccion">@Model.OrdenesProduccionMes</h3>
+                        <h3 id="kpi-produccion">@(Model?.OrdenesProduccionMes ?? "0")</h3>
                         <p>Órdenes Producción Mes</p>
                     </div>
                     <i class="small-box-icon bi bi-gear-wide-connected"></i>
-                    <a href="javascript:void(0);" onclick="alert('Módulo de Producción en Planta');" class="small-box-footer link-dark link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Producción en Planta (O.P.)');" class="small-box-footer link-dark link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Planta / O.P. <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
             </div>
 
             <!-- 5. Órdenes de Compra del Mes -->
-            <div class="col-xl col-lg-6 col-md-6 col-12">
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="card-kpi-compras">
                 <div class="small-box text-bg-danger shadow-sm h-100">
                     <div class="inner">
-                        <h3 id="kpi-compras">@Model.OrdenesCompraMes</h3>
+                        <h3 id="kpi-compras">@(Model?.OrdenesCompraMes ?? "0")</h3>
                         <p>Órdenes Compra Mes</p>
                     </div>
                     <i class="small-box-icon bi bi-truck"></i>
-                    <a href="javascript:void(0);" onclick="alert('Módulo de Órdenes de Compra');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Órdenes de Compra');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Órdenes de Compra <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 6. Sumatoria y Cantidad de Pedidos del Mes -->
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="card-kpi-pedidos-mes">
+                <div class="small-box small-box-gradient-pedidos shadow-sm h-100">
+                    <div class="inner">
+                        <h3 id="kpi-pedidos-cantidad">@(Model?.PedidosMesCantidad.ToString("N0") ?? "0")</h3>
+                        <p>Pedidos del Mes</p>
+                    </div>
+                    <i class="small-box-icon bi bi-clipboard-check"></i>
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Detalle Consolidado de Pedidos');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover d-flex justify-content-between align-items-center px-3">
+                        <span id="kpi-pedidos-monto-footer">Total: @(Model?.PedidosMesMonto ?? "S/ 0.00")</span>
+                        <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
             </div>
@@ -348,31 +381,48 @@
                         </div>
                     </div>
                     <div class="card-body pt-2 pb-2">
-                        <div class="position-relative" style="height: 250px;">
+                        <div class="position-relative mb-2" id="sales-chart-container" style="height: 250px;">
                             <canvas id="salesChart" height="250"></canvas>
                         </div>
-                        <div class="d-flex flex-wrap justify-content-end align-items-center small text-muted mt-2" style="gap: 12px; font-size: 0.8rem;">
-                            <span><i class="bi bi-dash-lg me-1" style="color: #fd7e14; font-weight: bold;"></i>Puente Dic &rarr; Ene</span>
-                            <span><i class="bi bi-dash-lg text-success me-1" style="font-weight: bold;"></i>Línea Actual</span>
-                            <span><i class="bi bi-dash-lg text-warning me-1" style="font-weight: bold;"></i>Línea Anterior</span>
-                            <span><i class="bi bi-square-fill text-primary me-1"></i>Barra Actual</span>
-                            <span><i class="bi bi-square-fill text-secondary me-1" style="opacity: 0.6;"></i>Barra Anterior</span>
+                        <div class="d-flex flex-row justify-content-end align-items-center px-1 text-xs text-muted" style="gap: 16px;">
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #0d6efd;"></span>
+                                <span>Periodo Actual</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #adb5bd;"></span>
+                                <span>Periodo Anterior</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. Gráfico Diferencia: Central vs. Ilo -->
-                <div class="card border-0 shadow-sm rounded-3 mb-3" id="area-diferencia-sedes">
-                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
-                        <h5 class="card-title fw-bold m-0 fs-6">
-                            <i class="bi bi-bar-chart-steps text-primary me-2"></i>Diferencia Diaria (Central vs. Ilo)
-                        </h5>
+                <!-- 2. Gráfico de Distribución por Sede (Diferencias Central vs Ilo) -->
+                <div class="card border-0 shadow-sm rounded-3 mb-3" id="area-distribucion-sede">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                            <h5 class="card-title fw-bold m-0 fs-6">
+                                <i class="bi bi-bar-chart-steps text-info me-2"></i>Distribución por Sede (Miles de Soles)
+                            </h5>
+                            <!-- Filtros interactivos -->
+                            <div class="d-inline-flex align-items-center p-1 rounded bg-body-tertiary border" style="gap: 4px;">
+                                <button type="button" class="btn-sede-filter btn-central" id="filter-sede-central" onclick="toggleSedeFilter('central');" title="Activar/Desactivar Sede Central">
+                                    <i class="bi bi-square-fill me-1" style="font-size: 0.65rem;"></i> Central
+                                </button>
+                                <button type="button" class="btn-sede-filter btn-ilo" id="filter-sede-ilo" onclick="toggleSedeFilter('ilo');" title="Activar/Desactivar Sede Ilo">
+                                    <i class="bi bi-square-fill me-1" style="font-size: 0.65rem;"></i> Ilo
+                                </button>
+                                <button type="button" class="btn-sede-filter btn-vs active" id="filter-sede-vs" onclick="toggleSedeFilter('vs');" title="Comparar ambas sedes simultáneamente">
+                                    Central vs Ilo
+                                </button>
+                            </div>
+                        </div>
                         <div class="d-flex align-items-center" style="gap: 6px;">
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Filtro de días">
-                                <button type="button" class="btn btn-primary active btn-sm px-2" id="btn-dias-6" onclick="setDiferenciaDias(6);">6d</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-dias-8" onclick="setDiferenciaDias(8);">8d</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-dias-10" onclick="setDiferenciaDias(10);">10d</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-dias-12" onclick="setDiferenciaDias(12);">12d</button>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Filtro de días sedes">
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-stacked-6" onclick="setStackedDias(6);">6d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-stacked-8" onclick="setStackedDias(8);">8d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-stacked-10" onclick="setStackedDias(10);">10d</button>
+                                <button type="button" class="btn btn-primary active btn-sm px-2" id="btn-stacked-12" onclick="setStackedDias(12);">12d</button>
                             </div>
                             <button type="button" class="btn btn-tool ms-1" data-lte-toggle="card-collapse" title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
@@ -380,22 +430,72 @@
                         </div>
                     </div>
                     <div class="card-body pt-2 pb-2">
-                        <div class="position-relative" style="height: 250px;">
+                        <div class="position-relative mb-2" id="stacked-chart-container" style="height: 250px;">
                             <canvas id="stackedBarChart" height="250"></canvas>
                         </div>
-                        <div class="d-flex flex-wrap justify-content-end align-items-center mt-2" style="gap: 8px;">
-                            <span class="small text-muted me-2 font-weight-500" style="font-size: 0.8rem;">
-                                <i class="bi bi-activity text-success me-1"></i>Picos / Tendencia
-                            </span>
-                            <button type="button" id="btn-filtro-central" class="btn btn-xs btn-sede-filter btn-central active" data-sede="central" title="Alternar Sede Central">
-                                <i class="bi bi-square-fill text-primary me-1"></i><span class="fw-semibold">Central</span>
+                        <div class="d-flex flex-row justify-content-end align-items-center px-1 text-xs text-muted" style="gap: 16px;">
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #0d6efd;"></span>
+                                <span>Central</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #6c757d;"></span>
+                                <span>Ilo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Gráfico de Pedidos por Vendedor (Día a Día) -->
+                <div class="card border-0 shadow-sm rounded-3 mb-3" id="area-pedidos-vendedor">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                            <h5 class="card-title fw-bold m-0 fs-6">
+                                <i class="bi bi-person-badge text-primary me-2"></i>Pedidos por Vendedor
+                            </h5>
+                            @if (Model?.PuedeFiltrarVendedorClientes == true)
+                            {
+                                <div class="d-inline-flex align-items-center">
+                                    <select id="select-vendedor-chart" class="form-select form-select-sm fw-semibold shadow-sm" style="min-width: 180px;" onchange="cambiarVendedorChart();">
+                                        @foreach (var v in listaVendedores.OrderBy(x => x.Nombre))
+                                        {
+                                            if (v.Id == (Model?.PrimerVendedorId ?? 50))
+                                            {
+                                                <option value="@v.Id" selected="selected">@v.Nombre</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@v.Id">@v.Nombre</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                            }
+                        </div>
+                        <div class="d-flex align-items-center" style="gap: 6px;">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Filtro de días vendedor">
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-vendedor-dias-6" onclick="setVendedorDias(6);">6d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-vendedor-dias-8" onclick="setVendedorDias(8);">8d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-vendedor-dias-10" onclick="setVendedorDias(10);">10d</button>
+                                <button type="button" class="btn btn-primary active btn-sm px-2" id="btn-vendedor-dias-12" onclick="setVendedorDias(12);">12d</button>
+                            </div>
+                            <button type="button" class="btn btn-tool ms-1" data-lte-toggle="card-collapse" title="Minimizar">
+                                <i class="bi bi-dash-lg"></i>
                             </button>
-                            <button type="button" id="btn-filtro-vs" class="btn btn-xs btn-sede-filter btn-vs active" title="Comparar ambas sedes (Central vs. Ilo)">
-                                <span>VS</span>
-                            </button>
-                            <button type="button" id="btn-filtro-ilo" class="btn btn-xs btn-sede-filter btn-ilo active" data-sede="ilo" title="Alternar Sede Ilo">
-                                <i class="bi bi-square-fill text-secondary me-1"></i><span class="fw-semibold">Ilo</span>
-                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body pt-2 pb-2">
+                        <div class="position-relative mb-2" id="vendedor-chart-container" style="height: 250px;">
+                            <canvas id="vendedorBarChart" height="250"></canvas>
+                        </div>
+                        <div class="d-flex flex-row justify-content-between align-items-center px-1 text-xs text-muted flex-wrap" style="gap: 6px;">
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <span><i class="bi bi-graph-up-arrow text-success me-1"></i>Pico / Tendencia diaria</span>
+                                <span id="vendedor-total-monto" class="badge bg-body-tertiary border text-body fw-bold px-2 py-1">Total: S/ 0.00</span>
+                            </div>
+                            <div>
+                                <span id="vendedor-total-pedidos" class="badge bg-primary fw-bold px-2 py-1">0 pedidos en el periodo</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -405,11 +505,11 @@
             <!-- Columna Derecha (5 columnas) -->
             <div class="col-lg-5" id="col-main-right">
 
-                <!-- 3. Accesos Rápidos del ERP -->
+                <!-- 4. Accesos Rápidos del ERP -->
                 <div class="card border-0 shadow-sm rounded-3 mb-3" id="area-accesos-rapidos">
                     <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                         <h5 class="card-title fw-bold m-0 fs-6">
-                            <i class="bi bi-lightning-charge-fill text-success me-2"></i>Accesos Rápidos
+                            <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Accesos Rápidos
                         </h5>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse" title="Minimizar">
@@ -419,80 +519,86 @@
                     </div>
                     <div class="card-body p-3">
                         <div class="d-flex flex-wrap justify-content-center align-items-center" style="gap: 10px;">
-                            <a class="btn-app" href="javascript:void(0);" onclick="alert('Ir a Cotizaciones');">
-                                <i class="bi bi-file-earmark-text-fill text-success"></i>Cotizaciones
+                            <a class="btn-app" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Cotizaciones');">
+                                <i class="bi bi-file-earmark-check text-success"></i>
+                                <span>Cotizaciones</span>
                             </a>
-                            <a class="btn-app" href="javascript:void(0);" onclick="alert('Ir a Pedidos');">
-                                <i class="bi bi-cart-check-fill text-primary"></i>Pedidos
+                            <a class="btn-app" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Pedidos');">
+                                <i class="bi bi-box-seam text-primary"></i>
+                                <span>Pedidos</span>
                             </a>
-                            <a class="btn-app" href="javascript:void(0);" onclick="alert('Ir a Facturación');">
-                                <i class="bi bi-receipt text-info"></i>Facturar
+                            <a class="btn-app" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Facturación / Comprobantes');">
+                                <i class="bi bi-receipt text-info"></i>
+                                <span>Facturar</span>
                             </a>
-                            <a class="btn-app" href="javascript:void(0);" onclick="alert('Ir a Producción');">
-                                <i class="bi bi-gear-fill text-warning"></i>Producción
+                            <a class="btn-app" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Producción en Planta (O.P.)');">
+                                <i class="bi bi-gear-wide-connected text-warning"></i>
+                                <span>Producción</span>
                             </a>
-                            <a class="btn-app" href="javascript:void(0);" onclick="alert('Ir a Compras');">
-                                <i class="bi bi-truck text-danger"></i>Compras
+                            <a class="btn-app" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Órdenes de Compra');">
+                                <i class="bi bi-truck text-danger"></i>
+                                <span>Compras</span>
                             </a>
-                            <a class="btn-app" asp-area="MG" asp-controller="Producto" asp-action="Index">
-                                <i class="bi bi-tags-fill text-secondary"></i>Productos
+                            <a class="btn-app" href="@Url.Action("Index", "Producto", new { area = "MG" })">
+                                <i class="bi bi-tags text-secondary"></i>
+                                <span>Productos</span>
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4. Gráfico de Producción en Planta -->
+                <!-- 5. Gráfico de Estado de Producción en Planta -->
                 <div class="card border-0 shadow-sm rounded-3 mb-3" id="area-estado-produccion">
                     <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                         <h5 class="card-title fw-bold m-0 fs-6">
                             <i class="bi bi-pie-chart-fill text-warning me-2"></i>Estado de Producción
                         </h5>
-                        <div class="d-flex align-items-center" style="gap: 6px;">
-                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                        <div class="card-tools">
+                            <span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1 me-1" id="badge-prod-mes">
                                 <i class="bi bi-calendar3 me-1"></i>Mes Actual
                             </span>
-                            <button type="button" class="btn btn-tool ms-1" data-lte-toggle="card-collapse" title="Minimizar">
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse" title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="card-body pt-2 pb-3 position-relative" style="height: 250px;">
-                        <canvas id="productionChart" height="230"></canvas>
+                    <div class="card-body pt-1 pb-3 position-relative" style="height: 260px;">
+                        <canvas id="productionChart" height="220"></canvas>
                         <div id="productionChartEmpty" class="d-none text-center text-muted position-absolute top-50 start-50 translate-middle">
-                            <i class="bi bi-gear-wide-connected fs-1 mb-2 opacity-50"></i>
+                            <i class="bi bi-gear-fill fs-1 text-secondary opacity-50 mb-2"></i>
                             <div class="fw-semibold">Sin órdenes de producción registradas</div>
-                            <small>en el periodo actual</small>
+                            <small class="text-muted">en el mes actual</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- 5. Tarjeta informativa de Base de Datos en Tiempo Real -->
+                <!-- 6. Tarjeta informativa de Base de Datos en Tiempo Real -->
                 <div class="card border-0 shadow-sm rounded-3 mb-3" id="area-db-tiempo-real">
                     <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                         <h5 class="card-title fw-bold m-0 fs-6">
-                            <i class="bi bi-database-fill-check text-success me-2"></i>Base de Datos en Tiempo Real
+                            <i class="bi bi-database-check text-success me-2"></i>Base de Datos en Tiempo Real
                         </h5>
-                        <div class="d-flex align-items-center" style="gap: 6px;">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                <i class="bi bi-shield-check me-1"></i>Sincronizado
+                        <div class="card-tools">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 me-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Sincronizado
                             </span>
-                            <button type="button" class="btn btn-tool ms-1" data-lte-toggle="card-collapse" title="Minimizar">
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse" title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                         </div>
                     </div>
                     <div class="card-body pt-2 pb-3">
                         <div class="d-flex align-items-center justify-content-between mb-1">
-                            <small class="text-muted">
+                            <span class="text-muted small">
                                 Catálogo: <code>esderp_v6</code> &bull; Polling activo cada 30s
-                            </small>
+                            </span>
                         </div>
-                        <div class="progress my-2" style="height: 5px;">
+                        <div class="progress my-2" style="height: 4px;">
                             <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 100%"></div>
                         </div>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">
-                            <i class="bi bi-lightning-charge text-success me-1"></i>Métricas calculadas directamente desde BD SQL Server
-                        </small>
+                        <span class="text-muted text-xs d-block">
+                            <i class="bi bi-lightning-charge-fill text-success me-1"></i> Totales y métricas calculados directamente desde BD
+                        </span>
                     </div>
                 </div>
 
@@ -500,25 +606,24 @@
 
         </div>
 
-        <!-- 3. SECCIÓN: TOP PEDIDOS DEL DÍA Y CLIENTES INACTIVOS -->
-        <div class="row g-3" id="row-tablas-detalle">
+        <!-- 3. SECCIÓN: TOP 10 PEDIDOS DEL DÍA Y CLIENTES INACTIVOS -->
+        <div class="row g-3 mb-4" id="row-tablas-detalle">
 
-            <!-- 3.1. Top 5 / Top 10 Pedidos del Día (Izquierda) -->
-            <div class="col-lg-6" id="area-top-pedidos">
+            <!-- 3.1. Top Pedidos del Día (Izquierda) -->
+            <div class="col-lg-6 mb-3" id="area-top-pedidos">
                 <div class="card border-0 shadow-sm rounded-3 h-100">
-                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
                         <h5 class="card-title fw-bold m-0 fs-6">
-                            <i class="bi bi-award-fill text-warning me-2"></i>Top Pedidos del Día
+                            <i class="bi bi-trophy-fill text-warning me-2"></i>Top Pedidos del Día (<span id="label-top-pedidos">Top 5</span>)
                         </h5>
-                        <div class="d-flex align-items-center" style="gap: 6px;">
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Cantidad pedidos">
-                                <button type="button" class="btn btn-primary active btn-sm px-2" id="btn-top-5" onclick="cambiarTopPedidos(5);">Top 5</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-top-10" onclick="cambiarTopPedidos(10);">Top 10</button>
-                            </div>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" id="badge-top-pedidos">
-                                <i class="bi bi-calendar-event me-1"></i>Top 5 Hoy
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 me-1" id="btn-toggle-top-pedidos" onclick="alternarTopPedidos();" style="font-size: 0.8rem; height: 28px;">
+                                <i class="bi bi-chevron-down me-1"></i>Ver Top 10
+                            </button>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 me-1" id="badge-fecha-pedidos">
+                                <i class="bi bi-calendar3 me-1"></i>@(Model?.TopPedidosFecha ?? DateTime.Today.ToString("dd/MM/yyyy"))
                             </span>
-                            <button type="button" class="btn btn-tool ms-1" data-lte-toggle="card-collapse" title="Minimizar">
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse" title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                         </div>
@@ -527,31 +632,27 @@
                         <table class="table table-striped table-hover align-middle mb-0" id="tabla-top-pedidos">
                             <thead class="table-header-custom border-bottom">
                                 <tr>
-                                    <th style="width: 25%;" class="text-center">ID / Código</th>
-                                    <th>Cliente</th>
-                                    <th style="width: 28%;" class="text-end">Monto Total</th>
+                                    <th style="width: 20%;" class="text-center">Código</th>
+                                    <th style="width: 55%;">Cliente</th>
+                                    <th style="width: 25%;" class="text-end pe-3">Monto Total</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @if (Model.TopPedidos != null && Model.TopPedidos.Count > 0)
+                                @if (Model?.TopPedidos != null && Model.TopPedidos.Count > 0)
                                 {
                                     int ranking = 1;
-                                    foreach (var p in Model.TopPedidos.Take(5))
+                                    foreach (var p in Model.TopPedidos)
                                     {
-                                        string badgeClass = ranking == 1 ? "bg-warning text-dark fw-bold" : "bg-secondary-subtle text-secondary border";
-                                        <tr>
-                                            <td class="text-center font-monospace fw-bold text-primary py-2">
-                                                <span class="badge @badgeClass me-1">#@ranking</span>
-                                                <span>@p.Id</span>
-                                                @if (!string.IsNullOrEmpty(p.Codigo))
-                                                {
-                                                    <small class="text-muted d-block">(@p.Codigo)</small>
-                                                }
+                                        string rankClass = ranking == 1 ? "badge-rank-1" : (ranking == 2 ? "badge-rank-2" : (ranking == 3 ? "badge-rank-3" : "badge bg-secondary-subtle text-secondary"));
+                                        <tr class="dashboard-drilldown-row @(ranking > 5 ? "d-none fila-top-extra" : "")" onclick="mostrarEnDesarrollo('Detalle del Pedido #@p.Codigo');" title="Clic para ver detalle del pedido">
+                                            <td class="text-center py-2">
+                                                <span class="badge @rankClass rounded-pill px-2 py-1 me-1">#@ranking</span>
+                                                <span class="font-monospace fw-bold text-primary">@p.Codigo</span>
                                             </td>
                                             <td class="py-2">
-                                                <span class="fw-semibold">@p.Cliente</span>
+                                                <span class="fw-semibold text-body">@p.Cliente</span>
                                             </td>
-                                            <td class="text-end font-monospace fw-bold text-success py-2">
+                                            <td class="text-end font-monospace fw-bold text-success py-2 pe-3 text-nowrap">
                                                 @p.MontoFormateado
                                             </td>
                                         </tr>
@@ -562,7 +663,7 @@
                                 {
                                     <tr>
                                         <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="bi bi-info-circle me-1"></i>No se registran pedidos en el día de hoy
+                                            <i class="bi bi-info-circle me-1"></i> No se registran pedidos el @(Model?.TopPedidosFecha ?? DateTime.Today.ToString("dd/MM/yyyy"))
                                         </td>
                                     </tr>
                                 }
@@ -570,36 +671,45 @@
                         </table>
                     </div>
                     <div class="card-footer bg-body border-top py-2 px-3 d-flex justify-content-between align-items-center">
-                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Pedidos de mayor facturación del día</small>
-                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="alert('Ver todos los pedidos');">
-                            <i class="bi bi-list me-1"></i>Ver Todos
-                        </button>
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Pedidos más grandes registrados el @(Model?.TopPedidosFecha ?? DateTime.Today.ToString("dd/MM/yyyy"))</small>
+                        <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Listado General de Pedidos');" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.8rem;">
+                            <i class="bi bi-list-ul me-1"></i>Ver Todos los Pedidos
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- 3.2. Clientes sin Compras (+5 Meses) (Derecha) -->
-            <div class="col-lg-6" id="area-clientes-inactivos">
+            <!-- 3.2. Clientes sin Compras Recientes (Derecha) -->
+            <div class="col-lg-6 mb-3" id="area-clientes-inactivos">
                 <div class="card border-0 shadow-sm rounded-3 h-100">
-                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
                         <h5 class="card-title fw-bold m-0 fs-6">
-                            <i class="bi bi-person-x-fill text-warning me-2"></i>Clientes sin Compras
+                            <i class="bi bi-person-x-fill text-warning me-2"></i>Clientes sin Compras (<span id="label-meses-inactivos">&ge; 5 Meses</span>)
                         </h5>
-                        <div class="d-flex align-items-center" style="gap: 6px;">
-                            <select id="select-meses-inactivos" class="form-select form-select-sm" style="width: auto;">
+                        <div class="card-tools d-inline-flex flex-wrap align-items-center" style="gap: 6px;">
+                            <select id="select-meses-inactivos" class="form-select form-select-sm" style="width: auto; height: 28px; padding: 2px 8px; font-size: 0.8rem;" onchange="cambiarFiltroInactivos();">
                                 <option value="3">&ge; 3 Meses</option>
+                                <option value="4">&ge; 4 Meses</option>
                                 <option value="5" selected>&ge; 5 Meses</option>
                                 <option value="6">&ge; 6 Meses</option>
-                                <option value="9">&ge; 9 Meses</option>
-                                <option value="12">&ge; 12 Meses</option>
                             </select>
-                            <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="btn-ver-mas-clientes" onclick="alternarVerMasClientesInactivos();">
+                            @if (Model?.PuedeFiltrarVendedorClientes == true)
+                            {
+                                <select id="select-vendedor-inactivos" class="form-select form-select-sm" style="width: 150px; height: 28px; padding: 2px 8px; font-size: 0.8rem;" onchange="cambiarFiltroInactivos();">
+                                    <option value="" selected>Todos los Vendedores</option>
+                                    @foreach (var v in listaVendedores.OrderBy(x => x.Nombre))
+                                    {
+                                        <option value="@v.Id">@v.Nombre</option>
+                                    }
+                                </select>
+                            }
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" id="btn-ver-mas-clientes" onclick="alternarVerMasClientesInactivos();" style="height: 28px; font-size: 0.8rem;">
                                 <i class="bi bi-chevron-down me-1"></i>Ver más (10)
                             </button>
-                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1" id="badge-clientes-inactivos">
-                                Inactivos
+                            <span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1" id="badge-clientes-inactivos">
+                                <i class="bi bi-clock-history me-1"></i>Inactivos
                             </span>
-                            <button type="button" class="btn btn-tool ms-1" data-lte-toggle="card-collapse" title="Minimizar">
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse" title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                         </div>
@@ -608,51 +718,43 @@
                         <table class="table table-striped table-hover align-middle mb-0" id="tabla-clientes-inactivos">
                             <thead class="table-header-custom border-bottom">
                                 <tr>
-                                    <th style="width: 25%;" class="text-center">ID / Código</th>
-                                    <th>Cliente</th>
-                                    <th style="width: 28%;" class="text-end">Última Compra</th>
+                                    <th style="width: 65%;">Cliente</th>
+                                    <th style="width: 35%;" class="text-end pe-3">Última Compra</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @if (Model.ClientesInactivos != null && Model.ClientesInactivos.Count > 0)
+                                @if (Model?.ClientesInactivos != null && Model.ClientesInactivos.Count > 0)
                                 {
-                                    int ranking = 1;
-                                    foreach (var c in Model.ClientesInactivos.Take(5))
+                                    int idx = 0;
+                                    foreach (var c in Model.ClientesInactivos)
                                     {
-                                        <tr>
-                                            <td class="text-center font-monospace text-secondary py-2">
-                                                <span class="badge bg-secondary-subtle text-secondary border me-1">#@ranking</span>
-                                                <span>@c.Id</span>
-                                                @if (!string.IsNullOrEmpty(c.Codigo))
-                                                {
-                                                    <small class="text-muted d-block">(@c.Codigo)</small>
-                                                }
-                                            </td>
+                                        idx++;
+                                        <tr class="dashboard-drilldown-row @(idx > 5 ? "d-none fila-inactivo-extra" : "")" onclick="mostrarEnDesarrollo('Ficha del Cliente: @c.Cliente');" title="Clic para ver ficha del cliente">
                                             <td class="py-2">
-                                                <span class="fw-semibold">@c.Cliente</span>
+                                                <span class="fw-semibold text-body d-block">@c.Cliente</span>
+                                                <small class="text-muted"><i class="bi bi-person me-1"></i>@c.Vendedor</small>
                                             </td>
-                                            <td class="text-end py-2">
-                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace px-2 py-1">
+                                            <td class="text-end py-2 pe-3 text-nowrap">
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1 fw-bold">
                                                     <i class="bi bi-calendar-x me-1"></i>@c.FechaFormateada
                                                 </span>
                                             </td>
                                         </tr>
-                                        ranking++;
                                     }
                                 }
                                 else
                                 {
                                     <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="bi bi-check-circle text-success me-1"></i>Sin clientes inactivos para este rango
+                                        <td colspan="2" class="text-center text-muted py-4">
+                                            <i class="bi bi-check-circle-fill text-success me-1"></i> No se encontraron clientes con inactividad superior a 5 meses
                                         </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
-                    <div class="card-footer bg-body border-top py-2 px-3 d-flex justify-content-between align-items-center">
-                        <small class="text-muted"><i class="bi bi-exclamation-triangle text-warning me-1"></i>Ordenado por mayor inactividad</small>
+                    <div class="card-footer bg-body border-top py-2 px-3">
+                        <small class="text-muted"><i class="bi bi-exclamation-triangle text-warning me-1"></i>Listado ordenado por mayor tiempo de inactividad</small>
                     </div>
                 </div>
             </div>
@@ -663,29 +765,32 @@
 </div>
 
 <!-- ======================================================== -->
-<!-- MODAL: GESTIONAR DASHBOARD (Areas Visibles)              -->
+<!-- MODAL: GESTIONAR DASHBOARD (USUARIO)                     -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-gestionar-dashboard" tabindex="-1" aria-labelledby="modalGestionarDashboardLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow border-0 rounded-4">
-            <div class="modal-header border-bottom py-3 px-4 d-flex align-items-center justify-content-between bg-body-tertiary">
+            <div class="modal-header bg-body-tertiary border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
-                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
                         <i class="bi bi-sliders fs-5"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0" id="modalGestionarDashboardLabel">
-                            Gestionar Dashboard
-                        </h5>
+                        <h5 class="modal-title fw-bold mb-0" id="modalGestionarDashboardLabel">Gestionar Dashboard</h5>
                         <small class="text-muted">Activa o desactiva las áreas que deseas visualizar en tu pantalla de inicio</small>
                     </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold me-2" data-bs-dismiss="modal" id="btn-modal-aceptar-header">
+                        <i class="bi bi-check-lg me-1"></i>Aceptar
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
             </div>
             <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                    <span class="text-uppercase small fw-bold text-muted">
-                        Áreas del Dashboard (<span id="modal-conteo-areas-activas" class="fw-bold text-primary">8</span> de 8 activas)
+                    <span class="text-xs fw-semibold text-uppercase text-muted">
+                        Áreas del Dashboard (<span id="modal-conteo-areas-activas" class="fw-bold text-primary">9</span> de 9 disponibles)
                     </span>
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-primary btn-sm px-2" id="btn-modal-marcar-todos">
@@ -700,1160 +805,1144 @@
                     </div>
                 </div>
 
-                <div class="d-flex flex-column" style="gap: 12px;">
-                    <!-- 1. Tarjetas de Métricas -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                <div class="d-flex flex-column gap-2">
+                    <!-- 1. Tarjetas de Métricas (KPIs) -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-kpis" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-info bg-opacity-10 text-info p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                            <div class="rounded-3 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
                                 <i class="bi bi-grid-fill fs-5"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Tarjetas de Métricas (KPIs)</div>
-                                <small class="text-muted">Facturación, Pedidos, Cotizaciones, Órdenes de Producción y Compras</small>
+                                <small class="text-muted">Facturación del Mes, Pedidos, Cotizaciones, Producción, Compras y Total</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-kpis" data-area="kpis" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-kpis" data-area="kpis" checked>
+                        </div>
+                    </label>
+
+                    <!-- Sub-controles de Tarjetas Individuales -->
+                    <div id="sub-kpis-container" class="ms-4 ps-3 py-2 border-start border-3 border-info bg-body-tertiary rounded-end" style="display: none;">
+                        <div class="small fw-bold text-uppercase text-info mb-2">Tarjetas individuales visibles:</div>
+                        <div class="row g-2">
+                            <div class="col-md-4 col-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input chk-sub-kpi" type="checkbox" id="chk-kpi-facturacion" data-kpi="facturacion" checked>
+                                    <label class="form-check-label small" for="chk-kpi-facturacion">Facturación del Mes</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input chk-sub-kpi" type="checkbox" id="chk-kpi-pedidos-activos" data-kpi="pedidos-activos" checked>
+                                    <label class="form-check-label small" for="chk-kpi-pedidos-activos">Pedidos Activos</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input chk-sub-kpi" type="checkbox" id="chk-kpi-cotizaciones" data-kpi="cotizaciones" checked>
+                                    <label class="form-check-label small" for="chk-kpi-cotizaciones">Cotizaciones Activas</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input chk-sub-kpi" type="checkbox" id="chk-kpi-produccion" data-kpi="produccion" checked>
+                                    <label class="form-check-label small" for="chk-kpi-produccion">Producción del Mes</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input chk-sub-kpi" type="checkbox" id="chk-kpi-compras" data-kpi="compras" checked>
+                                    <label class="form-check-label small" for="chk-kpi-compras">Compras del Mes</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input chk-sub-kpi" type="checkbox" id="chk-kpi-pedidos-mes" data-kpi="pedidos-mes" checked>
+                                    <label class="form-check-label small" for="chk-kpi-pedidos-mes">Total Pedidos Mes</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- 2. Evolución de Ventas -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-evolucion-ventas" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                            <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
                                 <i class="bi bi-graph-up fs-5"></i>
                             </div>
                             <div>
-                                <div class="fw-bold mb-0">Evolución de Ventas (Miles de Soles)</div>
-                                <small class="text-muted">Gráfico comparativo mensual histórico con filtros 6m-12m y zoom</small>
+                                <div class="fw-bold mb-0">Evolución de Ventas</div>
+                                <small class="text-muted">Gráfico de barras y línea comparativa de los últimos 12 meses móviles</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-evolucion-ventas" data-area="evolucion-ventas" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-evolucion-ventas" data-area="evolucion-ventas" checked>
                         </div>
-                    </div>
+                    </label>
 
-                    <!-- 3. Diferencia Central vs. Ilo -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                    <!-- 3. Distribución por Sede -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-distribucion-sede" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-success bg-opacity-10 text-success p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                            <div class="rounded-3 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
                                 <i class="bi bi-bar-chart-steps fs-5"></i>
                             </div>
                             <div>
-                                <div class="fw-bold mb-0">Diferencia (Central vs. Ilo)</div>
-                                <small class="text-muted">Comparativo diario entre sedes con línea de picos y botones interactivos VS</small>
+                                <div class="fw-bold mb-0">Distribución por Sede</div>
+                                <small class="text-muted">Gráfico apilado comparando la facturación diaria entre Central e Ilo</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-diferencia-sedes" data-area="diferencia-sedes" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-distribucion-sede" data-area="distribucion-sede" checked>
                         </div>
-                    </div>
+                    </label>
 
-                    <!-- 4. Accesos Rápidos -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                    <!-- 4. Pedidos por Vendedor -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-pedidos-vendedor" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-success bg-opacity-10 text-success p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                            <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
+                                <i class="bi bi-person-badge fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold mb-0">Pedidos por Vendedor</div>
+                                <small class="text-muted">Desempeño diario de pedidos por vendedor con línea de tendencia</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-pedidos-vendedor" data-area="pedidos-vendedor" checked>
+                        </div>
+                    </label>
+
+                    <!-- 5. Accesos Rápidos -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-accesos-rapidos" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <div class="rounded-3 bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
                                 <i class="bi bi-lightning-charge-fill fs-5"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Accesos Rápidos</div>
-                                <small class="text-muted">Botones directos a Cotizaciones, Pedidos, Facturar, Producción, Compras y Productos</small>
+                                <small class="text-muted">Botones directos a cotizaciones, pedidos, facturación, compras y productos</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-accesos-rapidos" data-area="accesos-rapidos" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-accesos-rapidos" data-area="accesos-rapidos" checked>
                         </div>
-                    </div>
+                    </label>
 
-                    <!-- 5. Estado de Producción -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                    <!-- 6. Estado de Producción -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-estado-produccion" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-warning bg-opacity-10 text-warning-emphasis p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                            <div class="rounded-3 bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
                                 <i class="bi bi-pie-chart-fill fs-5"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Estado de Producción</div>
-                                <small class="text-muted">Gráfico circular en planta (En Proceso, Culminadas, Pendientes, Anuladas)</small>
+                                <small class="text-muted">Gráfico circular con la distribución de órdenes de producción del mes actual</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-estado-produccion" data-area="estado-produccion" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-estado-produccion" data-area="estado-produccion" checked>
                         </div>
-                    </div>
+                    </label>
 
-                    <!-- 6. Base de Datos en Tiempo Real -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                    <!-- 7. Base de Datos en Tiempo Real -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-db-tiempo-real" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-success bg-opacity-10 text-success p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-                                <i class="bi bi-database-fill-check fs-5"></i>
+                            <div class="rounded-3 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
+                                <i class="bi bi-database-check fs-5"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Base de Datos en Tiempo Real</div>
-                                <small class="text-muted">Monitoreo de conexión al catálogo esderp_v6 y polling en vivo</small>
+                                <small class="text-muted">Indicador de sincronización en tiempo real y catálogo activo</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-db-tiempo-real" data-area="db-tiempo-real" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-db-tiempo-real" data-area="db-tiempo-real" checked>
                         </div>
-                    </div>
+                    </label>
 
-                    <!-- 7. Top Pedidos del Día -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                    <!-- 8. Top Pedidos del Día -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-top-pedidos" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-                                <i class="bi bi-award-fill fs-5"></i>
+                            <div class="rounded-3 bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
+                                <i class="bi bi-trophy-fill fs-5"></i>
                             </div>
                             <div>
                                 <div class="fw-bold mb-0">Top Pedidos del Día</div>
-                                <small class="text-muted">Tabla detallada de pedidos de mayor facturación (conmutador Top 5 / Top 10)</small>
+                                <small class="text-muted">Ranking de los mayores pedidos del día con montos totales y clientes</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-top-pedidos" data-area="top-pedidos" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-top-pedidos" data-area="top-pedidos" checked>
                         </div>
-                    </div>
+                    </label>
 
-                    <!-- 8. Clientes sin Compras -->
-                    <div class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body">
+                    <!-- 9. Clientes sin Compras Recientes -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-area-clientes-inactivos" style="cursor: pointer;">
                         <div class="d-flex align-items-center me-3">
-                            <div class="rounded-3 bg-warning bg-opacity-10 text-warning-emphasis p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                            <div class="rounded-3 bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
                                 <i class="bi bi-person-x-fill fs-5"></i>
                             </div>
                             <div>
-                                <div class="fw-bold mb-0">Clientes sin Compras (Inactivos)</div>
-                                <small class="text-muted">Tabla de seguimiento con selector de antigüedad (&ge; 3, 5, 6, 9, 12 meses)</small>
+                                <div class="fw-bold mb-0">Clientes sin Compras Recientes</div>
+                                <small class="text-muted">Alerta temprana de clientes que no compran hace 3, 4, 5 o más meses</small>
                             </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input chk-dashboard-area" type="checkbox" role="switch" id="chk-area-clientes-inactivos" data-area="clientes-inactivos" checked style="width: 2.5em; height: 1.3em;">
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-area" type="checkbox" id="chk-area-clientes-inactivos" data-area="clientes-inactivos" checked>
                         </div>
-                    </div>
+                    </label>
                 </div>
             </div>
-            <div class="modal-footer border-top py-2 px-4 d-flex justify-content-between align-items-center bg-body-tertiary">
-                <small class="text-muted"><i class="bi bi-check-circle-fill text-success me-1"></i>Los cambios se aplican y guardan automáticamente.</small>
-                <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">
-                    <i class="bi bi-check2 me-1"></i>Listo
+            <div class="modal-footer bg-body-tertiary border-top py-2 px-4">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold" data-bs-dismiss="modal" onclick="aplicarPreferenciasDashboard();">
+                    <i class="bi bi-check-lg me-1"></i>Aplicar Preferencias
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-@section Scripts {
-<script type="text/javascript">
-    $(document).ready(function () {
-        // Formato monetario peruano: S/ 310,879.10 o si pasa al millón S/ 3'456,890.00
-        function formatMonedaPeruana(valor) {
-            if (valor === null || valor === undefined || isNaN(valor)) return 'S/ 0.00';
-            var num = Number(valor);
-            var isNeg = num < 0;
-            num = Math.abs(num);
-            var partes = num.toFixed(2).split('.');
-            var entero = partes[0];
-            var decimales = partes[1];
-
-            if (entero.length > 6) {
-                var millones = entero.slice(0, entero.length - 6);
-                var miles = entero.slice(entero.length - 6, entero.length - 3);
-                var unidades = entero.slice(entero.length - 3);
-                var millonesFmt = millones.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                entero = millonesFmt + "'" + miles + "," + unidades;
-            } else if (entero.length > 3) {
-                entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-
-            return (isNeg ? '-' : '') + 'S/ ' + entero + '.' + decimales;
-        }
-
-        function getThemeConfig() {
-            var theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-            var isDark = theme === 'dark';
-            return {
-                isDark: isDark,
-                textColor: isDark ? '#cbd5e1' : '#64748b',
-                gridColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-                barCurrent: isDark ? '#3b82f6' : '#0d6efd',
-                barPrevious: isDark ? '#64748b' : '#ced4da',
-                pieColors: isDark ? ['#06b6d4', '#10b981', '#f59e0b', '#f43f5e'] : ['#0dcaf0', '#198754', '#ffc107', '#dc3545']
-            };
-        }
-
-        var salesChartInstance = null;
-        var productionChartInstance = null;
-        var stackedBarChartInstance = null;
-
-        var allStackedLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StackedLabels));
-        var allStackedCentral = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DsCentral));
-        var allStackedIlo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DsIlo));
-        var nivelesDias = [6, 8, 10, 12];
-        var diasActuales = 6;
-
-        var allSalesMeses = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MesesVentas));
-        var allSales2025 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Ventas2025));
-        var allSales2026 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Ventas2026));
-
-        // Generar series para la comparativa:
-        function generarSeriesVentas(n) {
-            var slicedMeses = (allSalesMeses || []).slice(-n);
-            var slicedBarra2025 = (allSales2025 || []).slice(-n);
-            var slicedBarra2026 = (allSales2026 || []).slice(-n);
-
-            // Identificar índices de Diciembre (2025) y Enero (2026)
-            var idxDic = -1;
-            var idxEne = -1;
-            for (var i = 0; i < slicedMeses.length; i++) {
-                var m = (slicedMeses[i] || '').toLowerCase();
-                if (m.indexOf('dic') >= 0) idxDic = i;
-                if (m.indexOf('ene') >= 0) idxEne = i;
-            }
-
-            // Puente Dic -> Ene (Naranja #fd7e14):
-            // Solo tiene dos puntos: Dic (valor 2025) y Ene (valor 2026)
-            var puenteDicEne = [];
-            for (var i = 0; i < slicedMeses.length; i++) {
-                if (i === idxDic && idxDic >= 0) {
-                    puenteDicEne.push(slicedBarra2025[i] || null);
-                } else if (i === idxEne && idxEne >= 0) {
-                    puenteDicEne.push(slicedBarra2026[i] || null);
-                } else {
-                    puenteDicEne.push(null);
-                }
-            }
-
-            // Línea Actual (Verde #198754):
-            // Comienza desde Enero (2026) en adelante, NO incluye Diciembre anterior
-            var slicedLinea2026 = [];
-            for (var i = 0; i < slicedMeses.length; i++) {
-                if (idxEne >= 0 && i < idxEne) {
-                    slicedLinea2026.push(null);
-                } else if (slicedBarra2026[i] && Number(slicedBarra2026[i]) > 0) {
-                    slicedLinea2026.push(slicedBarra2026[i]);
-                } else {
-                    slicedLinea2026.push(null);
-                }
-            }
-
-            return {
-                meses: slicedMeses,
-                puenteDicEne: puenteDicEne,
-                linea2026: slicedLinea2026,
-                linea2025: slicedBarra2025.slice(),
-                barra2026: slicedBarra2026,
-                barra2025: slicedBarra2025
-            };
-        }
-
-        var nivelesMesesVentas = [6, 8, 10, 12];
-        var mesesVentasActuales = 12;
-
-        function setVentasMeses(meses) {
-            mesesVentasActuales = meses;
-            nivelesMesesVentas.forEach(function (m) {
-                var $btn = $('#btn-ventas-' + m);
-                if (m === meses) {
-                    $btn.removeClass('btn-outline-secondary').addClass('btn-primary active');
-                } else {
-                    $btn.removeClass('btn-primary active').addClass('btn-outline-secondary');
-                }
-            });
-
-            var $badge = $('#badge-meses-ventas');
-            if ($badge.length) {
-                if (meses === 12) {
-                    $badge.html('<i class="bi bi-calendar-check me-1"></i>12 Meses Móviles');
-                } else {
-                    $badge.html('<i class="bi bi-calendar-check me-1"></i>Últimos ' + meses + ' meses');
-                }
-            }
-
-            actualizarChartVentasMeses();
-        }
-        window.setVentasMeses = setVentasMeses;
-
-        function actualizarChartVentasMeses() {
-            if (!salesChartInstance) return;
-            var series = generarSeriesVentas(mesesVentasActuales || 12);
-            salesChartInstance.data.labels = series.meses;
-            if (salesChartInstance.data.datasets[0]) salesChartInstance.data.datasets[0].data = series.puenteDicEne;
-            if (salesChartInstance.data.datasets[1]) salesChartInstance.data.datasets[1].data = series.linea2026;
-            if (salesChartInstance.data.datasets[2]) salesChartInstance.data.datasets[2].data = series.linea2025;
-            if (salesChartInstance.data.datasets[3]) salesChartInstance.data.datasets[3].data = series.barra2026;
-            if (salesChartInstance.data.datasets[4]) salesChartInstance.data.datasets[4].data = series.barra2025;
-            salesChartInstance.update();
-        }
-
-        var sedesVisibles = { central: true, ilo: true };
-
-        function setDiferenciaDias(dias) {
-            diasActuales = dias;
-            nivelesDias.forEach(function (n) {
-                var $btn = $('#btn-dias-' + n);
-                if (n === dias) {
-                    $btn.removeClass('btn-outline-secondary').addClass('btn-primary active');
-                } else {
-                    $btn.removeClass('btn-primary active').addClass('btn-outline-secondary');
-                }
-            });
-
-            actualizarBotonesSedesUI();
-            actualizarChartDiferenciaDias();
-        }
-        window.setDiferenciaDias = setDiferenciaDias;
-
-        function actualizarChartDiferenciaDias() {
-            if (!stackedBarChartInstance) return;
-
-            var n = diasActuales || 6;
-            var slicedLabels = (allStackedLabels || []).slice(-n);
-            var slicedCentral = (allStackedCentral || []).slice(-n);
-            var slicedIlo = (allStackedIlo || []).slice(-n);
-
-            var slicedTrend = [];
-            for (var i = 0; i < slicedCentral.length; i++) {
-                var vC = sedesVisibles.central ? (slicedCentral[i] || 0) : 0;
-                var vI = sedesVisibles.ilo ? (slicedIlo[i] || 0) : 0;
-                slicedTrend.push(Math.round((vC + vI) * 100) / 100);
-            }
-
-            stackedBarChartInstance.data.labels = slicedLabels;
-            stackedBarChartInstance.data.datasets.forEach(function (ds) {
-                if (ds.type === 'line' || (ds.label && ds.label.indexOf('Pico') >= 0)) {
-                    ds.data = slicedTrend;
-                } else if (ds.label === 'Central') {
-                    ds.data = slicedCentral;
-                    ds.hidden = !sedesVisibles.central;
-                } else if (ds.label === 'Ilo') {
-                    ds.data = slicedIlo;
-                    ds.hidden = !sedesVisibles.ilo;
-                }
-            });
-
-            stackedBarChartInstance.update();
-        }
-
-        function actualizarBotonesSedesUI() {
-            var $btnCentral = $('#btn-filtro-central');
-            var $btnIlo = $('#btn-filtro-ilo');
-            var $btnVs = $('#btn-filtro-vs');
-
-            if (sedesVisibles.central && sedesVisibles.ilo) {
-                $btnCentral.removeClass('inactive').addClass('active').attr('title', 'Ver solo Sede Central');
-                $btnIlo.removeClass('inactive').addClass('active').attr('title', 'Ver solo Sede Ilo');
-                $btnVs.removeClass('inactive').addClass('active').attr('title', 'Ambas sedes activas (VS)');
-            } else if (sedesVisibles.central && !sedesVisibles.ilo) {
-                $btnCentral.removeClass('inactive').addClass('active').attr('title', 'Sede Central activa');
-                $btnIlo.removeClass('active').addClass('inactive').attr('title', 'Cambiar a Sede Ilo');
-                $btnVs.removeClass('active').addClass('inactive').attr('title', 'Clic para comparar ambas sedes (VS)');
-            } else {
-                $btnCentral.removeClass('active').addClass('inactive').attr('title', 'Cambiar a Sede Central');
-                $btnIlo.removeClass('inactive').addClass('active').attr('title', 'Sede Ilo activa');
-                $btnVs.removeClass('active').addClass('inactive').attr('title', 'Clic para comparar ambas sedes (VS)');
-            }
-        }
-
-        function alternarSede(sede) {
-            if (sede === 'central') {
-                if (sedesVisibles.central && sedesVisibles.ilo) {
-                    sedesVisibles.central = true;
-                    sedesVisibles.ilo = false;
-                } else if (sedesVisibles.central && !sedesVisibles.ilo) {
-                    sedesVisibles.central = true;
-                    sedesVisibles.ilo = true;
-                } else {
-                    sedesVisibles.central = true;
-                    sedesVisibles.ilo = false;
-                }
-            } else {
-                if (sedesVisibles.central && sedesVisibles.ilo) {
-                    sedesVisibles.central = false;
-                    sedesVisibles.ilo = true;
-                } else if (!sedesVisibles.central && sedesVisibles.ilo) {
-                    sedesVisibles.central = true;
-                    sedesVisibles.ilo = true;
-                } else {
-                    sedesVisibles.central = false;
-                    sedesVisibles.ilo = true;
-                }
-            }
-            actualizarChartDiferenciaDias();
-            actualizarBotonesSedesUI();
-        }
-
-        $(document).off('click', '#btn-filtro-central').on('click', '#btn-filtro-central', function (e) {
-            e.preventDefault();
-            alternarSede('central');
-        });
-
-        $(document).off('click', '#btn-filtro-ilo').on('click', '#btn-filtro-ilo', function (e) {
-            e.preventDefault();
-            alternarSede('ilo');
-        });
-
-        $(document).off('click', '#btn-filtro-vs').on('click', '#btn-filtro-vs', function (e) {
-            e.preventDefault();
-            sedesVisibles.central = true;
-            sedesVisibles.ilo = true;
-            actualizarChartDiferenciaDias();
-            actualizarBotonesSedesUI();
-        });
-
-        var defaultDashboardData = {
-            success: true,
-            kpis: {
-                facturacionMes: "@Html.Raw(Model.FacturacionMes)",
-                pedidosActivos: "@Html.Raw(Model.PedidosActivos)",
-                cotizacionesActivas: "@Html.Raw(Model.CotizacionesActivas)",
-                ordenesProduccionMes: "@Html.Raw(Model.OrdenesProduccionMes)",
-                ordenesCompraMes: "@Html.Raw(Model.OrdenesCompraMes)"
-            },
-            graficoVentas: {
-                meses: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MesesVentas)),
-                ventas2025: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Ventas2025)),
-                ventas2026: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Ventas2026))
-            },
-            graficoProduccion: {
-                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ProdLabels)),
-                valores: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ProdValores))
-            },
-            graficoStackedBar: {
-                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StackedLabels)),
-                datasets: [
-                    { label: 'Central', data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DsCentral)) },
-                    { label: 'Ilo', data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DsIlo)) }
-                ]
-            }
-        };
-
-        var lastDashboardData = defaultDashboardData;
-
-        // Render Gráfico de Ventas
-        function renderSalesChart(data) {
-            if (!data) return;
-            var theme = getThemeConfig();
-            var canvas = document.getElementById('salesChart');
-            if (!canvas) return;
-
-            if (salesChartInstance) {
-                salesChartInstance.destroy();
-                salesChartInstance = null;
-            }
-
-            if (typeof Chart === 'undefined') return;
-
-            if (data.meses && data.meses.length) allSalesMeses = data.meses;
-            if (data.ventas2025 && data.ventas2025.length) allSales2025 = data.ventas2025;
-            if (data.ventas2026 && data.ventas2026.length) allSales2026 = data.ventas2026;
-
-            var series = generarSeriesVentas(mesesVentasActuales || 12);
-
-            salesChartInstance = new Chart(canvas.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: series.meses,
-                    datasets: [
+<!-- ======================================================== -->
+<!-- MODAL: GESTIONAR DASHBOARD POR ROL (ADMIN)               -->
+<!-- ======================================================== -->
+@if (esAdmin)
+{
+<div class="modal fade" id="modal-gestionar-dashboard-rol" tabindex="-1" aria-labelledby="modalGestionarDashboardRolLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header bg-body-tertiary border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="bi bi-shield-lock-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalGestionarDashboardRolLabel">Gestionar Dashboard por Rol</h5>
+                        <small class="text-muted">Configura las áreas y controles visibles en el dashboard para cada rol de usuario</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold me-2" data-bs-dismiss="modal" id="btn-modal-rol-listo-header">
+                        <i class="bi bi-check-lg me-1"></i>Listo
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+            </div>
+            <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Selector de Rol -->
+                <div class="p-3 bg-body-tertiary rounded-3 border mb-3">
+                    <label for="select-rol-dashboard" class="fw-bold mb-1 text-body d-flex align-items-center">
+                        <i class="bi bi-person-badge-fill text-primary me-2"></i> Seleccionar Rol a Gestionar:
+                    </label>
+                    <select id="select-rol-dashboard" class="form-select fw-semibold shadow-sm" onchange="cargarPermisosRol();">
+                        @foreach (var r in listaRoles)
                         {
-                            type: 'line',
-                            label: 'Puente Dic → Ene',
-                            order: 0,
-                            data: series.puenteDicEne,
-                            borderColor: '#fd7e14',
-                            backgroundColor: 'rgba(253, 126, 20, 0.1)',
-                            borderWidth: 3,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#fd7e14',
-                            pointBorderColor: '#fd7e14',
-                            tension: 0.25,
-                            fill: false,
-                            spanGaps: true
-                        },
-                        {
-                            type: 'line',
-                            label: 'Línea Actual',
-                            order: 1,
-                            data: series.linea2026,
-                            borderColor: '#198754',
-                            backgroundColor: 'rgba(25, 135, 84, 0.08)',
-                            borderWidth: 3,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#198754',
-                            pointBorderColor: '#198754',
-                            tension: 0.25,
-                            fill: false,
-                            spanGaps: true
-                        },
-                        {
-                            type: 'line',
-                            label: 'Línea Anterior (2025)',
-                            order: 2,
-                            data: series.linea2025,
-                            borderColor: '#ffc107',
-                            backgroundColor: 'rgba(255, 193, 7, 0.08)',
-                            borderWidth: 3,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#ffc107',
-                            pointBorderColor: '#ffc107',
-                            tension: 0.25,
-                            fill: false,
-                            spanGaps: true
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Barra Actual (2026)',
-                            order: 3,
-                            backgroundColor: theme.barCurrent,
-                            borderColor: theme.barCurrent,
-                            data: series.barra2026,
-                            borderRadius: 4
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Barra Anterior (2025)',
-                            order: 4,
-                            backgroundColor: theme.barPrevious,
-                            borderColor: theme.barPrevious,
-                            data: series.barra2025,
-                            borderRadius: 4
+                            <option value="@r.Codigo">@r.Nombre (@r.Codigo)</option>
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    if (context.parsed.y === null || context.parsed.y === undefined) return '';
-                                    var montoEnSoles = (Number(context.parsed.y) || 0) * 1000;
-                                    if (context.dataset.label === 'Puente Dic → Ene') {
-                                        return 'Puente Dic → Ene: ' + formatMonedaPeruana(montoEnSoles);
-                                    }
-                                    var anio = (context.dataset.label && context.dataset.label.indexOf('Actual') >= 0) ? 'Año Actual (2026)' : 'Año 2025';
-                                    return anio + ': ' + formatMonedaPeruana(montoEnSoles);
-                                }
+                    </select>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap mt-2" style="gap: 8px;">
+                        <small class="text-muted m-0">
+                            Los cambios configurarán qué áreas están autorizadas para los usuarios que tengan este rol.
+                        </small>
+                        <button type="button" class="btn btn-outline-info btn-sm fw-semibold" id="btn-aplicar-vista-rol" onclick="simularVistaRol();">
+                            <i class="bi bi-eye me-1"></i>Simular vista de este Rol
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <span class="text-xs text-uppercase fw-bold text-muted">
+                        Áreas Permitidas para este Rol (<span id="modal-rol-conteo-areas-activas" class="text-primary fw-bold">9</span> de 9)
+                    </span>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary btn-sm px-2 fw-semibold" id="btn-modal-rol-marcar-todos">Marcar Todos</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm px-2 fw-semibold" id="btn-modal-rol-desmarcar-todos">Desmarcar Todos</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm px-2 fw-semibold" id="btn-modal-rol-restablecer">Restablecer</button>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-2" id="contenedor-roles-areas">
+                    <!-- Switches para cada área por rol -->
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-kpis" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-grid-fill text-info me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Tarjetas de Métricas (KPIs)</span>
+                                <small class="text-muted">Resumen rápido de facturación, pedidos, cotizaciones, compras y producción</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-kpis" data-area="kpis" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-evolucion-ventas" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-graph-up text-primary me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Evolución de Ventas</span>
+                                <small class="text-muted">Gráfico de barras y línea comparativa de los últimos 12 meses móviles</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-evolucion-ventas" data-area="evolucion-ventas" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-distribucion-sede" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-bar-chart-steps text-info me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Distribución por Sede</span>
+                                <small class="text-muted">Gráfico apilado comparando la facturación diaria entre Central e Ilo</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-distribucion-sede" data-area="distribucion-sede" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-pedidos-vendedor" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-person-badge text-primary me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Pedidos por Vendedor</span>
+                                <small class="text-muted">Desempeño diario de pedidos por vendedor con línea de tendencia</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-pedidos-vendedor" data-area="pedidos-vendedor" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-accesos-rapidos" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-lightning-charge-fill text-warning me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Accesos Rápidos</span>
+                                <small class="text-muted">Botones directos a módulos clave del ERP</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-accesos-rapidos" data-area="accesos-rapidos" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-estado-produccion" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-pie-chart-fill text-warning me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Estado de Producción</span>
+                                <small class="text-muted">Gráfico circular con la distribución de órdenes de producción</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-estado-produccion" data-area="estado-produccion" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-db-tiempo-real" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-database-check text-success me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Base de Datos en Tiempo Real</span>
+                                <small class="text-muted">Indicador de sincronización en tiempo real y catálogo</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-db-tiempo-real" data-area="db-tiempo-real" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-top-pedidos" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-trophy-fill text-warning me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Top Pedidos del Día</span>
+                                <small class="text-muted">Ranking de los mayores pedidos del día</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-top-pedidos" data-area="top-pedidos" checked>
+                        </div>
+                    </label>
+
+                    <label class="dashboard-area-card d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="chk-rol-area-clientes-inactivos" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-person-x-fill text-danger me-3 fs-5"></i>
+                            <div>
+                                <span class="d-block fw-semibold text-body">Clientes sin Compras Recientes</span>
+                                <small class="text-muted">Alerta temprana de clientes inactivos</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-dashboard-rol-area" type="checkbox" id="chk-rol-area-clientes-inactivos" data-area="clientes-inactivos" checked>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer bg-body-tertiary border-top py-2 px-4">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold" data-bs-dismiss="modal" onclick="guardarPermisosRol();">
+                    <i class="bi bi-save me-1"></i>Guardar Permisos del Rol
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@section Scripts {
+<script>
+    // ========================================================
+    // ALERTA VISUAL: MÓDULO EN DESARROLLO (Solicitud del Usuario)
+    // ========================================================
+    function mostrarEnDesarrollo(modulo) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Módulo en Desarrollo',
+            html: '<p class="mb-2">El módulo <strong>' + modulo + '</strong> se encuentra actualmente en proceso de migración para ASP.NET Core 10.</p><small class="text-muted">Pronto estará disponible con todas sus funcionalidades conectadas a la base de datos en tiempo real.</small>',
+            confirmButtonText: '<i class="bi bi-check2-circle me-1"></i>Entendido',
+            confirmButtonColor: '#0d6efd',
+            customClass: {
+                popup: 'rounded-4 shadow'
+            }
+        });
+    }
+
+    // ========================================================
+    // VARIABLES GLOBALES Y DATOS DE MODELO
+    // ========================================================
+    var allMesesVentas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.MesesVentas ?? Array.Empty<string>()));
+    var allVentasAnterior = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VentasAnterior ?? Array.Empty<double>()));
+    var allVentasActual = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VentasActual ?? Array.Empty<double>()));
+    var allVentasBarra = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VentasBarraActual ?? Array.Empty<double?>()));
+
+    var allStackedLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.StackedLabels ?? new List<string>()));
+    var allDsCentral = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.DsCentral ?? Array.Empty<double>()));
+    var allDsIlo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.DsIlo ?? Array.Empty<double>()));
+
+    var allVendedorLabels = [];
+    var allVendedorCantidades = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VendedorCantidades ?? new List<int>()));
+    var allVendedorMontos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VendedorMontos ?? new List<double>()));
+
+    var prodLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.ProdLabels ?? Array.Empty<string>()));
+    var prodValores = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.ProdValores ?? Array.Empty<int>()));
+
+    // Instancias de Gráficos
+    var salesChartInstance = null;
+    var stackedChartInstance = null;
+    var vendedorChartInstance = null;
+    var productionChartInstance = null;
+
+    // Estados de filtros
+    var ventasMesesActuales = 12;
+    var stackedDiasActuales = 12;
+    var sedeActiva = 'vs'; // 'vs', 'central', 'ilo'
+    var vendedorDiasActuales = 12;
+    var verTop10Pedidos = false;
+    var ver10ClientesInactivos = false;
+
+    // Helper Formato Moneda
+    function formatMonedaPeruana(num) {
+        var n = Number(num) || 0;
+        return 'S/ ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Configuración de Tema Claro/Oscuro
+    function getThemeConfig() {
+        var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        return {
+            isDark: isDark,
+            textColor: isDark ? '#adb5bd' : '#495057',
+            gridColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            barCurrent: isDark ? '#3b82f6' : '#0d6efd',
+            linePrev: isDark ? '#64748b' : '#adb5bd'
+        };
+    }
+
+    // ========================================================
+    // 1. RENDER GRÁFICO: EVOLUCIÓN DE VENTAS
+    // ========================================================
+    function renderSalesChart(meses, actual, anterior) {
+        var canvas = document.getElementById('salesChart');
+        if (!canvas) return;
+        if (salesChartInstance) salesChartInstance.destroy();
+
+        var theme = getThemeConfig();
+        salesChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: meses,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Periodo Anterior',
+                        data: anterior,
+                        borderColor: theme.linePrev,
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: theme.linePrev,
+                        tension: 0.3,
+                        order: 0
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Periodo Actual',
+                        data: actual,
+                        backgroundColor: theme.barCurrent,
+                        borderColor: theme.barCurrent,
+                        borderRadius: 4,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': S/ ' + (ctx.parsed.y * 1000).toLocaleString('es-PE') + ' (' + ctx.parsed.y + 'k)';
                             }
                         }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: theme.textColor, font: { size: 11 } }
                     },
-                    scales: {
-                        x: {
-                            ticks: { color: theme.textColor },
-                            grid: { display: false }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                color: theme.textColor,
-                                callback: function(value) { return 'S/ ' + value + 'k'; }
-                            },
-                            grid: { color: theme.gridColor }
+                    y: {
+                        grid: { color: theme.gridColor },
+                        ticks: {
+                            color: theme.textColor,
+                            font: { size: 11 },
+                            callback: function(v) { return v + 'k'; }
                         }
                     }
                 }
+            }
+        });
+    }
+
+    function setVentasMeses(n) {
+        ventasMesesActuales = n;
+        $('[id^="btn-ventas-"]').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $('#btn-ventas-' + n).removeClass('btn-outline-secondary').addClass('btn-primary active');
+        $('#badge-meses-ventas').html('<i class="bi bi-calendar-check me-1"></i>' + n + ' Meses Móviles');
+
+        var meses = (allMesesVentas || []).slice(-n);
+        var actual = (allVentasActual || []).slice(-n);
+        var anterior = (allVentasAnterior || []).slice(-n);
+        renderSalesChart(meses, actual, anterior);
+    }
+
+    // ========================================================
+    // 2. RENDER GRÁFICO: DISTRIBUCIÓN POR SEDE (Central vs Ilo)
+    // ========================================================
+    function renderStackedChart(labels, central, ilo) {
+        var canvas = document.getElementById('stackedBarChart');
+        if (!canvas) return;
+        if (stackedChartInstance) stackedChartInstance.destroy();
+
+        var theme = getThemeConfig();
+        var datasets = [];
+
+        if (sedeActiva === 'vs' || sedeActiva === 'central') {
+            datasets.push({
+                label: 'Central',
+                data: central,
+                backgroundColor: theme.barCurrent,
+                borderRadius: sedeActiva === 'central' ? 4 : 0
+            });
+        }
+        if (sedeActiva === 'vs' || sedeActiva === 'ilo') {
+            datasets.push({
+                label: 'Ilo',
+                data: ilo,
+                backgroundColor: '#6c757d',
+                borderRadius: 4
             });
         }
 
-        // Render Gráfico de Producción
-        function renderProductionChart(data) {
-            if (!data) return;
-            var theme = getThemeConfig();
-            var canvas = document.getElementById('productionChart');
-            if (!canvas) return;
-
-            if (productionChartInstance) {
-                productionChartInstance.destroy();
-                productionChartInstance = null;
-            }
-
-            if (typeof Chart === 'undefined') return;
-
-            var rawData = data.valores || [];
-            var total = 0;
-            for (var i = 0; i < rawData.length; i++) {
-                total += (Number(rawData[i]) || 0);
-            }
-
-            var $empty = $('#productionChartEmpty');
-            if (total === 0) {
-                if ($empty.length) $empty.removeClass('d-none');
-            } else {
-                if ($empty.length) $empty.addClass('d-none');
-            }
-
-            productionChartInstance = new Chart(canvas.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        data: rawData,
-                        backgroundColor: theme.pieColors,
-                        borderWidth: theme.isDark ? 2 : 1,
-                        borderColor: theme.isDark ? '#212529' : '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: theme.textColor,
-                                boxWidth: 14,
-                                padding: 12,
-                                generateLabels: function (chart) {
-                                    var ds = chart.data.datasets[0];
-                                    return (chart.data.labels || []).map(function (label, idx) {
-                                        var val = (ds && ds.data) ? (ds.data[idx] || 0) : 0;
-                                        var fill = (ds && ds.backgroundColor && ds.backgroundColor[idx]) ? ds.backgroundColor[idx] : '#999';
-                                        return {
-                                            text: label + ' (' + val + ')',
-                                            fillStyle: fill,
-                                            strokeStyle: theme.isDark ? '#212529' : '#ffffff',
-                                            lineWidth: 1,
-                                            hidden: false,
-                                            index: idx
-                                        };
-                                    });
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    var label = context.label || '';
-                                    var val = Number(context.raw) || 0;
-                                    var pct = total > 0 ? Math.round((val / total) * 100) : 0;
-                                    return ' ' + label + ': ' + val + ' orden' + (val === 1 ? '' : 'es') + ' (' + pct + '%)';
-                                }
+        stackedChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': S/ ' + (ctx.parsed.y * 1000).toLocaleString('es-PE') + ' (' + ctx.parsed.y + 'k)';
                             }
                         }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: sedeActiva === 'vs',
+                        grid: { display: false },
+                        ticks: { color: theme.textColor, font: { size: 11 } }
                     },
-                    cutout: '62%'
+                    y: {
+                        stacked: sedeActiva === 'vs',
+                        grid: { color: theme.gridColor },
+                        ticks: {
+                            color: theme.textColor,
+                            font: { size: 11 },
+                            callback: function(v) { return v + 'k'; }
+                        }
+                    }
                 }
-            });
+            }
+        });
+    }
+
+    function setStackedDias(n) {
+        stackedDiasActuales = n;
+        $('[id^="btn-stacked-"]').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $('#btn-stacked-' + n).removeClass('btn-outline-secondary').addClass('btn-primary active');
+
+        var labels = (allStackedLabels || []).slice(-n);
+        var central = (allDsCentral || []).slice(-n);
+        var ilo = (allDsIlo || []).slice(-n);
+        renderStackedChart(labels, central, ilo);
+    }
+
+    function toggleSedeFilter(modo) {
+        sedeActiva = modo;
+        $('.btn-sede-filter').removeClass('active').addClass('inactive');
+        $('#filter-sede-' + modo).removeClass('inactive').addClass('active');
+        setStackedDias(stackedDiasActuales);
+    }
+
+    // ========================================================
+    // 3. RENDER GRÁFICO: PEDIDOS POR VENDEDOR
+    // ========================================================
+    function renderVendedorChart(labels, cantidades, montos, totalPedidos, totalMonto) {
+        var canvas = document.getElementById('vendedorBarChart');
+        if (!canvas) return;
+        if (vendedorChartInstance) vendedorChartInstance.destroy();
+
+        labels = labels || [];
+        cantidades = cantidades || [];
+        montos = montos || [];
+
+        if (totalPedidos === undefined || totalPedidos === null) {
+            totalPedidos = cantidades.reduce(function(a, b) { return a + (Number(b) || 0); }, 0);
+        }
+        if (!totalMonto) {
+            var sumMto = montos.reduce(function(a, b) { return a + (Number(b) || 0); }, 0);
+            totalMonto = formatMonedaPeruana(sumMto);
         }
 
-        // Render Gráfico de Diferencia Diaria
-        function renderStackedBarChart(data) {
-            if (!data) return;
-            var theme = getThemeConfig();
-            var canvas = document.getElementById('stackedBarChart');
-            if (!canvas) return;
+        $('#vendedor-total-pedidos').text(totalPedidos + ' pedido' + (totalPedidos === 1 ? '' : 's') + ' en el periodo');
+        $('#vendedor-total-monto').text('Total: ' + totalMonto);
 
-            if (stackedBarChartInstance) {
-                stackedBarChartInstance.destroy();
-                stackedBarChartInstance = null;
+        var theme = getThemeConfig();
+        vendedorChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Tendencia Pedidos',
+                        data: cantidades,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        fill: false,
+                        tension: 0.25,
+                        order: 0
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Cantidad de Pedidos',
+                        data: cantidades,
+                        backgroundColor: theme.barCurrent,
+                        borderColor: theme.barCurrent,
+                        borderRadius: 4,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.dataset.type === 'line') {
+                                    return 'Pico / Tendencia: ' + ctx.parsed.y + ' pedidos';
+                                }
+                                var idx = ctx.dataIndex;
+                                var mto = (montos && montos.length > idx) ? montos[idx] : 0;
+                                return [
+                                    'Pedidos: ' + ctx.parsed.y,
+                                    'Monto Total: ' + formatMonedaPeruana(mto)
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: theme.textColor, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: theme.gridColor },
+                        ticks: {
+                            color: theme.textColor,
+                            font: { size: 11 },
+                            stepSize: 1
+                        }
+                    }
+                }
             }
+        });
+    }
 
-            if (typeof Chart === 'undefined') return;
+    function setVendedorDias(n) {
+        vendedorDiasActuales = n;
+        $('[id^="btn-vendedor-dias-"]').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $('#btn-vendedor-dias-' + n).removeClass('btn-outline-secondary').addClass('btn-primary active');
 
-            if (data.labels && data.labels.length) allStackedLabels = data.labels;
-            if (data.datasets && data.datasets.length >= 2) {
-                data.datasets.forEach(function (ds) {
-                    if (ds.label === 'Central') allStackedCentral = ds.data;
-                    else if (ds.label === 'Ilo') allStackedIlo = ds.data;
+        var vid = $('#select-vendedor-chart').val() || @(Model?.PrimerVendedorId ?? 50);
+        cargarDatosVendedor(vid, n);
+    }
+
+    function cambiarVendedorChart() {
+        var vid = $('#select-vendedor-chart').val() || @(Model?.PrimerVendedorId ?? 50);
+        cargarDatosVendedor(vid, vendedorDiasActuales);
+    }
+
+    function cargarDatosVendedor(vid, dias) {
+        $.ajax({
+            url: '@Url.Action("ObtenerPedidosVendedor", "Home")',
+            type: 'GET',
+            data: { vendedorId: vid, dias: dias },
+            success: function(res) {
+                if (res && res.success) {
+                    allVendedorLabels = res.labels;
+                    allVendedorCantidades = res.cantidades;
+                    allVendedorMontos = res.montos;
+                    renderVendedorChart(res.labels, res.cantidades, res.montos, res.totalPedidos, res.totalMonto);
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 4. RENDER GRÁFICO: ESTADO DE PRODUCCIÓN (Doughnut)
+    // ========================================================
+    function renderProductionChart(labels, valores) {
+        var canvas = document.getElementById('productionChart');
+        if (!canvas) return;
+        if (productionChartInstance) productionChartInstance.destroy();
+
+        var total = (valores || []).reduce(function(a, b) { return a + b; }, 0);
+        if (total === 0) {
+            $('#productionChartEmpty').removeClass('d-none');
+            $(canvas).addClass('d-none');
+            return;
+        } else {
+            $('#productionChartEmpty').addClass('d-none');
+            $(canvas).removeClass('d-none');
+        }
+
+        var theme = getThemeConfig();
+        productionChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545'],
+                    borderWidth: 2,
+                    borderColor: theme.isDark ? '#1e2227' : '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 12,
+                            color: theme.textColor,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                var val = ctx.parsed;
+                                var pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                return ctx.label + ': ' + val + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    // ========================================================
+    // 5. ACCIONES EN TABLAS DE DETALLE
+    // ========================================================
+    function alternarTopPedidos() {
+        verTop10Pedidos = !verTop10Pedidos;
+        if (verTop10Pedidos) {
+            $('.fila-top-extra').removeClass('d-none');
+            $('#label-top-pedidos').text('Top 10');
+            $('#btn-toggle-top-pedidos').html('<i class="bi bi-chevron-up me-1"></i>Ver Top 5');
+        } else {
+            $('.fila-top-extra').addClass('d-none');
+            $('#label-top-pedidos').text('Top 5');
+            $('#btn-toggle-top-pedidos').html('<i class="bi bi-chevron-down me-1"></i>Ver Top 10');
+        }
+    }
+
+    function alternarVerMasClientesInactivos() {
+        ver10ClientesInactivos = !ver10ClientesInactivos;
+        if (ver10ClientesInactivos) {
+            $('.fila-inactivo-extra').removeClass('d-none');
+            $('#btn-ver-mas-clientes').html('<i class="bi bi-chevron-up me-1"></i>Ver menos (5)');
+        } else {
+            $('.fila-inactivo-extra').addClass('d-none');
+            $('#btn-ver-mas-clientes').html('<i class="bi bi-chevron-down me-1"></i>Ver más (10)');
+        }
+    }
+
+    function cambiarFiltroInactivos() {
+        var meses = parseInt($('#select-meses-inactivos').val()) || 5;
+        var vid = $('#select-vendedor-inactivos').val();
+        $('#label-meses-inactivos').html('&ge; ' + meses + ' Meses');
+
+        $.ajax({
+            url: '@Url.Action("ObtenerClientesInactivos", "Home")',
+            type: 'GET',
+            data: { meses: meses, vendedorId: vid ? parseInt(vid) : null },
+            success: function(res) {
+                if (res && res.success && res.data) {
+                    var $tbody = $('#tabla-clientes-inactivos tbody').empty();
+                    if (res.data.length === 0) {
+                        $tbody.append('<tr><td colspan="2" class="text-center text-muted py-4"><i class="bi bi-check-circle-fill text-success me-1"></i> No se encontraron clientes inactivos para el filtro</td></tr>');
+                    } else {
+                        $.each(res.data, function(i, c) {
+                            var isExtra = (i >= 5 && !ver10ClientesInactivos) ? 'd-none fila-inactivo-extra' : '';
+                            var row = '<tr class="dashboard-drilldown-row ' + isExtra + '" onclick="mostrarEnDesarrollo(\'Ficha del Cliente: ' + (c.cliente || '') + '\');" title="Clic para ver ficha del cliente">' +
+                                '<td class="py-2"><span class="fw-semibold text-body d-block">' + (c.cliente || 'Sin Nombre') + '</span><small class="text-muted"><i class="bi bi-person me-1"></i>' + (c.vendedor || 'Sin vendedor') + '</small></td>' +
+                                '<td class="text-end py-2 pe-3 text-nowrap"><span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1 fw-bold"><i class="bi bi-calendar-x me-1"></i>' + (c.fechaFormateada || '') + '</span></td>' +
+                                '</tr>';
+                            $tbody.append(row);
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 6. SINCRONIZACIÓN EN TIEMPO REAL (POLLING)
+    // ========================================================
+    function sincronizarDashboard() {
+        var $icon = $('#icon-sync').addClass('fa-spin bi-spin');
+        var vid = $('#select-vendedor-chart').val();
+        var meses = $('#select-meses-inactivos').val() || 5;
+
+        $.ajax({
+            url: '@Url.Action("ObtenerMetricas", "Home")',
+            type: 'GET',
+            data: { vendedorId: vid, mesesInactivos: meses },
+            success: function(res) {
+                $icon.removeClass('fa-spin bi-spin');
+                if (res && res.success) {
+                    // Actualizar KPIs
+                    $('#kpi-ventas').text(res.kpis.facturacionMes);
+                    $('#kpi-pedidos').text(res.kpis.pedidosActivos);
+                    $('#kpi-cotizaciones').text(res.kpis.cotizacionesActivas);
+                    $('#kpi-produccion').text(res.kpis.ordenesProduccionMes);
+                    $('#kpi-compras').text(res.kpis.ordenesCompraMes);
+                    $('#kpi-pedidos-cantidad').text(res.kpis.pedidosMesCantidad.toLocaleString());
+                    $('#kpi-pedidos-monto-footer').text('Total: ' + res.kpis.pedidosMesMonto);
+
+                    // Actualizar Arrays
+                    allMesesVentas = res.graficoVentas.meses;
+                    allVentasActual = res.graficoVentas.ventasActual;
+                    allVentasAnterior = res.graficoVentas.ventasAnterior;
+
+                    allStackedLabels = res.graficoStackedBar.labels;
+                    allDsCentral = res.graficoStackedBar.datasets[0].data;
+                    allDsIlo = res.graficoStackedBar.datasets[1].data;
+
+                    prodLabels = res.graficoProduccion.labels;
+                    prodValores = res.graficoProduccion.valores;
+
+                    // Re-render
+                    setVentasMeses(ventasMesesActuales);
+                    setStackedDias(stackedDiasActuales);
+                    renderProductionChart(prodLabels, prodValores);
+                }
+            },
+            error: function() {
+                $icon.removeClass('fa-spin bi-spin');
+            }
+        });
+    }
+
+    // ========================================================
+    // 7. GESTIÓN DEL DASHBOARD (PERSONALIZACIÓN USUARIO)
+    // ========================================================
+    var STORAGE_PREF_KEY = 'arco_dashboard_pref_' + ('@(userSession?.UsuarioLogon ?? "admin")');
+
+    function aplicarPreferenciasDashboard() {
+        var prefs = {};
+        $('.chk-dashboard-area').each(function() {
+            var area = $(this).data('area');
+            prefs[area] = $(this).is(':checked');
+        });
+
+        var kpiPrefs = {};
+        $('.chk-sub-kpi').each(function() {
+            var kpi = $(this).data('kpi');
+            kpiPrefs[kpi] = $(this).is(':checked');
+        });
+        prefs['sub_kpis'] = kpiPrefs;
+
+        localStorage.setItem(STORAGE_PREF_KEY, JSON.stringify(prefs));
+        ejecutarVisibilidadAreas(prefs);
+    }
+
+    function ejecutarVisibilidadAreas(prefs) {
+        if (!prefs) return;
+
+        // Tarjetas KPIs
+        if (prefs['kpis'] === false) {
+            $('#row-kpis-metricas').addClass('d-none');
+        } else {
+            $('#row-kpis-metricas').removeClass('d-none');
+            if (prefs['sub_kpis']) {
+                $.each(prefs['sub_kpis'], function(kpi, visible) {
+                    var $card = $('#card-kpi-' + kpi);
+                    if (visible === false) $card.addClass('d-none');
+                    else $card.removeClass('d-none');
                 });
             }
-
-            var n = diasActuales || 6;
-            var slicedLabels = (allStackedLabels || []).slice(-n);
-            var slicedCentral = (allStackedCentral || []).slice(-n);
-            var slicedIlo = (allStackedIlo || []).slice(-n);
-
-            var trendData = [];
-            for (var i = 0; i < slicedCentral.length; i++) {
-                var vC = sedesVisibles.central ? (slicedCentral[i] || 0) : 0;
-                var vI = sedesVisibles.ilo ? (slicedIlo[i] || 0) : 0;
-                trendData.push(Math.round((vC + vI) * 100) / 100);
-            }
-
-            stackedBarChartInstance = new Chart(canvas.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: slicedLabels,
-                    datasets: [
-                        {
-                            type: 'line',
-                            label: 'Pico / Tendencia',
-                            data: trendData,
-                            borderColor: '#198754',
-                            backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                            borderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#198754',
-                            fill: false,
-                            tension: 0.25,
-                            order: 0,
-                            stack: 'trendStack'
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Ilo',
-                            stack: 'sedesStack',
-                            backgroundColor: theme.barPrevious,
-                            borderColor: theme.barPrevious,
-                            borderRadius: 4,
-                            data: slicedIlo,
-                            hidden: !sedesVisibles.ilo,
-                            order: 1
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Central',
-                            stack: 'sedesStack',
-                            backgroundColor: theme.barCurrent,
-                            borderColor: theme.barCurrent,
-                            borderRadius: 4,
-                            data: slicedCentral,
-                            hidden: !sedesVisibles.central,
-                            order: 2
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    var fmt = formatMonedaPeruana(context.parsed.y);
-                                    if (context.dataset.type === 'line') return 'Pico Máximo: ' + fmt;
-                                    return context.dataset.label + ': ' + fmt;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: true,
-                            ticks: { color: theme.textColor },
-                            grid: { display: false }
-                        },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true,
-                            ticks: {
-                                color: theme.textColor,
-                                callback: function(value) {
-                                    if (value >= 1000) return 'S/ ' + (value / 1000).toLocaleString() + 'k';
-                                    return 'S/ ' + Number(value).toLocaleString();
-                                }
-                            },
-                            grid: { color: theme.gridColor }
-                        }
-                    }
-                }
-            });
-            actualizarBotonesSedesUI();
         }
 
-        // Inicializar gráficos
-        function initChartsImmediately() {
-            if (typeof Chart !== 'undefined') {
-                try { renderSalesChart(lastDashboardData.graficoVentas); } catch(e) { console.error('Error renderSalesChart:', e); }
-                try { renderProductionChart(lastDashboardData.graficoProduccion); } catch(e) { console.error('Error renderProductionChart:', e); }
-                try { renderStackedBarChart(lastDashboardData.graficoStackedBar); } catch(e) { console.error('Error renderStackedBarChart:', e); }
-            } else {
-                setTimeout(initChartsImmediately, 80);
-            }
-        }
-        initChartsImmediately();
-
-        // ==========================================
-        // GESTIÓN DEL DASHBOARD (Áreas Visibles)
-        // ==========================================
-        var STORAGE_AREAS_KEY = 'arco_dashboard_areas_visibles_v2';
-        var areasDashboardConfig = {
-            'kpis': { selector: '#row-kpis-metricas', visible: true },
-            'evolucion-ventas': { selector: '#area-evolucion-ventas', visible: true },
-            'diferencia-sedes': { selector: '#area-diferencia-sedes', visible: true },
-            'accesos-rapidos': { selector: '#area-accesos-rapidos', visible: true },
-            'estado-produccion': { selector: '#area-estado-produccion', visible: true },
-            'db-tiempo-real': { selector: '#area-db-tiempo-real', visible: true },
-            'top-pedidos': { selector: '#area-top-pedidos', visible: true },
-            'clientes-inactivos': { selector: '#area-clientes-inactivos', visible: true }
+        // Demás áreas
+        var areasMap = {
+            'evolucion-ventas': '#area-evolucion-ventas',
+            'distribucion-sede': '#area-distribucion-sede',
+            'pedidos-vendedor': '#area-pedidos-vendedor',
+            'accesos-rapidos': '#area-accesos-rapidos',
+            'estado-produccion': '#area-estado-produccion',
+            'db-tiempo-real': '#area-db-tiempo-real',
+            'top-pedidos': '#area-top-pedidos',
+            'clientes-inactivos': '#area-clientes-inactivos'
         };
 
-        function cargarConfiguracionAreas() {
-            try {
-                var guardado = localStorage.getItem(STORAGE_AREAS_KEY);
-                if (guardado) {
-                    var parsed = JSON.parse(guardado);
-                    for (var key in parsed) {
-                        if (areasDashboardConfig.hasOwnProperty(key)) {
-                            areasDashboardConfig[key].visible = Boolean(parsed[key]);
-                        }
-                    }
-                }
-            } catch (e) { }
-        }
-
-        function guardarConfiguracionAreas() {
-            try {
-                var obj = {};
-                for (var key in areasDashboardConfig) {
-                    obj[key] = areasDashboardConfig[key].visible;
-                }
-                localStorage.setItem(STORAGE_AREAS_KEY, JSON.stringify(obj));
-            } catch (e) { }
-        }
-
-        function aplicarVisibilidadAreas() {
-            var activasCount = 0;
-
-            for (var key in areasDashboardConfig) {
-                var item = areasDashboardConfig[key];
-                var $el = $(item.selector);
-                var $chk = $('#chk-area-' + key);
-
-                if (item.visible) {
-                    activasCount++;
-                    $el.removeClass('d-none');
-                    if ($chk.length) $chk.prop('checked', true);
-                } else {
-                    $el.addClass('d-none');
-                    if ($chk.length) $chk.prop('checked', false);
-                }
-            }
-
-            $('#modal-conteo-areas-activas').text(activasCount);
-
-            // Reflow responsivo de columnas
-            var leftVisible = areasDashboardConfig['evolucion-ventas'].visible || areasDashboardConfig['diferencia-sedes'].visible;
-            var rightVisible = areasDashboardConfig['accesos-rapidos'].visible || areasDashboardConfig['estado-produccion'].visible || areasDashboardConfig['db-tiempo-real'].visible;
-
-            var $colLeft = $('#col-main-left');
-            var $colRight = $('#col-main-right');
-            var $rowMain = $('#row-main-dashboard');
-
-            if (!leftVisible && !rightVisible) {
-                $rowMain.addClass('d-none');
+        var activas = 0;
+        $.each(areasMap, function(k, sel) {
+            if (prefs[k] === false) {
+                $(sel).addClass('d-none');
             } else {
-                $rowMain.removeClass('d-none');
-                if (leftVisible && !rightVisible) {
-                    $colLeft.removeClass('d-none col-lg-7').addClass('col-lg-12');
-                    $colRight.addClass('d-none');
-                } else if (!leftVisible && rightVisible) {
-                    $colLeft.addClass('d-none');
-                    $colRight.removeClass('d-none col-lg-5').addClass('col-lg-12');
-                } else {
-                    $colLeft.removeClass('d-none col-lg-12').addClass('col-lg-7');
-                    $colRight.removeClass('d-none col-lg-12').addClass('col-lg-5');
-                }
-            }
-
-            var topPedidosVis = areasDashboardConfig['top-pedidos'].visible;
-            var clientesVis = areasDashboardConfig['clientes-inactivos'].visible;
-            var $areaTop = $('#area-top-pedidos');
-            var $areaCli = $('#area-clientes-inactivos');
-            var $rowTablas = $('#row-tablas-detalle');
-
-            if (!topPedidosVis && !clientesVis) {
-                $rowTablas.addClass('d-none');
-            } else {
-                $rowTablas.removeClass('d-none');
-                if (topPedidosVis && !clientesVis) {
-                    $areaTop.removeClass('d-none col-lg-6').addClass('col-lg-12');
-                    $areaCli.addClass('d-none');
-                } else if (!topPedidosVis && clientesVis) {
-                    $areaTop.addClass('d-none');
-                    $areaCli.removeClass('d-none col-lg-6').addClass('col-lg-12');
-                } else {
-                    $areaTop.removeClass('d-none col-lg-12').addClass('col-lg-6');
-                    $areaCli.removeClass('d-none col-lg-12').addClass('col-lg-6');
-                }
-            }
-
-            setTimeout(function () {
-                if (salesChartInstance) salesChartInstance.resize();
-                if (stackedBarChartInstance) stackedBarChartInstance.resize();
-                if (productionChartInstance) productionChartInstance.resize();
-            }, 60);
-        }
-
-        $(document).off('change', '.chk-dashboard-area').on('change', '.chk-dashboard-area', function () {
-            var areaKey = $(this).data('area');
-            var isChecked = $(this).is(':checked');
-            if (areasDashboardConfig.hasOwnProperty(areaKey)) {
-                areasDashboardConfig[areaKey].visible = isChecked;
-                guardarConfiguracionAreas();
-                aplicarVisibilidadAreas();
+                $(sel).removeClass('d-none');
+                activas++;
             }
         });
+        if (prefs['kpis'] !== false) activas++;
+        $('#modal-conteo-areas-activas').text(activas);
+    }
 
-        $('#btn-modal-marcar-todos').on('click', function () {
-            for (var k in areasDashboardConfig) areasDashboardConfig[k].visible = true;
-            guardarConfiguracionAreas();
-            aplicarVisibilidadAreas();
-        });
-
-        $('#btn-modal-desmarcar-todos').on('click', function () {
-            for (var k in areasDashboardConfig) areasDashboardConfig[k].visible = false;
-            guardarConfiguracionAreas();
-            aplicarVisibilidadAreas();
-        });
-
-        $('#btn-modal-restablecer').on('click', function () {
-            for (var k in areasDashboardConfig) areasDashboardConfig[k].visible = true;
-            guardarConfiguracionAreas();
-            aplicarVisibilidadAreas();
-        });
-
-        cargarConfiguracionAreas();
-        aplicarVisibilidadAreas();
-
-        // Soporte rueda de ratón para zoom en gráficos
-        var canvasVentas = document.getElementById('salesChart');
-        if (canvasVentas) {
-            canvasVentas.addEventListener('wheel', function (e) {
-                e.preventDefault();
-                var delta = e.deltaY;
-                var curIdx = nivelesMesesVentas.indexOf(mesesVentasActuales);
-                if (delta > 0 && curIdx > 0) setVentasMeses(nivelesMesesVentas[curIdx - 1]);
-                else if (delta < 0 && curIdx < nivelesMesesVentas.length - 1) setVentasMeses(nivelesMesesVentas[curIdx + 1]);
-            }, { passive: false });
-        }
-
-        var canvasDiferencia = document.getElementById('stackedBarChart');
-        if (canvasDiferencia) {
-            canvasDiferencia.addEventListener('wheel', function (e) {
-                e.preventDefault();
-                var delta = e.deltaY;
-                var curIdx = nivelesDias.indexOf(diasActuales);
-                if (delta > 0 && curIdx > 0) setDiferenciaDias(nivelesDias[curIdx - 1]);
-                else if (delta < 0 && curIdx < nivelesDias.length - 1) setDiferenciaDias(nivelesDias[curIdx + 1]);
-            }, { passive: false });
-        }
-
-        // Top Pedidos (Conmutador 5 vs 10)
-        var currentTopPedidosData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TopPedidos));
-        var currentTopLimit = 5;
-
-        function cambiarTopPedidos(limit) {
-            currentTopLimit = limit;
-            renderTopPedidos(currentTopPedidosData, currentTopLimit);
-            var $btn5 = $('#btn-top-5');
-            var $btn10 = $('#btn-top-10');
-            var $badge = $('#badge-top-pedidos');
-            if (currentTopLimit === 10) {
-                $btn5.removeClass('btn-primary active').addClass('btn-outline-secondary');
-                $btn10.removeClass('btn-outline-secondary').addClass('btn-primary active');
-                if ($badge.length) $badge.html('<i class="bi bi-calendar-event me-1"></i>Top 10 Hoy');
-            } else {
-                $btn5.removeClass('btn-outline-secondary').addClass('btn-primary active');
-                $btn10.removeClass('btn-primary active').addClass('btn-outline-secondary');
-                if ($badge.length) $badge.html('<i class="bi bi-calendar-event me-1"></i>Top 5 Hoy');
-            }
-        }
-        window.cambiarTopPedidos = cambiarTopPedidos;
-
-        function renderTopPedidos(lista, limit) {
-            var $tbody = $('#tabla-top-pedidos tbody');
-            if (!$tbody.length) return;
-            if (!lista || !lista.length) {
-                $tbody.html('<tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-info-circle me-1"></i>No se registran pedidos en el día de hoy</td></tr>');
-                return;
-            }
-            var subLista = lista.slice(0, limit || 5);
-            var html = '';
-            for (var i = 0; i < subLista.length; i++) {
-                var p = subLista[i];
-                var id = p.id !== undefined ? p.id : p.Id;
-                var codigo = p.codigo || p.Codigo || '';
-                var cliente = p.cliente || p.Cliente || 'Sin Cliente';
-                var montoFormateado = p.montoFormateado || p.MontoFormateado || ('S/ ' + Number(p.monto || p.Monto || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                var rank = i + 1;
-                var badgeClass = rank === 1 ? 'bg-warning text-dark fw-bold' : 'bg-secondary-subtle text-secondary border';
-
-                html += '<tr>' +
-                    '<td class="text-center font-monospace fw-bold text-primary py-2">' +
-                        '<span class="badge ' + badgeClass + ' me-1">#' + rank + '</span>' +
-                        '<span>' + id + '</span>' +
-                        (codigo ? ' <small class="text-muted d-block">(' + codigo + ')</small>' : '') +
-                    '</td>' +
-                    '<td class="py-2"><span class="fw-semibold">' + cliente + '</span></td>' +
-                    '<td class="text-end font-monospace fw-bold text-success py-2">' + montoFormateado + '</td>' +
-                '</tr>';
-            }
-            $tbody.html(html);
-        }
-
-        // Clientes Inactivos
-        var currentClientesInactivosData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ClientesInactivos));
-        var currentClientesInactivosLimit = 5;
-
-        function alternarVerMasClientesInactivos() {
-            currentClientesInactivosLimit = currentClientesInactivosLimit === 5 ? 10 : 5;
-            var $btn = $('#btn-ver-mas-clientes');
-            if (currentClientesInactivosLimit === 10) {
-                $btn.html('<i class="bi bi-chevron-up me-1"></i>Ver menos (5)').removeClass('btn-outline-secondary').addClass('btn-secondary');
-            } else {
-                $btn.html('<i class="bi bi-chevron-down me-1"></i>Ver más (10)').removeClass('btn-secondary').addClass('btn-outline-secondary');
-            }
-            var meses = parseInt($('#select-meses-inactivos').val()) || 5;
-            renderClientesInactivos(currentClientesInactivosData, meses, currentClientesInactivosLimit);
-        }
-        window.alternarVerMasClientesInactivos = alternarVerMasClientesInactivos;
-
-        function renderClientesInactivos(lista, meses, limit) {
-            var $tbody = $('#tabla-clientes-inactivos tbody');
-            if (!$tbody.length) return;
-            if (!lista || !lista.length) {
-                $tbody.html('<tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-check-circle text-success me-1"></i>Sin clientes inactivos para este rango</td></tr>');
-                return;
-            }
-            var subLista = lista.slice(0, limit || 5);
-            var html = '';
-            for (var i = 0; i < subLista.length; i++) {
-                var c = subLista[i];
-                var id = c.id !== undefined ? c.id : c.Id;
-                var codigo = c.codigo || c.Codigo || '';
-                var cliente = c.cliente || c.Cliente || 'Sin Nombre';
-                var fStr = c.fechaFormateada || c.FechaFormateada || '';
-                var rank = i + 1;
-
-                html += '<tr>' +
-                    '<td class="text-center font-monospace text-secondary py-2">' +
-                        '<span class="badge bg-secondary-subtle text-secondary border me-1">#' + rank + '</span>' +
-                        '<span>' + id + '</span>' +
-                        (codigo ? ' <small class="text-muted d-block">(' + codigo + ')</small>' : '') +
-                    '</td>' +
-                    '<td class="py-2"><span class="fw-semibold">' + cliente + '</span></td>' +
-                    '<td class="text-end py-2">' +
-                        '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-monospace px-2 py-1">' +
-                            '<i class="bi bi-calendar-x me-1"></i>' + fStr +
-                        '</span>' +
-                    '</td>' +
-                '</tr>';
-            }
-            $tbody.html(html);
-        }
-
-        $(document).off('change', '#select-meses-inactivos').on('change', '#select-meses-inactivos', function () {
-            var meses = $(this).val();
-            var $badge = $('#badge-clientes-inactivos');
-            if ($badge.length) $badge.html('Inactivos (&ge; ' + meses + 'm)');
-            var $tbody = $('#tabla-clientes-inactivos tbody');
-            $tbody.html('<tr><td colspan="3" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Consultando clientes...</td></tr>');
-
-            $.ajax({
-                url: '@Url.Action("ObtenerClientesInactivos", "Home")',
-                type: 'GET',
-                data: { meses: meses },
-                success: function (res) {
-                    if (res && res.success && res.data) {
-                        currentClientesInactivosData = res.data;
-                        renderClientesInactivos(res.data, meses, currentClientesInactivosLimit);
-                    } else {
-                        $tbody.html('<tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-check-circle text-success me-1"></i>Sin clientes inactivos para este rango</td></tr>');
-                    }
-                },
-                error: function () {
-                    $tbody.html('<tr><td colspan="3" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i>Error al consultar clientes</td></tr>');
+    function cargarPreferenciasDashboard() {
+        var saved = localStorage.getItem(STORAGE_PREF_KEY);
+        var prefs = saved ? JSON.parse(saved) : null;
+        if (prefs) {
+            $('.chk-dashboard-area').each(function() {
+                var area = $(this).data('area');
+                if (prefs[area] !== undefined) {
+                    $(this).prop('checked', prefs[area]);
                 }
             });
-        });
-
-        // Polling y Sincronización
-        function sincronizarDashboard() {
-            var $icon = $('#icon-sync');
-            $icon.addClass('spinner-border spinner-border-sm').removeClass('bi-arrow-repeat');
-
-            var mesesAct = parseInt($('#select-meses-inactivos').val()) || 5;
-            $.ajax({
-                url: '@Url.Action("ObtenerDatosDashboard", "Home")',
-                type: 'GET',
-                data: { mesesInactivos: mesesAct },
-                success: function (res) {
-                    $icon.removeClass('spinner-border spinner-border-sm').addClass('bi-arrow-repeat');
-                    if (res && res.success) {
-                        lastDashboardData = res;
-                        if (res.kpis) {
-                            if (res.kpis.facturacionMes) $('#kpi-ventas').text(res.kpis.facturacionMes);
-                            if (res.kpis.pedidosActivos) $('#kpi-pedidos').text(res.kpis.pedidosActivos);
-                            if (res.kpis.cotizacionesActivas) $('#kpi-cotizaciones').text(res.kpis.cotizacionesActivas);
-                            if (res.kpis.ordenesProduccionMes) $('#kpi-produccion').text(res.kpis.ordenesProduccionMes);
-                            if (res.kpis.ordenesCompraMes) $('#kpi-compras').text(res.kpis.ordenesCompraMes);
-                        }
-                        if (res.graficoVentas) renderSalesChart(res.graficoVentas);
-                        if (res.graficoProduccion) renderProductionChart(res.graficoProduccion);
-                        if (res.graficoStackedBar) renderStackedBarChart(res.graficoStackedBar);
-                        if (res.topPedidos) {
-                            currentTopPedidosData = res.topPedidos;
-                            renderTopPedidos(res.topPedidos, currentTopLimit);
-                        }
-                        if (res.clientesInactivos) {
-                            currentClientesInactivosData = res.clientesInactivos;
-                            renderClientesInactivos(res.clientesInactivos, mesesAct, currentClientesInactivosLimit);
-                        }
+            if (prefs['sub_kpis']) {
+                $('.chk-sub-kpi').each(function() {
+                    var kpi = $(this).data('kpi');
+                    if (prefs['sub_kpis'][kpi] !== undefined) {
+                        $(this).prop('checked', prefs['sub_kpis'][kpi]);
                     }
-                },
-                error: function () {
-                    $icon.removeClass('spinner-border spinner-border-sm').addClass('bi-arrow-repeat');
-                }
-            });
+                });
+            }
+            ejecutarVisibilidadAreas(prefs);
         }
-        window.sincronizarDashboard = sincronizarDashboard;
+    }
 
-        // Auto polling cada 30 segundos
-        var intervalId = setInterval(function () {
-            if ($('#kpi-ventas').length) sincronizarDashboard();
-            else clearInterval(intervalId);
-        }, 30000);
+    $('#chk-area-kpis').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#sub-kpis-container').slideDown(200);
+        } else {
+            $('#sub-kpis-container').slideUp(200);
+        }
+    });
 
-        // Manejador para minimizar / expandir tarjetas (Card Collapse)
-        $(document).off('click', '[data-lte-toggle="card-collapse"]').on('click', '[data-lte-toggle="card-collapse"]', function (e) {
-            e.preventDefault();
-            var $btn = $(this);
-            var $card = $btn.closest('.card');
-            var $body = $card.children('.card-body');
-            var $footer = $card.children('.card-footer');
-            var $icon = $btn.find('i');
+    $('#btn-modal-marcar-todos').on('click', function() {
+        $('.chk-dashboard-area, .chk-sub-kpi').prop('checked', true);
+        $('#sub-kpis-container').slideDown(200);
+    });
 
-            $body.slideToggle(200, function () {
-                if (salesChartInstance) salesChartInstance.resize();
-                if (stackedBarChartInstance) stackedBarChartInstance.resize();
-                if (productionChartInstance) productionChartInstance.resize();
+    $('#btn-modal-desmarcar-todos').on('click', function() {
+        $('.chk-dashboard-area, .chk-sub-kpi').prop('checked', false);
+        $('#sub-kpis-container').slideUp(200);
+    });
+
+    $('#btn-modal-restablecer').on('click', function() {
+        localStorage.removeItem(STORAGE_PREF_KEY);
+        $('.chk-dashboard-area, .chk-sub-kpi').prop('checked', true);
+        $('#sub-kpis-container').hide();
+        aplicarPreferenciasDashboard();
+    });
+
+    // ========================================================
+    // 8. GESTIÓN POR ROL (ADMINISTRADOR)
+    // ========================================================
+    var STORAGE_ROLE_KEY = 'arco_dashboard_role_permissions';
+
+    function getRolePermissionsMatrix() {
+        var saved = localStorage.getItem(STORAGE_ROLE_KEY);
+        return saved ? JSON.parse(saved) : {};
+    }
+
+    function cargarPermisosRol() {
+        var rol = $('#select-rol-dashboard').val();
+        var matrix = getRolePermissionsMatrix();
+        var rolPrefs = matrix[rol] || null;
+
+        if (rolPrefs) {
+            $('.chk-dashboard-rol-area').each(function() {
+                var area = $(this).data('area');
+                $(this).prop('checked', rolPrefs[area] !== false);
             });
-            if ($footer.length) {
-                $footer.slideToggle(200);
-            }
-            if ($icon.hasClass('bi-dash-lg')) {
-                $icon.removeClass('bi-dash-lg').addClass('bi-plus-lg');
-                $btn.attr('title', 'Expandir');
-                $card.addClass('collapsed-card');
-            } else {
-                $icon.removeClass('bi-plus-lg').addClass('bi-dash-lg');
-                $btn.attr('title', 'Minimizar');
-                $card.removeClass('collapsed-card');
-            }
+        } else {
+            $('.chk-dashboard-rol-area').prop('checked', true);
+        }
+        contarAreasRol();
+    }
+
+    function contarAreasRol() {
+        var checked = $('.chk-dashboard-rol-area:checked').length;
+        $('#modal-rol-conteo-areas-activas').text(checked);
+    }
+
+    $('.chk-dashboard-rol-area').on('change', contarAreasRol);
+
+    function guardarPermisosRol() {
+        var rol = $('#select-rol-dashboard').val();
+        var matrix = getRolePermissionsMatrix();
+        var prefs = {};
+        $('.chk-dashboard-rol-area').each(function() {
+            var area = $(this).data('area');
+            prefs[area] = $(this).is(':checked');
+        });
+        matrix[rol] = prefs;
+        localStorage.setItem(STORAGE_ROLE_KEY, JSON.stringify(matrix));
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Permisos de Rol Guardados',
+            text: 'Las áreas del dashboard para el rol ' + rol + ' se han actualizado.',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+
+    function simularVistaRol() {
+        var rol = $('#select-rol-dashboard').val();
+        var matrix = getRolePermissionsMatrix();
+        var prefs = matrix[rol] || {};
+        ejecutarVisibilidadAreas(prefs);
+        bootstrap.Modal.getInstance(document.getElementById('modal-gestionar-dashboard-rol')).hide();
+
+        Swal.fire({
+            icon: 'info',
+            title: 'Simulando Vista de Rol',
+            text: 'Visualizando el dashboard con los permisos asignados a ' + rol + '.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+
+    $('#btn-modal-rol-marcar-todos').on('click', function() {
+        $('.chk-dashboard-rol-area').prop('checked', true);
+        contarAreasRol();
+    });
+
+    $('#btn-modal-rol-desmarcar-todos').on('click', function() {
+        $('.chk-dashboard-rol-area').prop('checked', false);
+        contarAreasRol();
+    });
+
+    $('#btn-modal-rol-restablecer').on('click', function() {
+        var rol = $('#select-rol-dashboard').val();
+        var matrix = getRolePermissionsMatrix();
+        delete matrix[rol];
+        localStorage.setItem(STORAGE_ROLE_KEY, JSON.stringify(matrix));
+        $('.chk-dashboard-rol-area').prop('checked', true);
+        contarAreasRol();
+    });
+
+    // ========================================================
+    // INICIALIZACIÓN DOCUMENT READY
+    // ========================================================
+    $(document).ready(function() {
+        // Cargar preferencias guardadas
+        cargarPreferenciasDashboard();
+
+        // Render inicial de gráficos
+        setVentasMeses(12);
+        setStackedDias(12);
+        setVendedorDias(12);
+        renderProductionChart(prodLabels, prodValores);
+
+        // Actualizar gráficos al cambiar tema claro/oscuro
+        $(document).on('themeChanged', function() {
+            setVentasMeses(ventasMesesActuales);
+            setStackedDias(stackedDiasActuales);
+            setVendedorDias(vendedorDiasActuales);
+            renderProductionChart(prodLabels, prodValores);
         });
 
-        // Observer para cambios de modo oscuro en <html>
-        var observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
-                    if (lastDashboardData) {
-                        renderSalesChart(lastDashboardData.graficoVentas);
-                        renderProductionChart(lastDashboardData.graficoProduccion);
-                        renderStackedBarChart(lastDashboardData.graficoStackedBar);
-                    }
-                }
-            });
-        });
-        observer.observe(document.documentElement, { attributes: true });
+        // Polling en tiempo real cada 30 segundos
+        setInterval(sincronizarDashboard, 30000);
     });
 </script>
 }

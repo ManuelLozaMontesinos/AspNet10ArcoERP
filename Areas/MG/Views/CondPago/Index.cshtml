@@ -55,10 +55,10 @@
             <div class="card-body py-2 px-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     
-                    <!-- CONTENEDOR DE FILTROS EN LÍNEA -->
+                    <!-- CONTENEDOR DE FILTROS A LA IZQUIERDA -->
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- 1. Buscador -->
-                        <div class="input-group input-group-sm" style="width: 290px;">
+                        <div class="input-group input-group-sm" style="min-width: 250px; max-width: 340px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
@@ -77,25 +77,27 @@
                                 <option value="I">Solo Inactivos</option>
                             </select>
                         </div>
-
-                        <div class="text-muted small ms-2">
-                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> condiciones</span>
-                        </div>
                     </div>
 
-                    <!-- 3. BOTÓN DROPDOWN 'MOSTRANDO: 25' -->
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
-                            <i class="bi bi-funnel-fill text-primary"></i>
-                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">25</strong></span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
-                            <li><a class="dropdown-item item-top active" href="javascript:void(0)" onclick="cambiarTop(25)">25 registros</a></li>
-                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(50)">50 registros</a></li>
-                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(100)">100 registros</a></li>
-                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(500)">500 registros</a></li>
-                        </ul>
+                    <!-- TOTAL Y MOSTRANDO: FIRMEMENTE A LA DERECHA (ms-auto) -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> condiciones</span>
+                        </div>
+
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">25</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                                <li><a class="dropdown-item item-top active" href="javascript:void(0)" onclick="cambiarTop(25)">25 registros</a></li>
+                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(50)">50 registros</a></li>
+                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(100)">100 registros</a></li>
+                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(500)">500 registros</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -236,7 +238,7 @@
                 </div>
                 <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
                     <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-cp" disabled>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm" id="btn-guardar-cp">
                         <i class="bi bi-check-circle me-1"></i>Guardar Condición
                     </button>
                 </div>
@@ -250,30 +252,6 @@
     var topActual = 25;
     var sortColIdx = -1;
     var sortAsc = true;
-    var formInitialState = "";
-
-    function sonCamposRequeridosValidos() {
-        var nom = ($('#cp-nombre').val() || '').trim();
-        var dias = $('#cp-dias').val();
-        return (nom !== '' && dias !== '' && $('#cp-tipo').val() !== '');
-    }
-
-    function actualizarEstadoBotonGuardar() {
-        var id = parseInt($('#cp-id').val()) || 0;
-        var valido = sonCamposRequeridosValidos();
-        var $btn = $('#btn-guardar-cp');
-
-        if (id === 0) {
-            $btn.prop('disabled', !valido);
-        } else {
-            var haCambiado = (formInitialState !== "" && $('#form-condpago').serialize() !== formInitialState);
-            $btn.prop('disabled', !(valido && haCambiado));
-        }
-    }
-
-    $(document).on('input change keyup', '#form-condpago input, #form-condpago select', function () {
-        actualizarEstadoBotonGuardar();
-    });
 
     function aplicarFiltros() {
         var query = ($('#filtro-tabla').val() || '').toLowerCase().trim();
@@ -360,17 +338,23 @@
         aplicarFiltros();
     }
 
+    $('#cp-tipo').on('change', function () {
+        var tipoId = parseInt($(this).val()) || 0;
+        if (tipoId === 1) { // Contado
+            $('#cp-dias').val(0).prop('readonly', true);
+        } else {
+            $('#cp-dias').prop('readonly', false);
+        }
+    });
+
     function abrirModalCrear() {
         $('#modal-titulo').text('Nueva Condición de Pago');
         $('#cp-id').val(0);
         $('#cp-codigo').val('');
         $('#cp-nombre').val('');
-        $('#cp-dias').val(0);
-        $('#cp-tipo').val('');
+        $('#cp-dias').val(0).prop('readonly', false);
+        $('#cp-tipo').val('').prop('disabled', false);
         $('#cp-estado').val('A');
-
-        formInitialState = "";
-        actualizarEstadoBotonGuardar();
 
         var modal = new bootstrap.Modal(document.getElementById('modal-crud-condpago'));
         modal.show();
@@ -388,16 +372,24 @@
                     $('#cp-id').val(res.data.id || res.data.Id);
                     $('#cp-codigo').val(res.data.codigo || res.data.Codigo || '');
                     $('#cp-nombre').val(res.data.nombre || res.data.Nombre);
-                    $('#cp-dias').val(res.data.dias !== undefined ? res.data.dias : res.data.Dias);
-                    $('#cp-tipo').val(res.data.tipoCondicionPagoId || res.data.TipoCondicionPagoId || '');
+                    
+                    var tipoId = res.data.tipoCondicionPagoId || res.data.TipoCondicionPagoId || '';
+                    $('#cp-tipo').val(tipoId).prop('disabled', true); // Bloqueado en edición como en legacy
+
+                    var diasVal = res.data.dias !== undefined ? res.data.dias : res.data.Dias;
+                    $('#cp-dias').val(diasVal);
+                    if (parseInt(tipoId) === 1) {
+                        $('#cp-dias').prop('readonly', true);
+                    } else {
+                        $('#cp-dias').prop('readonly', false);
+                    }
+
                     $('#cp-estado').val(res.data.estado || res.data.Estado || 'A');
 
                     var modal = new bootstrap.Modal(document.getElementById('modal-crud-condpago'));
                     modal.show();
 
                     setTimeout(function () {
-                        formInitialState = $('#form-condpago').serialize();
-                        actualizarEstadoBotonGuardar();
                         $('#cp-nombre').focus();
                     }, 300);
                 } else {
@@ -422,7 +414,12 @@
         var $btn = $('#btn-guardar-cp');
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
 
+        $('#cp-tipo').prop('disabled', false); // habilitar temporalmente para que serialize() incluya TipoCondicionPagoId
         var formData = $('#form-condpago').serialize();
+        var id = parseInt($('#cp-id').val()) || 0;
+        if (id > 0) {
+            $('#cp-tipo').prop('disabled', true);
+        }
         $.ajax({
             url: '@Url.Action("Guardar", "CondPago", new { area = "MG" })',
             type: 'POST',

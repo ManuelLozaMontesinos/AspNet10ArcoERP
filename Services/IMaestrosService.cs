@@ -50,12 +50,12 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoTipoCambioMaestroAsync(int id, int userId);
 
         // 7. Familia de Producto
-        Task<List<GrupoClaseFamiliaModel>> GetFamiliasProductoAsync();
+        Task<List<GrupoClaseFamiliaModel>> GetFamiliasProductoAsync(int? claseId = null, int? grupoId = null);
         Task<GrupoClaseFamiliaModel?> GetFamiliaProductoByIdAsync(int id);
         Task<(bool success, string message, int id)> SaveFamiliaProductoAsync(GrupoClaseFamiliaModel model, int userId);
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoFamiliaProductoAsync(int id, int userId);
         Task<List<LookupItemModel>> GetClasesProductoLookupAsync(int? grupoId = null);
-        Task<List<GrupoProductoModel>> GetGruposProductoAsync(int? tipoProductoId = null);
+        Task<List<GrupoProductoModel>> GetGruposProductoAsync(int? tipoProductoId = null, string? search = null, string? estado = null);
         Task<GrupoProductoModel?> GetGrupoProductoByIdAsync(int id);
         Task<(bool success, string message, int id)> SaveGrupoProductoAsync(GrupoProductoModel model, int userId);
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoGrupoProductoAsync(int id, int userId);
@@ -163,6 +163,8 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoComboAsync(int productoId, int userId);
         Task<List<LookupItemModel>> BuscarProductosParaComboAsync(string search);
         Task<List<LookupItemModel>> GetGruposCombosLookupAsync();
+        Task<List<LookupItemModel>> GetClasesCombosLookupAsync(int? grupoId = null);
+        Task<List<LookupItemModel>> GetFamiliasCombosLookupAsync(int? grupoId = null, int? claseId = null);
 
         // 11. Tabla General
         Task<List<TablaGeneralModel>> GetTablasGeneralesAsync();

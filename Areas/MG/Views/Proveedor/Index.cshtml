@@ -69,6 +69,13 @@
         color: #ced4da !important;
         border-color: #495057 !important;
     }
+    /* Modal Extendido con scroll suave y altura máxima */
+    #modal-crud-proveedor .modal-body {
+        max-height: calc(90vh - 135px) !important;
+        overflow-y: auto !important;
+        scrollbar-width: thin;
+        scroll-behavior: smooth;
+    }
 </style>
 
 <div class="app-content-header py-3 border-bottom">
@@ -126,7 +133,7 @@
                             <input type="hidden" name="top" value="@currentTop" />
 
                             <!-- 2. Buscador por Nombre, RUC o DNI, código... -->
-                            <div class="input-group input-group-sm" style="width: 290px;">
+                            <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                                 <span class="input-group-text bg-body-tertiary border-end-0">
                                     <i class="bi bi-search text-muted"></i>
                                 </span>
@@ -363,7 +370,7 @@
 <!-- MODAL CRUD MAESTRO: CLIENTE / PROVEEDOR (ADMINLTE 4)      -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-crud-proveedor" tabindex="-1" aria-labelledby="modalProvLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
         <div class="modal-content shadow-lg border-0 rounded-4">
             <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
                 <h5 class="modal-title fw-bold" id="modalProvLabel">

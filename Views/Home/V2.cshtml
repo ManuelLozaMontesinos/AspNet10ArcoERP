@@ -1,0 +1,2304 @@
+@model AspNet10ArcoERP.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "Tablero Principal V2 (AdminLTE 4)";
+    var userSession = ViewBag.UserSession as AspNet10ArcoERP.Models.UserSessionDto;
+    bool esAdmin = ViewBag.EsAdmin != null ? (bool)ViewBag.EsAdmin : true;
+    string rolActualCodigo = ViewBag.RolActualCodigo as string ?? "S0001";
+    var listaVendedores = Model?.ListaVendedores ?? new List<AspNet10ArcoERP.Models.VendedorDto>();
+    var listaRoles = Model?.ListaRoles ?? new List<AspNet10ArcoERP.Models.RolDto>();
+}
+
+<!--begin::App Content Header (AdminLTE 4 Oficial)-->
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-speedometer text-warning me-2 fs-2"></i>Tablero de Control V2
+                    <span class="badge text-bg-warning ms-2 fs-7 fw-semibold">AdminLTE 4 Oficial</span>
+                </h3>
+                <ol class="breadcrumb mt-1 mb-0 small">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none"><i class="bi bi-house-door me-1"></i>Inicio</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Tablero</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Tablero Principal V2</li>
+                </ol>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <div class="d-inline-flex align-items-center flex-wrap justify-content-sm-end" style="gap: 8px;">
+                    <!-- Indicador en vivo de conexión BD -->
+                    <div class="d-inline-flex align-items-center px-2 py-1 rounded bg-body border shadow-sm me-1" title="Conexión en tiempo real con SQL Server">
+                        <span class="live-indicator-dot me-2"></span>
+                        <span class="small fw-semibold text-success me-1">En Línea</span>
+                        <small class="text-muted d-none d-md-inline">&bull; <code>esderp_v6</code> &bull; <span id="v2-last-sync-time">En vivo</span></small>
+                    </div>
+
+                    @if (esAdmin)
+                    {
+                        <button type="button" class="btn btn-outline-primary btn-sm shadow-sm fw-semibold px-3 py-1 d-inline-flex align-items-center" id="btn-gestionar-dashboard-rol-v2" data-bs-toggle="modal" data-bs-target="#modal-gestionar-dashboard-rol-v2">
+                            <i class="bi bi-shield-lock me-1"></i>Gestionar por Rol
+                        </button>
+                    }
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm fw-semibold px-3 py-1 d-inline-flex align-items-center" id="btn-gestionar-dashboard-v2" data-bs-toggle="modal" data-bs-target="#modal-gestionar-dashboard-v2">
+                        <i class="bi bi-sliders me-1"></i>Gestionar Dashboard
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm shadow-sm" onclick="sincronizarDashboardV2();" id="btn-sync-v2" title="Actualizar métricas ahora">
+                        <i class="bi bi-arrow-repeat me-1" id="icon-sync-v2"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--end::App Content Header-->
+
+<!-- Estilos unificados para AdminLTE 4 Puro -->
+<style>
+    /* Pulso animado en vivo */
+    .live-indicator-dot {
+        width: 9px;
+        height: 9px;
+        background-color: #198754;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 0 rgba(25, 135, 84, 0.4);
+        animation: livePulse 2s infinite;
+    }
+    @@keyframes livePulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 8px rgba(25, 135, 84, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+        }
+    }
+
+    /* Small Box AdminLTE 4 Oficial */
+    .small-box {
+        border-radius: 0.75rem;
+        position: relative;
+        display: block;
+        margin-bottom: 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .small-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 22px rgba(0,0,0,0.15) !important;
+    }
+    .small-box > .inner {
+        padding: 1rem 1rem 0.75rem 1rem;
+    }
+    .small-box h3 {
+        font-size: 1.65rem;
+        font-weight: 700;
+        margin: 0 0 0.3rem 0;
+        white-space: nowrap;
+        letter-spacing: -0.02em;
+    }
+    .small-box p {
+        font-size: 0.85rem;
+        margin-bottom: 0;
+        font-weight: 500;
+        opacity: 0.95;
+    }
+    .small-box .small-box-icon {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        z-index: 0;
+        font-size: 3.5rem;
+        line-height: 1;
+        transition: transform 0.3s ease;
+    }
+    .small-box:hover .small-box-icon {
+        transform: scale(1.12);
+    }
+    .small-box > .small-box-footer {
+        display: block;
+        padding: 6px 12px;
+        position: relative;
+        text-align: center;
+        z-index: 10;
+        font-size: 0.78rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background-color 0.15s ease;
+    }
+
+    /* KPI 6: Gradiente azul sofisticado base */
+    .small-box-gradient-pedidos {
+        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    }
+
+    /* ======================================================== */
+    /* SMALL BOXES EN TEMA CLARO: TODAS CON LETRAS BLANCAS     */
+    /* ======================================================== */
+    .small-box {
+        color: #ffffff !important;
+    }
+    .small-box h3,
+    .small-box p,
+    .small-box a,
+    .small-box span,
+    .small-box .small-box-footer,
+    .small-box .small-box-footer * {
+        color: #ffffff !important;
+    }
+    .small-box .small-box-icon {
+        color: rgba(255, 255, 255, 0.25) !important;
+    }
+    .small-box .small-box-footer {
+        background-color: rgba(0, 0, 0, 0.1) !important;
+    }
+    .small-box .small-box-footer:hover {
+        background-color: rgba(0, 0, 0, 0.2) !important;
+        color: #ffffff !important;
+    }
+
+    /* En tema claro para Warning: sutil realce para máxima legibilidad de letras blancas sobre amarillo */
+    .small-box.text-bg-warning h3,
+    .small-box.text-bg-warning p,
+    .small-box.text-bg-warning .small-box-footer {
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    /* ======================================================== */
+    /* SMALL BOXES EN TEMA OSCURO: LETRAS NEGRAS EN TODAS       */
+    /* ======================================================== */
+    [data-bs-theme="dark"] .small-box,
+    .dark-mode .small-box,
+    html[data-bs-theme="dark"] .small-box,
+    body[data-bs-theme="dark"] .small-box {
+        color: #000000 !important;
+    }
+    [data-bs-theme="dark"] .small-box h3,
+    .dark-mode .small-box h3,
+    [data-bs-theme="dark"] .small-box p,
+    .dark-mode .small-box p,
+    [data-bs-theme="dark"] .small-box a,
+    .dark-mode .small-box a,
+    [data-bs-theme="dark"] .small-box span,
+    .dark-mode .small-box span,
+    [data-bs-theme="dark"] .small-box .small-box-footer,
+    .dark-mode .small-box .small-box-footer,
+    [data-bs-theme="dark"] .small-box .small-box-footer *,
+    .dark-mode .small-box .small-box-footer * {
+        color: #000000 !important;
+        font-weight: 700 !important;
+    }
+    [data-bs-theme="dark"] .small-box .small-box-icon,
+    .dark-mode .small-box .small-box-icon {
+        color: rgba(0, 0, 0, 0.18) !important;
+    }
+    [data-bs-theme="dark"] .small-box .small-box-footer,
+    .dark-mode .small-box .small-box-footer {
+        background-color: rgba(0, 0, 0, 0.12) !important;
+    }
+    [data-bs-theme="dark"] .small-box .small-box-footer:hover,
+    .dark-mode .small-box .small-box-footer:hover {
+        background-color: rgba(0, 0, 0, 0.22) !important;
+        color: #000000 !important;
+    }
+
+    /* En Modo Oscuro: Fondos de alta luminiscencia para máxima legibilidad del texto negro */
+    [data-bs-theme="dark"] .small-box.text-bg-info,
+    .dark-mode .small-box.text-bg-info {
+        background-color: #0dcaf0 !important;
+    }
+    [data-bs-theme="dark"] .small-box.text-bg-primary,
+    .dark-mode .small-box.text-bg-primary {
+        background-color: #38bdf8 !important;
+    }
+    [data-bs-theme="dark"] .small-box.text-bg-success,
+    .dark-mode .small-box.text-bg-success {
+        background-color: #22c55e !important;
+    }
+    [data-bs-theme="dark"] .small-box.text-bg-warning,
+    .dark-mode .small-box.text-bg-warning {
+        background-color: #ffc107 !important;
+    }
+    [data-bs-theme="dark"] .small-box.text-bg-danger,
+    .dark-mode .small-box.text-bg-danger {
+        background-color: #f87171 !important;
+    }
+    [data-bs-theme="dark"] .small-box-gradient-pedidos,
+    .dark-mode .small-box-gradient-pedidos {
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%) !important;
+    }
+
+    /* Info Box AdminLTE 4 Oficial */
+    .info-box {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        border-radius: 0.75rem;
+        background-color: var(--bs-card-bg, #ffffff);
+        border: 1px solid var(--bs-border-color, rgba(0, 0, 0, 0.08));
+        color: var(--bs-body-color, #212529);
+        display: flex !important;
+        flex-direction: row !important;
+        margin-bottom: 0;
+        min-height: 85px;
+        padding: 0.75rem 0.85rem;
+        position: relative;
+        width: 100%;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .info-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+    .info-box .info-box-icon {
+        border-radius: 0.6rem;
+        align-items: center;
+        display: flex;
+        font-size: 1.85rem;
+        justify-content: center;
+        text-align: center;
+        width: 65px;
+        flex-shrink: 0;
+    }
+    .info-box .info-box-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        line-height: 1.25;
+        flex: 1;
+        padding: 0 12px;
+    }
+    .info-box .info-box-text {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 700;
+        color: var(--bs-secondary-color, #6c757d);
+    }
+    .info-box .info-box-number {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--bs-body-color, #212529);
+        margin: 2px 0;
+    }
+    .info-box .progress {
+        background-color: var(--bs-secondary-bg, #e9ecef);
+        height: 4px;
+        border-radius: 4px;
+        margin-top: 4px;
+    }
+
+    /* MODO OSCURO PARA INFO BOXES (ADMINLTE 4 PURO) */
+    [data-bs-theme="dark"] .info-box,
+    .dark-mode .info-box,
+    html[data-bs-theme="dark"] .info-box,
+    body[data-bs-theme="dark"] .info-box {
+        background-color: #212529 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .info-box:hover,
+    .dark-mode .info-box:hover {
+        border-color: rgba(255, 255, 255, 0.28) !important;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6) !important;
+    }
+    [data-bs-theme="dark"] .info-box .info-box-text,
+    .dark-mode .info-box .info-box-text {
+        color: #94a3b8 !important;
+    }
+    [data-bs-theme="dark"] .info-box .info-box-number,
+    .dark-mode .info-box .info-box-number {
+        color: #ffffff !important;
+    }
+    [data-bs-theme="dark"] .info-box .info-box-number small,
+    .dark-mode .info-box .info-box-number small {
+        color: #cbd5e1 !important;
+    }
+    [data-bs-theme="dark"] .info-box .progress,
+    .dark-mode .info-box .progress {
+        background-color: rgba(255, 255, 255, 0.15) !important;
+    }
+    [data-bs-theme="dark"] .info-box small.text-muted,
+    .dark-mode .info-box small.text-muted {
+        color: #94a3b8 !important;
+    }
+
+    /* Controles de tarjetas AdminLTE 4 */
+    .btn-tool {
+        background: transparent;
+        color: var(--bs-secondary-color);
+        border: none;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        line-height: 1;
+        border-radius: 4px;
+        transition: all 0.15s ease-in-out;
+        cursor: pointer;
+    }
+    .btn-tool:hover {
+        color: var(--bs-body-color);
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    /* Reglas para el alternado de iconos de expandir/colapsar en AdminLTE 4 */
+    .card.collapsed-card [data-lte-icon="collapse"] {
+        display: none !important;
+    }
+    .card.collapsed-card [data-lte-icon="expand"] {
+        display: inline-block !important;
+    }
+    .card:not(.collapsed-card) [data-lte-icon="expand"] {
+        display: none !important;
+    }
+    .card:not(.collapsed-card) [data-lte-icon="collapse"] {
+        display: inline-block !important;
+    }
+
+    /* Reglas para el alternado de iconos de maximizar/minimizar */
+    .card.maximized-card [data-lte-icon="maximize"] {
+        display: none !important;
+    }
+    .card.maximized-card [data-lte-icon="minimize"] {
+        display: inline-block !important;
+    }
+    .card:not(.maximized-card) [data-lte-icon="minimize"] {
+        display: none !important;
+    }
+    .card:not(.maximized-card) [data-lte-icon="maximize"] {
+        display: inline-block !important;
+    }
+
+    /* Modo pantalla completa en tarjetas */
+    .card.maximized-card {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 1050 !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+    .card.maximized-card .chart-container-v2 {
+        height: calc(100vh - 140px) !important;
+    }
+
+    /* Botones de Acceso Rápido AdminLTE 4 */
+    .btn-app-v2 {
+        border-radius: 10px;
+        background-color: #ffffff;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        color: var(--bs-body-color, #212529);
+        font-size: 0.8rem;
+        height: 76px;
+        min-width: 95px;
+        padding: 10px 8px;
+        text-align: center;
+        position: relative;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        text-decoration: none;
+    }
+    .btn-app-v2:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        border-color: var(--bs-primary, #0d6efd);
+        color: var(--bs-primary, #0d6efd);
+    }
+    .btn-app-v2 > i {
+        font-size: 1.6rem;
+        margin-bottom: 4px;
+    }
+    [data-bs-theme="dark"] .btn-app-v2,
+    .dark-mode .btn-app-v2 {
+        background-color: #2b3035 !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .btn-app-v2:hover,
+    .dark-mode .btn-app-v2:hover {
+        background-color: #343a40 !important;
+        border-color: #0d6efd !important;
+        color: #0d6efd !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* MODO OSCURO PARA CARDS Y CONTENEDORES */
+    [data-bs-theme="dark"] .card,
+    .dark-mode .card {
+        background-color: #212529 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+    }
+    [data-bs-theme="dark"] .card-header,
+    .dark-mode .card-header {
+        background-color: #212529 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .card-footer,
+    .dark-mode .card-footer {
+        background-color: #212529 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #94a3b8 !important;
+    }
+
+    /* MODO OSCURO PARA TABLAS */
+    .table-header-custom-v2 {
+        background-color: var(--bs-tertiary-bg) !important;
+        color: var(--bs-body-color) !important;
+        border-bottom: 2px solid var(--bs-border-color) !important;
+    }
+    .table-header-custom-v2 th {
+        background-color: inherit !important;
+        color: inherit !important;
+        border-color: inherit !important;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        font-weight: 700;
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+    }
+    [data-bs-theme="dark"] .table-header-custom-v2,
+    .dark-mode .table-header-custom-v2 {
+        background-color: #2b3035 !important;
+        color: #f8fafc !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
+    }
+    [data-bs-theme="dark"] .table-header-custom-v2 th,
+    .dark-mode .table-header-custom-v2 th {
+        background-color: #2b3035 !important;
+        color: #f8fafc !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
+    }
+    [data-bs-theme="dark"] .table,
+    .dark-mode .table {
+        --bs-table-bg: #212529;
+        --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+        --bs-table-hover-bg: rgba(13, 110, 253, 0.15);
+        color: #dee2e6;
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    .dashboard-drilldown-row {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+    .dashboard-drilldown-row:hover {
+        background-color: var(--bs-primary-bg-subtle, rgba(13, 110, 253, 0.08)) !important;
+    }
+    [data-bs-theme="dark"] .dashboard-drilldown-row:hover,
+    .dark-mode .dashboard-drilldown-row:hover {
+        background-color: rgba(13, 110, 253, 0.18) !important;
+    }
+
+    /* MODO OSCURO PARA PILL, FORM SELECTS Y CONTROLES */
+    [data-bs-theme="dark"] #v2-live-status-pill,
+    .dark-mode #v2-live-status-pill {
+        background-color: #2b3035 !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+    [data-bs-theme="dark"] .form-select,
+    .dark-mode .form-select {
+        background-color: #2b3035 !important;
+        border-color: rgba(255, 255, 255, 0.15) !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .form-select option,
+    .dark-mode .form-select option {
+        background-color: #212529 !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .bg-body-tertiary,
+    .dark-mode .bg-body-tertiary {
+        background-color: #2b3035 !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+    [data-bs-theme="dark"] .btn-outline-secondary,
+    .dark-mode .btn-outline-secondary {
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        color: #cbd5e1 !important;
+    }
+    [data-bs-theme="dark"] .btn-outline-secondary:hover,
+    .dark-mode .btn-outline-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+    }
+
+    /* MODO OSCURO PARA MODALES */
+    [data-bs-theme="dark"] .modal-content,
+    .dark-mode .modal-content {
+        background-color: #212529 !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .modal-header,
+    [data-bs-theme="dark"] .modal-footer,
+    .dark-mode .modal-header,
+    .dark-mode .modal-footer {
+        background-color: #2b3035 !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+    [data-bs-theme="dark"] .modal-body label,
+    .dark-mode .modal-body label {
+        background-color: #2b3035 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f8fafc !important;
+    }
+
+    /* MODO OSCURO PARA SWEETALERT2 */
+    [data-bs-theme="dark"] .swal2-popup,
+    .dark-mode .swal2-popup {
+        background-color: #212529 !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    }
+    [data-bs-theme="dark"] .swal2-title,
+    .dark-mode .swal2-title {
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .swal2-html-container,
+    .dark-mode .swal2-html-container {
+        color: #cbd5e1 !important;
+    }
+
+    /* Medallas de Ranking */
+    .badge-rank-1 { background-color: #ffd700; color: #5c4300; font-weight: 700; border: 1px solid #e6c200; }
+    .badge-rank-2 { background-color: #e0e0e0; color: #424242; font-weight: 700; border: 1px solid #bdbdbd; }
+    .badge-rank-3 { background-color: #cd7f32; color: #ffffff; font-weight: 700; border: 1px solid #b87333; }
+
+    /* Contenedores de gráficos alineados */
+    .chart-container-v2 {
+        position: relative;
+        height: 310px;
+        width: 100%;
+    }
+    .chart-container-v2-donut {
+        position: relative;
+        height: 330px;
+        width: 100%;
+    }
+</style>
+
+<!--begin::App Content-->
+<div class="app-content py-3">
+    <div class="container-fluid">
+
+        <!-- ======================================================== -->
+        <!-- 1. FILA DE TARJETAS KPI (6 SMALL-BOXES ADMINLTE 4)       -->
+        <!-- ======================================================== -->
+        <div class="row g-3 mb-4" id="v2-row-kpis">
+            <!-- 1. Facturación del Mes -->
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="v2-card-kpi-facturacion">
+                <div class="small-box text-bg-info shadow-sm h-100">
+                    <div class="inner">
+                        <h3 id="v2-kpi-ventas">@(Model?.FacturacionMes ?? "S/ 0.00")</h3>
+                        <p>Facturación del Mes</p>
+                    </div>
+                    <i class="small-box-icon bi bi-cash-coin"></i>
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Comprobantes de Pago / Facturación');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
+                        Ver Comprobantes <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 2. Pedidos Activos -->
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="v2-card-kpi-pedidos-activos">
+                <div class="small-box text-bg-primary shadow-sm h-100">
+                    <div class="inner">
+                        <h3 id="v2-kpi-pedidos">@(Model?.PedidosActivos ?? "0")</h3>
+                        <p>Pedidos Activos</p>
+                    </div>
+                    <i class="small-box-icon bi bi-box-seam"></i>
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Pedidos');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
+                        Ver Pedidos <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 3. Cotizaciones Activas -->
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="v2-card-kpi-cotizaciones">
+                <div class="small-box text-bg-success shadow-sm h-100">
+                    <div class="inner">
+                        <h3 id="v2-kpi-cotizaciones">@(Model?.CotizacionesActivas ?? "0")</h3>
+                        <p>Cotizaciones Activas</p>
+                    </div>
+                    <i class="small-box-icon bi bi-file-earmark-check"></i>
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Cotizaciones');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
+                        Ver Cotizaciones <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 4. Órdenes de Producción del Mes -->
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="v2-card-kpi-produccion">
+                <div class="small-box text-bg-warning shadow-sm h-100">
+                    <div class="inner">
+                        <h3 id="v2-kpi-produccion">@(Model?.OrdenesProduccionMes ?? "0")</h3>
+                        <p>Órdenes Producción Mes</p>
+                    </div>
+                    <i class="small-box-icon bi bi-gear-wide-connected"></i>
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Producción en Planta (O.P.)');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
+                        Ver Planta / O.P. <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 5. Órdenes de Compra del Mes -->
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="v2-card-kpi-compras">
+                <div class="small-box text-bg-danger shadow-sm h-100">
+                    <div class="inner">
+                        <h3 id="v2-kpi-compras">@(Model?.OrdenesCompraMes ?? "0")</h3>
+                        <p>Órdenes Compra Mes</p>
+                    </div>
+                    <i class="small-box-icon bi bi-truck"></i>
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Órdenes de Compra');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
+                        Ver Órdenes de Compra <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 6. Sumatoria y Cantidad de Pedidos del Mes -->
+            <div class="col-xl-2 col-lg-4 col-md-6 col-12" id="v2-card-kpi-pedidos-mes">
+                <div class="small-box small-box-gradient-pedidos shadow-sm h-100">
+                    <div class="inner">
+                        <h3 id="v2-kpi-pedidos-cantidad">@(Model?.PedidosMesCantidad.ToString("N0") ?? "0")</h3>
+                        <p>Pedidos del Mes</p>
+                    </div>
+                    <i class="small-box-icon bi bi-clipboard-check"></i>
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Detalle Consolidado de Pedidos');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover d-flex justify-content-between align-items-center px-3">
+                        <span id="v2-kpi-pedidos-monto-footer">Total: @(Model?.PedidosMesMonto ?? "S/ 0.00")</span>
+                        <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- 2. FILA DE INFO BOXES (ADMINLTE 4 MÉTRICAS OPERATIVAS)    -->
+        <!-- ======================================================== -->
+        <div class="row g-3 mb-4" id="v2-row-infoboxes">
+            <!-- Ticket Promedio -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="info-box shadow-sm">
+                    <span class="info-box-icon text-bg-primary shadow-sm"><i class="bi bi-receipt"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Ticket Promedio</span>
+                        <span class="info-box-number">S/ 4,280<small>.50</small></span>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-primary" style="width: 78%"></div>
+                        </div>
+                        <small class="text-muted mt-1 text-xs">+5.4% vs mes anterior</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasa de Conversión Cotizaciones a Pedidos -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="info-box shadow-sm">
+                    <span class="info-box-icon text-bg-success shadow-sm"><i class="bi bi-graph-up-arrow"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Efectividad Comercial</span>
+                        <span class="info-box-number">74.2 <small>%</small></span>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-success" style="width: 74.2%"></div>
+                        </div>
+                        <small class="text-muted mt-1 text-xs">Conversión cotiz. &rarr; pedidos</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eficiencia Operativa en Planta -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="info-box shadow-sm">
+                    <span class="info-box-icon text-bg-warning shadow-sm"><i class="bi bi-cpu"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Eficiencia Planta</span>
+                        <span class="info-box-number">88.6 <small>%</small></span>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-warning" style="width: 88.6%"></div>
+                        </div>
+                        <small class="text-muted mt-1 text-xs">Cumplimiento O.P. a tiempo</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cumplimiento Plazo de Entrega -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="info-box shadow-sm">
+                    <span class="info-box-icon text-bg-info shadow-sm"><i class="bi bi-clock-history"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Plazo de Entrega</span>
+                        <span class="info-box-number">3.2 <small>días prom.</small></span>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-info" style="width: 92%"></div>
+                        </div>
+                        <small class="text-muted mt-1 text-xs">Despacho hacia clientes</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- 3. SECCIÓN PRINCIPAL: 6 GRÁFICOS OFICIALES ADMINLTE 4    -->
+        <!-- ======================================================== -->
+        <div class="row g-4 mb-4" id="v2-row-charts">
+
+            <!-- 1. AREA CHART (Evolución de Ventas 12 Meses Móviles) -->
+            <div class="col-12 col-lg-6" id="v2-area-chart-container">
+                <div class="card h-100 shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-graph-up text-primary me-2"></i>Area Chart: Evolución de Ventas
+                        </h3>
+                        <div class="card-tools d-flex align-items-center" style="gap: 6px;">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-ventas-6" onclick="setVentasMesesV2(6);">6m</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-ventas-8" onclick="setVentasMesesV2(8);">8m</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-ventas-10" onclick="setVentasMesesV2(10);">10m</button>
+                                <button type="button" class="btn btn-primary active btn-sm px-2" id="v2-btn-ventas-12" onclick="setVentasMesesV2(12);">12m</button>
+                            </div>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse" aria-label="Colapsar tarjeta">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize" aria-label="Maximizar tarjeta">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-remove" aria-label="Cerrar tarjeta">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container-v2">
+                            <canvas id="area-chart" role="img" aria-label="Area chart de ventas mensuales"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 px-1 text-xs text-muted flex-wrap" style="gap: 8px;">
+                            <span id="v2-badge-meses-ventas"><i class="bi bi-calendar3 me-1"></i>12 Meses Móviles</span>
+                            <div class="d-flex align-items-center" style="gap: 16px;">
+                                <div class="d-flex align-items-center">
+                                    <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #0d6efd;"></span>
+                                    <span>Periodo Actual</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #20c997;"></span>
+                                    <span>Periodo Anterior</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. COLUMN CHART (Distribución por Sede Central vs Ilo) -->
+            <div class="col-12 col-lg-6" id="v2-column-chart-container">
+                <div class="card h-100 shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                            <h3 class="card-title fw-bold m-0 fs-6">
+                                <i class="bi bi-bar-chart-steps text-info me-2"></i>Column Chart: Sedes
+                            </h3>
+                            <div class="d-inline-flex align-items-center p-1 rounded bg-body-tertiary border" style="gap: 4px;">
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" id="v2-filter-central" onclick="toggleSedeFilterV2('central');">Central</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="v2-filter-ilo" onclick="toggleSedeFilterV2('ilo');">Ilo</button>
+                                <button type="button" class="btn btn-sm btn-primary active py-0 px-2" id="v2-filter-vs" onclick="toggleSedeFilterV2('vs');">Central vs Ilo</button>
+                            </div>
+                        </div>
+                        <div class="card-tools d-flex align-items-center" style="gap: 6px;">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-stacked-6" onclick="setStackedDiasV2(6);">6d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-stacked-8" onclick="setStackedDiasV2(8);">8d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-stacked-10" onclick="setStackedDiasV2(10);">10d</button>
+                                <button type="button" class="btn btn-primary active btn-sm px-2" id="v2-btn-stacked-12" onclick="setStackedDiasV2(12);">12d</button>
+                            </div>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-remove">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container-v2">
+                            <canvas id="column-chart" role="img" aria-label="Column chart de distribución por sede"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center mt-2 px-1 text-xs text-muted" style="gap: 16px;">
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #6f42c1;"></span>
+                                <span>Central</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 12px; height: 12px; background-color: #20c997;"></span>
+                                <span>Ilo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. DONUT CHART (Estado de Producción en Planta) -->
+            <div class="col-12 col-lg-6" id="v2-donut-chart-container">
+                <div class="card h-100 shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-pie-chart-fill text-warning me-2"></i>Donut Chart: Estado de Producción
+                        </h3>
+                        <div class="card-tools d-flex align-items-center" style="gap: 6px;">
+                            <span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1">Mes Actual</span>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-remove">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container-v2-donut position-relative">
+                            <canvas id="donut-chart" role="img" aria-label="Donut chart de órdenes de producción"></canvas>
+                            <div id="v2-productionEmpty" class="d-none text-center text-muted position-absolute top-50 start-50 translate-middle">
+                                <i class="bi bi-gear-fill fs-1 text-secondary opacity-50 mb-2"></i>
+                                <div class="fw-semibold">Sin órdenes registradas este mes</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. RADIAL BAR CHART (Eficiencia Operativa con Center Text Plugin) -->
+            <div class="col-12 col-lg-6" id="v2-radialbar-chart-container">
+                <div class="card h-100 shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-bullseye text-danger me-2"></i>Radial Bar Chart: Cumplimiento de Metas
+                        </h3>
+                        <div class="card-tools d-flex align-items-center" style="gap: 6px;">
+                            <span class="badge bg-success-subtle text-success border px-2 py-1">KPIs Clave</span>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-remove">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container-v2-donut position-relative">
+                            <canvas id="radialbar-chart" role="img" aria-label="Radial bar chart de cumplimiento"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-center align-items-center mt-2 px-1 text-xs text-muted flex-wrap" style="gap: 20px;">
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 10px; height: 10px; background-color: #0d6efd;"></span>
+                                <span>Facturación (82%)</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 10px; height: 10px; background-color: #20c997;"></span>
+                                <span>Pedidos (74%)</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded me-1" style="width: 10px; height: 10px; background-color: #ffc107;"></span>
+                                <span>Planta (68%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. MIXED CHART (Pedidos y Monto por Vendedor con Doble Eje Y) -->
+            <div class="col-12 col-lg-6" id="v2-mixed-chart-container">
+                <div class="card h-100 shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                            <h3 class="card-title fw-bold m-0 fs-6">
+                                <i class="bi bi-person-badge text-primary me-2"></i>Mixed Chart: Vendedor
+                            </h3>
+                            @if (Model?.PuedeFiltrarVendedorClientes == true)
+                            {
+                                <div class="d-inline-flex align-items-center">
+                                    <select id="v2-select-vendedor-chart" class="form-select form-select-sm fw-semibold shadow-sm" style="min-width: 160px;" onchange="cambiarVendedorChartV2();">
+                                        @foreach (var v in listaVendedores.OrderBy(x => x.Nombre))
+                                        {
+                                            if (v.Id == (Model?.PrimerVendedorId ?? 50))
+                                            {
+                                                <option value="@v.Id" selected="selected">@v.Nombre</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@v.Id">@v.Nombre</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                            }
+                        </div>
+                        <div class="card-tools d-flex align-items-center" style="gap: 6px;">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-vendedor-6" onclick="setVendedorDiasV2(6);">6d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-vendedor-8" onclick="setVendedorDiasV2(8);">8d</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2" id="v2-btn-vendedor-10" onclick="setVendedorDiasV2(10);">10d</button>
+                                <button type="button" class="btn btn-primary active btn-sm px-2" id="v2-btn-vendedor-12" onclick="setVendedorDiasV2(12);">12d</button>
+                            </div>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-remove">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container-v2">
+                            <canvas id="mixed-chart" role="img" aria-label="Mixed chart de pedidos y montos por vendedor"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 px-1 text-xs text-muted flex-wrap" style="gap: 6px;">
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <span><i class="bi bi-graph-up-arrow text-success me-1"></i>Pico Diario</span>
+                                <span id="v2-vendedor-total-monto" class="badge bg-body-tertiary border text-body fw-bold px-2 py-1">Total: S/ 0.00</span>
+                            </div>
+                            <div>
+                                <span id="v2-vendedor-total-pedidos" class="badge bg-primary fw-bold px-2 py-1">0 pedidos en el periodo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. LINE CHART (Tendencia de Ingresos Mensuales) -->
+            <div class="col-12 col-lg-6" id="v2-line-chart-container">
+                <div class="card h-100 shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-graph-down text-info me-2"></i>Line Chart: Tendencia de Ingresos
+                        </h3>
+                        <div class="card-tools d-flex align-items-center" style="gap: 6px;">
+                            <span class="badge bg-info-subtle text-info border px-2 py-1">Línea Pura</span>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-remove">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container-v2">
+                            <canvas id="line-chart" role="img" aria-label="Line chart de ingresos mensuales"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 px-1 text-xs text-muted">
+                            <span><i class="bi bi-arrow-up-right text-success me-1"></i>Curva de facturación acumulada 2026</span>
+                            <span class="fw-semibold text-primary">Proyección S/ +15.4%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- 4. ACCESOS RÁPIDOS & BASE DE DATOS EN TIEMPO REAL        -->
+        <!-- ======================================================== -->
+        <div class="row g-4 mb-4" id="v2-row-apps">
+            <!-- Accesos Rápidos -->
+            <div class="col-12 col-lg-8" id="v2-area-accesos-rapidos">
+                <div class="card shadow-sm border-0 rounded-3 h-100">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Accesos Rápidos del ERP
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
+                            <a class="btn-app-v2" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Cotizaciones');">
+                                <i class="bi bi-file-earmark-check text-success"></i>
+                                <span>Cotizaciones</span>
+                            </a>
+                            <a class="btn-app-v2" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Pedidos');">
+                                <i class="bi bi-box-seam text-primary"></i>
+                                <span>Pedidos</span>
+                            </a>
+                            <a class="btn-app-v2" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Facturación / Comprobantes');">
+                                <i class="bi bi-receipt text-info"></i>
+                                <span>Facturar</span>
+                            </a>
+                            <a class="btn-app-v2" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Producción en Planta (O.P.)');">
+                                <i class="bi bi-gear-wide-connected text-warning"></i>
+                                <span>Producción</span>
+                            </a>
+                            <a class="btn-app-v2" href="javascript:void(0);" onclick="mostrarEnDesarrollo('Órdenes de Compra');">
+                                <i class="bi bi-truck text-danger"></i>
+                                <span>Compras</span>
+                            </a>
+                            <a class="btn-app-v2" href="@Url.Action("Index", "Producto", new { area = "MG" })">
+                                <i class="bi bi-tags text-secondary"></i>
+                                <span>Productos</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Base de Datos en Tiempo Real -->
+            <div class="col-12 col-lg-4" id="v2-area-db-tiempo-real">
+                <div class="card shadow-sm border-0 rounded-3 h-100">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-database-check text-success me-2"></i>Base de Datos en Tiempo Real
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Sincronizado
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="text-muted small">Catálogo: <code>esderp_v6</code> &bull; Polling activo cada 30s</span>
+                        </div>
+                        <div class="progress my-2" style="height: 6px; border-radius: 4px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 100%"></div>
+                        </div>
+                        <span class="text-muted text-xs d-block mt-2">
+                            <i class="bi bi-lightning-charge-fill text-success me-1"></i> Totales y métricas calculados directamente desde SQL Server
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- 5. SECCIÓN: TOP 10 PEDIDOS & CLIENTES INACTIVOS          -->
+        <!-- ======================================================== -->
+        <div class="row g-4 mb-4" id="v2-row-tablas">
+            <!-- Top Pedidos del Día -->
+            <div class="col-12 col-lg-6" id="v2-area-top-pedidos">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-trophy-fill text-warning me-2"></i>Top Pedidos del Día (<span id="v2-label-top-pedidos">Top 5</span>)
+                        </h3>
+                        <div class="card-tools d-flex align-items-center" style="gap: 6px;">
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" id="v2-btn-toggle-top-pedidos" onclick="alternarTopPedidosV2();" style="font-size: 0.8rem; height: 28px;">
+                                <i class="bi bi-chevron-down me-1"></i>Ver Top 10
+                            </button>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                <i class="bi bi-calendar3 me-1"></i>@(Model?.TopPedidosFecha ?? DateTime.Today.ToString("dd/MM/yyyy"))
+                            </span>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0" id="v2-tabla-top-pedidos">
+                            <thead class="table-header-custom-v2 border-bottom">
+                                <tr>
+                                    <th style="width: 20%;" class="text-center">Código</th>
+                                    <th style="width: 55%;">Cliente</th>
+                                    <th style="width: 25%;" class="text-end pe-3">Monto Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model?.TopPedidos != null && Model.TopPedidos.Count > 0)
+                                {
+                                    int ranking = 1;
+                                    foreach (var p in Model.TopPedidos)
+                                    {
+                                        string rankClass = ranking == 1 ? "badge-rank-1" : (ranking == 2 ? "badge-rank-2" : (ranking == 3 ? "badge-rank-3" : "badge bg-secondary-subtle text-secondary"));
+                                        <tr class="dashboard-drilldown-row @(ranking > 5 ? "d-none v2-fila-top-extra" : "")" onclick="mostrarEnDesarrollo('Detalle del Pedido #@p.Codigo');" title="Clic para ver detalle">
+                                            <td class="text-center py-2">
+                                                <span class="badge @rankClass rounded-pill px-2 py-1 me-1">#@ranking</span>
+                                                <span class="font-monospace fw-bold text-primary">@p.Codigo</span>
+                                            </td>
+                                            <td class="py-2">
+                                                <span class="fw-semibold text-body">@p.Cliente</span>
+                                            </td>
+                                            <td class="text-end font-monospace fw-bold text-success py-2 pe-3 text-nowrap">
+                                                @p.MontoFormateado
+                                            </td>
+                                        </tr>
+                                        ranking++;
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">
+                                            <i class="bi bi-info-circle me-1"></i> No se registran pedidos el @(Model?.TopPedidosFecha ?? DateTime.Today.ToString("dd/MM/yyyy"))
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-body border-top py-2 px-3 d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Ranking automático por mayor monto</small>
+                        <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Listado General de Pedidos');" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.8rem;">
+                            <i class="bi bi-list-ul me-1"></i>Ver Todos los Pedidos
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clientes sin Compras Recientes -->
+            <div class="col-12 col-lg-6" id="v2-area-clientes-inactivos">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-body border-bottom py-2 px-3 d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                        <h3 class="card-title fw-bold m-0 fs-6">
+                            <i class="bi bi-person-x-fill text-warning me-2"></i>Clientes sin Compras (<span id="v2-label-meses-inactivos">&ge; 5 Meses</span>)
+                        </h3>
+                        <div class="card-tools d-inline-flex flex-wrap align-items-center" style="gap: 6px;">
+                            <select id="v2-select-meses-inactivos" class="form-select form-select-sm" style="width: auto; height: 28px; padding: 2px 8px; font-size: 0.8rem;" onchange="cambiarFiltroInactivosV2();">
+                                <option value="3">&ge; 3 Meses</option>
+                                <option value="4">&ge; 4 Meses</option>
+                                <option value="5" selected>&ge; 5 Meses</option>
+                                <option value="6">&ge; 6 Meses</option>
+                            </select>
+                            @if (Model?.PuedeFiltrarVendedorClientes == true)
+                            {
+                                <select id="v2-select-vendedor-inactivos" class="form-select form-select-sm" style="width: 150px; height: 28px; padding: 2px 8px; font-size: 0.8rem;" onchange="cambiarFiltroInactivosV2();">
+                                    <option value="" selected>Todos los Vendedores</option>
+                                    @foreach (var v in listaVendedores.OrderBy(x => x.Nombre))
+                                    {
+                                        <option value="@v.Id">@v.Nombre</option>
+                                    }
+                                </select>
+                            }
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" id="v2-btn-ver-mas-clientes" onclick="alternarVerMasClientesInactivosV2();" style="height: 28px; font-size: 0.8rem;">
+                                <i class="bi bi-chevron-down me-1"></i>Ver más (10)
+                            </button>
+                            <span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1">Inactivos</span>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-collapse">
+                                <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-lte-toggle="card-maximize">
+                                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0" id="v2-tabla-clientes-inactivos">
+                            <thead class="table-header-custom-v2 border-bottom">
+                                <tr>
+                                    <th style="width: 65%;">Cliente</th>
+                                    <th style="width: 35%;" class="text-end pe-3">Última Compra</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model?.ClientesInactivos != null && Model.ClientesInactivos.Count > 0)
+                                {
+                                    int idx = 0;
+                                    foreach (var c in Model.ClientesInactivos)
+                                    {
+                                        idx++;
+                                        <tr class="dashboard-drilldown-row @(idx > 5 ? "d-none v2-fila-inactivo-extra" : "")" onclick="mostrarEnDesarrollo('Ficha del Cliente: @c.Cliente');" title="Clic para ver ficha">
+                                            <td class="py-2">
+                                                <span class="fw-semibold text-body d-block">@c.Cliente</span>
+                                                <small class="text-muted"><i class="bi bi-person me-1"></i>@c.Vendedor</small>
+                                            </td>
+                                            <td class="text-end py-2 pe-3 text-nowrap">
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1 fw-bold">
+                                                    <i class="bi bi-calendar-x me-1"></i>@c.FechaFormateada
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted py-4">
+                                            <i class="bi bi-check-circle-fill text-success me-1"></i> No se encontraron clientes inactivos
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-body border-top py-2 px-3">
+                        <small class="text-muted"><i class="bi bi-exclamation-triangle text-warning me-1"></i>Alerta temprana para reactivación comercial</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<!--end::App Content-->
+
+<!-- ======================================================== -->
+<!-- MODAL: GESTIONAR DASHBOARD V2                            -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-gestionar-dashboard-v2" tabindex="-1" aria-labelledby="modalGestionarDashboardV2Label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header bg-body-tertiary border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="bi bi-sliders fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalGestionarDashboardV2Label">Gestionar Dashboard V2</h5>
+                        <small class="text-muted">Activa o desactiva las áreas y gráficos que deseas visualizar</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold me-2" data-bs-dismiss="modal" onclick="aplicarPreferenciasV2();">
+                        <i class="bi bi-check-lg me-1"></i>Aceptar
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+            </div>
+            <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+                <div class="d-flex flex-column gap-2">
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-area-kpis" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-grid-fill text-info me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Tarjetas de Métricas (6 KPIs)</div>
+                                <small class="text-muted">Facturación, Pedidos, Cotizaciones, Producción, Compras y Total</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-area-kpis" data-area="kpis" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-area-infoboxes" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-speedometer2 text-success me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Resumen Operativo (4 Info Boxes)</div>
+                                <small class="text-muted">Ticket promedio, conversión comercial, eficiencia planta y entregas</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-area-infoboxes" data-area="infoboxes" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-area-chart" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-graph-up text-primary me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Evolución de Ventas (Area Chart)</div>
+                                <small class="text-muted">Áreas con gradiente suave comparando 12 meses móviles</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-area-chart" data-area="area-chart" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-column-chart" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-bar-chart-steps text-info me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Distribución por Sede (Column Chart)</div>
+                                <small class="text-muted">Columnas agrupadas de facturación diaria Central vs Ilo</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-column-chart" data-area="column-chart" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-donut-chart" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-pie-chart-fill text-warning me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Estado de Producción (Donut Chart)</div>
+                                <small class="text-muted">Distribución de órdenes en planta con leyenda derecha</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-donut-chart" data-area="donut-chart" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-radialbar-chart" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-bullseye text-danger me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Cumplimiento de Metas (Radial Bar Chart)</div>
+                                <small class="text-muted">Anillos concéntricos con porcentaje promedio al centro</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-radialbar-chart" data-area="radialbar-chart" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-mixed-chart" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-person-badge text-primary me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Desempeño Vendedor (Mixed Chart)</div>
+                                <small class="text-muted">Gráfico mixto con barras de pedidos y línea de montos</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-mixed-chart" data-area="mixed-chart" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-line-chart" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-graph-down text-info me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Tendencia de Ingresos (Line Chart)</div>
+                                <small class="text-muted">Línea continua con proyección de ventas</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-line-chart" data-area="line-chart" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-area-apps" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-lightning-charge-fill text-warning me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Accesos Rápidos & Conexión BD</div>
+                                <small class="text-muted">Accesos directos a los módulos comerciales y de planta</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-area-apps" data-area="apps" checked>
+                        </div>
+                    </label>
+
+                    <label class="d-flex align-items-center justify-content-between p-3 rounded bg-body border shadow-sm" for="v2-chk-area-tablas" style="cursor: pointer;">
+                        <div class="d-flex align-items-center me-3">
+                            <i class="bi bi-table text-secondary me-3 fs-5"></i>
+                            <div>
+                                <div class="fw-bold mb-0">Tablas de Pedidos & Clientes Inactivos</div>
+                                <small class="text-muted">Top 10 pedidos diarios y alertas tempranas de clientes</small>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch form-switch-md m-0">
+                            <input class="form-check-input chk-v2-area" type="checkbox" id="v2-chk-area-tablas" data-area="tablas" checked>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer bg-body-tertiary border-top py-2 px-4">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold" data-bs-dismiss="modal" onclick="aplicarPreferenciasV2();">
+                    <i class="bi bi-check-lg me-1"></i>Aplicar Preferencias
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL: GESTIONAR DASHBOARD POR ROL V2 (ADMIN)            -->
+<!-- ======================================================== -->
+@if (esAdmin)
+{
+<div class="modal fade" id="modal-gestionar-dashboard-rol-v2" tabindex="-1" aria-labelledby="modalGestionarDashboardRolV2Label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header bg-body-tertiary border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="bi bi-shield-lock-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalGestionarDashboardRolV2Label">Gestionar Dashboard V2 por Rol</h5>
+                        <small class="text-muted">Define qué áreas visualizan los diferentes perfiles del ERP</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold me-2" data-bs-dismiss="modal">
+                        <i class="bi bi-check-lg me-1"></i>Listo
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+            </div>
+            <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+                <div class="p-3 bg-body-tertiary rounded-3 border mb-3">
+                    <label for="v2-select-rol" class="fw-bold mb-1 text-body d-flex align-items-center">
+                        <i class="bi bi-person-badge-fill text-primary me-2"></i> Seleccionar Rol:
+                    </label>
+                    <select id="v2-select-rol" class="form-select fw-semibold shadow-sm">
+                        @foreach (var r in listaRoles)
+                        {
+                            <option value="@r.Codigo">@r.Nombre (@r.Codigo)</option>
+                        }
+                    </select>
+                </div>
+                <div class="alert alert-info py-2 px-3 small rounded-3">
+                    <i class="bi bi-info-circle-fill me-1"></i>Las restricciones de visualización de gráficos y métricas se aplican automáticamente a los usuarios autenticados según su rol principal.
+                </div>
+            </div>
+            <div class="modal-footer bg-body-tertiary border-top py-2 px-4">
+                <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold" data-bs-dismiss="modal">
+                    <i class="bi bi-save me-1"></i>Guardar Permisos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@section Scripts {
+<!-- Chart.js 4.5.1 Oficial de AdminLTE 4 -->
+<script src="~/plugins/chart.js/chart.umd.min.js" asp-append-version="true"></script>
+
+<!-- begin::Chart.js theme preset oficial de AdminLTE 4 -->
+<script>
+    // ========================================================
+    // MOTOR DE TEMA OFICIAL ADMINLTE 4 PARA CHART.JS
+    // https://adminlte.io/themes/v4/charts/chartjs.html
+    // ========================================================
+    (() => {
+        'use strict';
+        const { Chart } = globalThis;
+        if (!Chart) return;
+
+        const root = document.documentElement;
+        const cssVar = (name, fallback = '') =>
+            getComputedStyle(root).getPropertyValue(name).trim() || fallback;
+
+        const alpha = (color, opacity) => {
+            let hex = String(color).trim().replace(/^#/, '');
+            if (!/^[\da-f]{3}([\da-f]{3})?$/i.test(hex)) {
+                return color;
+            }
+            if (hex.length === 3) {
+                hex = [...hex].map((c) => c + c).join('');
+            }
+            const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        };
+
+        const areaFill = (color, from = 0.35, to = 0) => (context) => {
+            const { ctx, chartArea } = context.chart;
+            if (!chartArea) {
+                return alpha(color, from);
+            }
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, alpha(color, from));
+            gradient.addColorStop(1, alpha(color, to));
+            return gradient;
+        };
+
+        let applied = [];
+
+        const apply = () => {
+            const text = cssVar('--bs-secondary-color', '#6c757d');
+            const body = cssVar('--bs-body-color', '#212529');
+            const surface = cssVar('--bs-body-bg', '#fff');
+            const grid = `rgba(${cssVar('--bs-emphasis-color-rgb', '0, 0, 0')}, 0.08)`;
+            const rtl = root.getAttribute('dir') === 'rtl';
+            const d = Chart.defaults;
+            applied = [text, grid];
+
+            d.font.family = cssVar('--bs-body-font-family', d.font.family);
+            d.font.size = 12;
+            d.color = text;
+            d.borderColor = grid;
+            d.maintainAspectRatio = false;
+
+            d.scale.grid.color = grid;
+            d.scale.border.color = grid;
+            d.scale.ticks.padding = 8;
+            d.set('scales.linear', { border: { display: false } });
+            d.set('scales.category', { grid: { display: false } });
+
+            d.elements.line.borderWidth = 2;
+            d.elements.point.radius = 0;
+            d.elements.point.hoverRadius = 5;
+            d.elements.point.hitRadius = 8;
+            d.elements.point.hoverBorderWidth = 2;
+            d.elements.point.borderColor = surface;
+            d.elements.bar.borderRadius = 4;
+            d.elements.arc.borderColor = surface;
+            d.elements.arc.borderWidth = 2;
+
+            const { legend, tooltip } = d.plugins;
+            legend.position = 'bottom';
+            legend.rtl = rtl;
+            Object.assign(legend.labels, {
+                color: body,
+                usePointStyle: true,
+                pointStyle: 'circle',
+                boxWidth: 8,
+                boxHeight: 8,
+                padding: 16,
+            });
+
+            Object.assign(tooltip, {
+                rtl,
+                backgroundColor: surface,
+                borderColor: cssVar('--bs-border-color', '#dee2e6'),
+                borderWidth: 1,
+                titleColor: cssVar('--bs-emphasis-color', '#000'),
+                bodyColor: body,
+                titleFont: { weight: '600' },
+                padding: 10,
+                cornerRadius: 6,
+                caretSize: 5,
+                boxPadding: 4,
+                usePointStyle: true,
+            });
+
+            for (const type of ['line', 'bar']) {
+                Chart.overrides[type].interaction = { mode: 'index', intersect: false };
+            }
+        };
+
+        const forgetThemeColors = (options, stale) => {
+            for (const [key, value] of Object.entries(options)) {
+                if (value && typeof value === 'object' && !Array.isArray(value)) {
+                    forgetThemeColors(value, stale);
+                } else if (/color$/i.test(key) && stale.includes(value)) {
+                    delete options[key];
+                }
+            }
+        };
+
+        const refresh = () => {
+            const stale = applied;
+            apply();
+            for (const chart of Object.values(Chart.instances)) {
+                forgetThemeColors(chart.config.options.scales || {}, stale);
+                chart.update('none');
+            }
+        };
+
+        apply();
+        new MutationObserver(refresh).observe(root, {
+            attributes: true,
+            attributeFilter: ['data-bs-theme', 'dir'],
+        });
+        document.fonts?.addEventListener('loadingdone', refresh);
+
+        globalThis.lteChartTheme = { cssVar, alpha, areaFill, refresh };
+    })();
+</script>
+<!-- end::Chart.js theme preset -->
+
+<script>
+    // ========================================================
+    // ALERTA VISUAL: MÓDULO EN DESARROLLO
+    // ========================================================
+    function mostrarEnDesarrollo(modulo) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Módulo en Desarrollo',
+            html: '<p class="mb-2">El módulo <strong>' + modulo + '</strong> se encuentra actualmente en proceso de migración para ASP.NET Core 10.</p><small class="text-muted">Pronto estará disponible con todas sus funcionalidades conectadas a la base de datos en tiempo real.</small>',
+            confirmButtonText: '<i class="bi bi-check2-circle me-1"></i>Entendido',
+            confirmButtonColor: '#0d6efd',
+            customClass: {
+                popup: 'rounded-4 shadow'
+            }
+        });
+    }
+
+    // Funciones utilitarias para formateo
+    const { cssVar, alpha, areaFill } = globalThis.lteChartTheme;
+    const thousands = (value) => 'S/ ' + Math.round(value) + 'k';
+    const dollars = (context) => ' ' + context.dataset.label + ': S/ ' + context.parsed.y.toLocaleString('es-PE');
+
+    // ========================================================
+    // DATOS DE MODELO (CONEXIÓN BD REAL)
+    // ========================================================
+    var allMesesVentas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.MesesVentas ?? Array.Empty<string>()));
+    var allVentasAnterior = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VentasAnterior ?? Array.Empty<double>()));
+    var allVentasActual = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VentasActual ?? Array.Empty<double>()));
+
+    var allStackedLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.StackedLabels ?? new List<string>()));
+    var allDsCentral = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.DsCentral ?? Array.Empty<double>()));
+    var allDsIlo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.DsIlo ?? Array.Empty<double>()));
+
+    var allVendedorLabels = [];
+    var allVendedorCantidades = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VendedorCantidades ?? new List<int>()));
+    var allVendedorMontos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.VendedorMontos ?? new List<double>()));
+
+    var prodLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.ProdLabels ?? Array.Empty<string>()));
+    var prodValores = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.ProdValores ?? Array.Empty<int>()));
+
+    // Instancias de Gráficos V2
+    var areaChartInstance = null;
+    var columnChartInstance = null;
+    var donutChartInstance = null;
+    var radialChartInstance = null;
+    var mixedChartInstance = null;
+    var lineChartInstance = null;
+
+    var ventasMesesActuales = 12;
+    var vendedorDiasActuales = 12;
+    var stackedDiasActuales = 12;
+    var sedeActiva = 'vs';
+    var verTop10Pedidos = false;
+    var ver10ClientesInactivos = false;
+
+    // Actualizar reloj en vivo
+    function actualizarRelojEnVivo() {
+        const ahora = new Date();
+        const horaStr = ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        $('#v2-last-sync-time').text(horaStr);
+    }
+
+    // ========================================================
+    // 1. RENDER AREA CHART (AdminLTE 4)
+    // ========================================================
+    function renderAreaChart(labels, actual, anterior) {
+        const canvas = document.querySelector('#area-chart');
+        if (!canvas) return;
+        if (areaChartInstance) areaChartInstance.destroy();
+
+        areaChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Periodo Actual',
+                        data: actual,
+                        borderColor: '#0d6efd',
+                        backgroundColor: areaFill('#0d6efd', 0.4, 0),
+                        pointBackgroundColor: '#0d6efd',
+                        pointBorderColor: cssVar('--bs-body-bg', '#fff'),
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Periodo Anterior',
+                        data: anterior,
+                        borderColor: '#20c997',
+                        backgroundColor: areaFill('#20c997', 0.3, 0),
+                        pointBackgroundColor: '#20c997',
+                        pointBorderColor: cssVar('--bs-body-bg', '#fff'),
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': S/ ' + (ctx.parsed.y * 1000).toLocaleString('es-PE') + ' (' + ctx.parsed.y + 'k)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: thousands }
+                    }
+                }
+            }
+        });
+    }
+
+    function setVentasMesesV2(n) {
+        ventasMesesActuales = n;
+        $('[id^="v2-btn-ventas-"]').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $('#v2-btn-ventas-' + n).removeClass('btn-outline-secondary').addClass('btn-primary active');
+        $('#v2-badge-meses-ventas').html('<i class="bi bi-calendar3 me-1"></i>' + n + ' Meses Móviles');
+
+        const labels = (allMesesVentas || []).slice(-n);
+        const actual = (allVentasActual || []).slice(-n);
+        const anterior = (allVentasAnterior || []).slice(-n);
+        renderAreaChart(labels, actual, anterior);
+    }
+
+    // ========================================================
+    // 2. RENDER COLUMN CHART (AdminLTE 4) - Grouped Bars
+    // ========================================================
+    function renderColumnChart(labels, central, ilo) {
+        const canvas = document.querySelector('#column-chart');
+        if (!canvas) return;
+        if (columnChartInstance) columnChartInstance.destroy();
+
+        const datasets = [];
+        if (sedeActiva === 'vs' || sedeActiva === 'central') {
+            datasets.push({
+                label: 'Central',
+                data: central,
+                backgroundColor: '#6f42c1',
+                borderRadius: 4
+            });
+        }
+        if (sedeActiva === 'vs' || sedeActiva === 'ilo') {
+            datasets.push({
+                label: 'Ilo',
+                data: ilo,
+                backgroundColor: '#20c997',
+                borderRadius: 4
+            });
+        }
+
+        columnChartInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                datasets: {
+                    bar: { categoryPercentage: 0.55, barPercentage: 0.9 }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': S/ ' + (ctx.parsed.y * 1000).toLocaleString('es-PE') + ' (' + ctx.parsed.y + 'k)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: thousands }
+                    }
+                }
+            }
+        });
+    }
+
+    function setStackedDiasV2(n) {
+        stackedDiasActuales = n;
+        $('[id^="v2-btn-stacked-"]').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $('#v2-btn-stacked-' + n).removeClass('btn-outline-secondary').addClass('btn-primary active');
+
+        const labels = (allStackedLabels || []).slice(-n);
+        const central = (allDsCentral || []).slice(-n);
+        const ilo = (allDsIlo || []).slice(-n);
+        renderColumnChart(labels, central, ilo);
+    }
+
+    function toggleSedeFilterV2(modo) {
+        sedeActiva = modo;
+        $('#v2-filter-central, #v2-filter-ilo, #v2-filter-vs').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $('#v2-filter-' + modo).removeClass('btn-outline-secondary').addClass('btn-primary active');
+        setStackedDiasV2(stackedDiasActuales);
+    }
+
+    // ========================================================
+    // 3. RENDER DONUT CHART (AdminLTE 4)
+    // ========================================================
+    function renderDonutChart(labels, valores) {
+        const canvas = document.querySelector('#donut-chart');
+        if (!canvas) return;
+        if (donutChartInstance) donutChartInstance.destroy();
+
+        const total = (valores || []).reduce((a, b) => a + b, 0);
+        if (total === 0) {
+            $('#v2-productionEmpty').removeClass('d-none');
+            $(canvas).addClass('d-none');
+            return;
+        } else {
+            $('#v2-productionEmpty').addClass('d-none');
+            $(canvas).removeClass('d-none');
+        }
+
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const sliceBorder = isDark ? '#212529' : '#ffffff';
+
+        donutChartInstance = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Órdenes',
+                        data: valores,
+                        backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#dc3545', '#6f42c1'],
+                        borderColor: sliceBorder,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            padding: 14
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const val = ctx.parsed;
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                return ' ' + ctx.label + ': ' + val + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 4. RENDER RADIAL BAR CHART (AdminLTE 4) - Center Text Plugin
+    // ========================================================
+    function renderRadialBarChart() {
+        const canvas = document.querySelector('#radialbar-chart');
+        if (!canvas) return;
+        if (radialChartInstance) radialChartInstance.destroy();
+
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const sliceBorder = isDark ? '#212529' : '#ffffff';
+        const radial_values = [82, 74, 68];
+        const radial_labels = ['Facturación', 'Pedidos', 'Planta'];
+        const radial_colors = ['#0d6efd', '#20c997', '#ffc107'];
+        const radial_track = () => isDark ? 'rgba(255, 255, 255, 0.12)' : cssVar('--bs-secondary-bg', '#e9ecef');
+
+        const centerText = {
+            id: 'centerTextV2',
+            afterDatasetsDraw(chart, args, options) {
+                const { ctx, chartArea } = chart;
+                const x = (chartArea.left + chartArea.right) / 2;
+                const y = (chartArea.top + chartArea.bottom) / 2;
+                const currentDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = currentDark ? '#94a3b8' : cssVar('--bs-secondary-color', '#6c757d');
+                ctx.font = `14px ${Chart.defaults.font.family}`;
+                ctx.fillText(options.label || 'Eficiencia', x, y - 14);
+                ctx.fillStyle = currentDark ? '#f8fafc' : cssVar('--bs-emphasis-color', '#212529');
+                ctx.font = `600 24px ${Chart.defaults.font.family}`;
+                ctx.fillText(options.value || '75%', x, y + 12);
+                ctx.restore();
+            }
+        };
+
+        radialChartInstance = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cumplido', 'Restante'],
+                datasets: radial_values.map((value, index) => ({
+                    label: radial_labels[index],
+                    data: [value, 100 - value],
+                    backgroundColor: (ctx) => ctx.dataIndex === 0 ? radial_colors[index] : radial_track(),
+                    hoverBackgroundColor: (ctx) => ctx.dataIndex === 0 ? radial_colors[index] : radial_track(),
+                    borderColor: sliceBorder,
+                    borderWidth: 4,
+                    hoverBorderWidth: 4
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '50%',
+                plugins: {
+                    legend: { display: false },
+                    centerTextV2: {
+                        label: 'Eficiencia',
+                        value: `${Math.round(radial_values.reduce((s, v) => s + v, 0) / radial_values.length)}%`
+                    },
+                    tooltip: {
+                        filter: (item) => item.dataIndex === 0,
+                        callbacks: {
+                            title: () => '',
+                            label: (item) => ` ${item.dataset.label}: ${item.raw}% de cumplimiento`,
+                            labelColor: (item) => ({
+                                backgroundColor: radial_colors[item.datasetIndex],
+                                borderColor: radial_colors[item.datasetIndex]
+                            })
+                        }
+                    }
+                }
+            },
+            plugins: [centerText]
+        });
+    }
+
+    // ========================================================
+    // 5. RENDER MIXED CHART (AdminLTE 4) - Dual Y Axes
+    // ========================================================
+    function renderMixedChart(labels, cantidades, montos, totalPedidos, totalMonto) {
+        const canvas = document.querySelector('#mixed-chart');
+        if (!canvas) return;
+        if (mixedChartInstance) mixedChartInstance.destroy();
+
+        $('#v2-vendedor-total-pedidos').text((totalPedidos || 0) + ' pedidos en el periodo');
+        $('#v2-vendedor-total-monto').text('Total: ' + (totalMonto || 'S/ 0.00'));
+
+        mixedChartInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Pedidos',
+                        data: cantidades,
+                        backgroundColor: alpha('#20c997', 0.85),
+                        hoverBackgroundColor: '#20c997',
+                        borderRadius: 4,
+                        categoryPercentage: 0.55,
+                        yAxisID: 'y',
+                        order: 1
+                    },
+                    {
+                        type: 'line',
+                        label: 'Facturación S/',
+                        data: montos,
+                        borderColor: '#0d6efd',
+                        backgroundColor: '#0d6efd',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        tension: 0.4,
+                        yAxisID: 'y1',
+                        order: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            sort: (a, b) => a.datasetIndex - b.datasetIndex
+                        }
+                    },
+                    tooltip: {
+                        itemSort: (a, b) => a.datasetIndex - b.datasetIndex,
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.dataset.yAxisID === 'y1') {
+                                    return 'Facturación: S/ ' + ctx.parsed.y.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+                                }
+                                return 'Pedidos: ' + ctx.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        position: 'left',
+                        title: { display: true, text: 'Pedidos' },
+                        ticks: { stepSize: 1 }
+                    },
+                    y1: {
+                        position: 'right',
+                        title: { display: true, text: 'Monto Total' },
+                        grid: { drawOnChartArea: false },
+                        ticks: {
+                            callback: function(v) { return 'S/ ' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v); }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function setVendedorDiasV2(n) {
+        vendedorDiasActuales = n;
+        $('[id^="v2-btn-vendedor-"]').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $('#v2-btn-vendedor-' + n).removeClass('btn-outline-secondary').addClass('btn-primary active');
+
+        const vid = $('#v2-select-vendedor-chart').val() || @(Model?.PrimerVendedorId ?? 50);
+        cargarDatosVendedorV2(vid, n);
+    }
+
+    function cambiarVendedorChartV2() {
+        const vid = $('#v2-select-vendedor-chart').val() || @(Model?.PrimerVendedorId ?? 50);
+        cargarDatosVendedorV2(vid, vendedorDiasActuales);
+    }
+
+    function cargarDatosVendedorV2(vid, dias) {
+        $.ajax({
+            url: '@Url.Action("ObtenerPedidosVendedor", "Home")',
+            type: 'GET',
+            data: { vendedorId: vid, dias: dias },
+            success: function(res) {
+                if (res && res.success) {
+                    allVendedorLabels = res.labels;
+                    allVendedorCantidades = res.cantidades;
+                    allVendedorMontos = res.montos;
+                    renderMixedChart(res.labels, res.cantidades, res.montos, res.totalPedidos, res.totalMonto);
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 6. RENDER LINE CHART (AdminLTE 4)
+    // ========================================================
+    function renderLineChart() {
+        const canvas = document.querySelector('#line-chart');
+        if (!canvas) return;
+        if (lineChartInstance) lineChartInstance.destroy();
+
+        lineChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: allMesesVentas.slice(-10),
+                datasets: [
+                    {
+                        label: 'Ingresos Acumulados',
+                        data: (allVentasActual || []).slice(-10),
+                        borderColor: '#0d6efd',
+                        backgroundColor: '#0d6efd',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ' Ingresos: S/ ' + (ctx.parsed.y * 1000).toLocaleString('es-PE');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: thousands }
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 7. TABLAS DE DETALLE & ACCIONES INTERACTIVAS
+    // ========================================================
+    function alternarTopPedidosV2() {
+        verTop10Pedidos = !verTop10Pedidos;
+        if (verTop10Pedidos) {
+            $('.v2-fila-top-extra').removeClass('d-none');
+            $('#v2-label-top-pedidos').text('Top 10');
+            $('#v2-btn-toggle-top-pedidos').html('<i class="bi bi-chevron-up me-1"></i>Ver Top 5');
+        } else {
+            $('.v2-fila-top-extra').addClass('d-none');
+            $('#v2-label-top-pedidos').text('Top 5');
+            $('#v2-btn-toggle-top-pedidos').html('<i class="bi bi-chevron-down me-1"></i>Ver Top 10');
+        }
+    }
+
+    function alternarVerMasClientesInactivosV2() {
+        ver10ClientesInactivos = !ver10ClientesInactivos;
+        if (ver10ClientesInactivos) {
+            $('.v2-fila-inactivo-extra').removeClass('d-none');
+            $('#v2-btn-ver-mas-clientes').html('<i class="bi bi-chevron-up me-1"></i>Ver menos (5)');
+        } else {
+            $('.v2-fila-inactivo-extra').addClass('d-none');
+            $('#v2-btn-ver-mas-clientes').html('<i class="bi bi-chevron-down me-1"></i>Ver más (10)');
+        }
+    }
+
+    function cambiarFiltroInactivosV2() {
+        const meses = parseInt($('#v2-select-meses-inactivos').val()) || 5;
+        const vid = $('#v2-select-vendedor-inactivos').val();
+        $('#v2-label-meses-inactivos').html('&ge; ' + meses + ' Meses');
+
+        $.ajax({
+            url: '@Url.Action("ObtenerClientesInactivos", "Home")',
+            type: 'GET',
+            data: { meses: meses, vendedorId: vid ? parseInt(vid) : null },
+            success: function(res) {
+                if (res && res.success && res.data) {
+                    const $tbody = $('#v2-tabla-clientes-inactivos tbody').empty();
+                    if (res.data.length === 0) {
+                        $tbody.append('<tr><td colspan="2" class="text-center text-muted py-4"><i class="bi bi-check-circle-fill text-success me-1"></i> No se encontraron clientes inactivos</td></tr>');
+                    } else {
+                        $.each(res.data, function(i, c) {
+                            const isExtra = (i >= 5 && !ver10ClientesInactivos) ? 'd-none v2-fila-inactivo-extra' : '';
+                            const row = '<tr class="dashboard-drilldown-row ' + isExtra + '" onclick="mostrarEnDesarrollo(\'Ficha del Cliente: ' + (c.cliente || '') + '\');" title="Clic para ver ficha">' +
+                                '<td class="py-2"><span class="fw-semibold text-body d-block">' + (c.cliente || 'Sin Nombre') + '</span><small class="text-muted"><i class="bi bi-person me-1"></i>' + (c.vendedor || 'Sin vendedor') + '</small></td>' +
+                                '<td class="text-end py-2 pe-3 text-nowrap"><span class="badge bg-warning-subtle text-warning-emphasis border px-2 py-1 fw-bold"><i class="bi bi-calendar-x me-1"></i>' + (c.fechaFormateada || '') + '</span></td>' +
+                                '</tr>';
+                            $tbody.append(row);
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 8. SINCRONIZACIÓN EN TIEMPO REAL V2
+    // ========================================================
+    function sincronizarDashboardV2() {
+        const $icon = $('#icon-sync-v2').addClass('bi-spin fa-spin');
+        const vid = $('#v2-select-vendedor-chart').val();
+        const meses = $('#v2-select-meses-inactivos').val() || 5;
+
+        $.ajax({
+            url: '@Url.Action("ObtenerMetricas", "Home")',
+            type: 'GET',
+            data: { vendedorId: vid, mesesInactivos: meses },
+            success: function(res) {
+                $icon.removeClass('bi-spin fa-spin');
+                actualizarRelojEnVivo();
+                if (res && res.success) {
+                    $('#v2-kpi-ventas').text(res.kpis.facturacionMes);
+                    $('#v2-kpi-pedidos').text(res.kpis.pedidosActivos);
+                    $('#v2-kpi-cotizaciones').text(res.kpis.cotizacionesActivas);
+                    $('#v2-kpi-produccion').text(res.kpis.ordenesProduccionMes);
+                    $('#v2-kpi-compras').text(res.kpis.ordenesCompraMes);
+                    $('#v2-kpi-pedidos-cantidad').text(res.kpis.pedidosMesCantidad.toLocaleString());
+                    $('#v2-kpi-pedidos-monto-footer').text('Total: ' + res.kpis.pedidosMesMonto);
+
+                    allMesesVentas = res.graficoVentas.meses;
+                    allVentasActual = res.graficoVentas.ventasActual;
+                    allVentasAnterior = res.graficoVentas.ventasAnterior;
+
+                    allStackedLabels = res.graficoStackedBar.labels;
+                    allDsCentral = res.graficoStackedBar.datasets[0].data;
+                    allDsIlo = res.graficoStackedBar.datasets[1].data;
+
+                    prodLabels = res.graficoProduccion.labels;
+                    prodValores = res.graficoProduccion.valores;
+
+                    setVentasMesesV2(ventasMesesActuales);
+                    setStackedDiasV2(stackedDiasActuales);
+                    renderDonutChart(prodLabels, prodValores);
+                    renderRadialBarChart();
+                    renderLineChart();
+                }
+            },
+            error: function() {
+                $icon.removeClass('bi-spin fa-spin');
+            }
+        });
+    }
+
+    // ========================================================
+    // 9. GESTIÓN DE ÁREAS V2
+    // ========================================================
+    function aplicarPreferenciasV2() {
+        const prefs = {};
+        $('.chk-v2-area').each(function() {
+            prefs[$(this).data('area')] = $(this).is(':checked');
+        });
+        localStorage.setItem('arco_dashboard_v2_pref', JSON.stringify(prefs));
+        ejecutarVisibilidadV2(prefs);
+    }
+
+    function ejecutarVisibilidadV2(prefs) {
+        if (!prefs) return;
+        if (prefs['kpis'] === false) $('#v2-row-kpis').addClass('d-none'); else $('#v2-row-kpis').removeClass('d-none');
+        if (prefs['infoboxes'] === false) $('#v2-row-infoboxes').addClass('d-none'); else $('#v2-row-infoboxes').removeClass('d-none');
+        if (prefs['area-chart'] === false) $('#v2-area-chart-container').addClass('d-none'); else $('#v2-area-chart-container').removeClass('d-none');
+        if (prefs['column-chart'] === false) $('#v2-column-chart-container').addClass('d-none'); else $('#v2-column-chart-container').removeClass('d-none');
+        if (prefs['donut-chart'] === false) $('#v2-donut-chart-container').addClass('d-none'); else $('#v2-donut-chart-container').removeClass('d-none');
+        if (prefs['radialbar-chart'] === false) $('#v2-radialbar-chart-container').addClass('d-none'); else $('#v2-radialbar-chart-container').removeClass('d-none');
+        if (prefs['mixed-chart'] === false) $('#v2-mixed-chart-container').addClass('d-none'); else $('#v2-mixed-chart-container').removeClass('d-none');
+        if (prefs['line-chart'] === false) $('#v2-line-chart-container').addClass('d-none'); else $('#v2-line-chart-container').removeClass('d-none');
+        if (prefs['apps'] === false) $('#v2-row-apps').addClass('d-none'); else $('#v2-row-apps').removeClass('d-none');
+        if (prefs['tablas'] === false) $('#v2-row-tablas').addClass('d-none'); else $('#v2-row-tablas').removeClass('d-none');
+    }
+
+    function cargarPreferenciasV2() {
+        const saved = localStorage.getItem('arco_dashboard_v2_pref');
+        if (saved) {
+            const prefs = JSON.parse(saved);
+            $('.chk-v2-area').each(function() {
+                const a = $(this).data('area');
+                if (prefs[a] !== undefined) $(this).prop('checked', prefs[a]);
+            });
+            ejecutarVisibilidadV2(prefs);
+        }
+    }
+
+    // ========================================================
+    // INICIALIZACIÓN
+    // ========================================================
+    $(document).ready(function() {
+        actualizarRelojEnVivo();
+        cargarPreferenciasV2();
+
+        // Renderizar los 6 gráficos oficiales de AdminLTE 4
+        setVentasMesesV2(12);
+        setStackedDiasV2(12);
+        renderDonutChart(prodLabels, prodValores);
+        renderRadialBarChart();
+        setVendedorDiasV2(12);
+        renderLineChart();
+
+        // Escuchar cambio dinámico de tema Claro / Oscuro
+        $(document).on('themeChanged', function() {
+            setTimeout(function() {
+                renderDonutChart(prodLabels, prodValores);
+                renderRadialBarChart();
+            }, 50);
+        });
+
+        // Polling cada 30 segundos
+        setInterval(sincronizarDashboardV2, 30000);
+        setInterval(actualizarRelojEnVivo, 1000);
+    });
+</script>
+}

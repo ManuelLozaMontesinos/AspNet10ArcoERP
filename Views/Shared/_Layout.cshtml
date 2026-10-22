@@ -58,6 +58,11 @@
                             <i class="bi bi-speedometer2 text-primary me-1"></i>Tablero
                         </a>
                     </li>
+                    <li class="nav-item d-none d-md-block">
+                        <a asp-controller="Home" asp-action="V2" class="nav-link fw-semibold">
+                            <i class="bi bi-speedometer text-warning me-1"></i>Tablero V2
+                        </a>
+                    </li>
                     <li class="nav-item d-none d-lg-block">
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 ms-2">
                             <i class="bi bi-building me-1"></i>@empresaNombre &mdash; @sedeNombre
@@ -162,9 +167,20 @@
                         
                         <!-- Tablero Principal -->
                         <li class="nav-item">
-                            <a asp-area="" asp-controller="Home" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                            <a asp-area="" asp-controller="Home" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && (ViewContext.RouteData.Values["action"]?.ToString() == "Index" || string.IsNullOrEmpty(ViewContext.RouteData.Values["action"]?.ToString())) ? "active" : "")">
                                 <i class="nav-icon bi bi-speedometer2 text-info"></i>
                                 <p>Tablero Principal</p>
+                            </a>
+                        </li>
+
+                        <!-- Tablero Principal V2 (AdminLTE 4 Puro) -->
+                        <li class="nav-item">
+                            <a asp-area="" asp-controller="Home" asp-action="V2" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "V2" ? "active" : "")">
+                                <i class="nav-icon bi bi-speedometer text-warning"></i>
+                                <p>
+                                    Tablero Principal V2
+                                    <span class="badge text-bg-warning ms-1">V2 Pro</span>
+                                </p>
                             </a>
                         </li>
 

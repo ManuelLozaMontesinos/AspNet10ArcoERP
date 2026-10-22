@@ -145,15 +145,15 @@
                     <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Filtro de Tipo">
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(string.IsNullOrEmpty(tipoFiltro) ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-grid-fill me-1"></i>Todos <span class="badge bg-white text-primary ms-1">@totalCount</span>
+                            <i class="bi bi-grid-fill me-1"></i>Todos <span class="badge @(string.IsNullOrEmpty(tipoFiltro) ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@totalCount</span>
                         </a>
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "P", grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(tipoFiltro == "P" ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-box-seam me-1"></i>Productos <span class="badge bg-white text-primary ms-1">@productosCount</span>
+                            <i class="bi bi-box-seam me-1"></i>Productos <span class="badge @(tipoFiltro == "P" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@productosCount</span>
                         </a>
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "S", grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(tipoFiltro == "S" ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-gear-wide-connected me-1"></i>Servicios <span class="badge bg-white text-primary ms-1">@serviciosCount</span>
+                            <i class="bi bi-gear-wide-connected me-1"></i>Servicios <span class="badge @(tipoFiltro == "S" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@serviciosCount</span>
                         </a>
                     </div>
 

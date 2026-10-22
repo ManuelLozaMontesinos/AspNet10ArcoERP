@@ -47,7 +47,7 @@ namespace AspNet10ArcoERP.Services
                 WHERE f.familia_producto_id = @FamiliaId
                     AND f.estado = 'A' AND c.estado = 'A' AND g.estado = 'A'
                     AND (@TipoProductoId IS NULL OR g.tipo_producto_id = @TipoProductoId)
-                    AND (@RequireComboGroup = 0 OR g.es_combo = 'S')
+                    AND (@RequireComboGroup = 0 OR g.es_combo = 'S' OR g.tipo_producto_id = 2)
                 GROUP BY g.grupo_producto, c.clase_producto, f.familia_producto, f.correla";
             var family = await conn.QueryFirstOrDefaultAsync<SkuFamilyData>(
                 sql,
@@ -343,13 +343,13 @@ namespace AspNet10ArcoERP.Services
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = @"
                 SELECT 
-                    cond_pago_id AS Id,
-                    cond_pago AS Codigo,
-                    nombre AS Nombre,
-                    tipo_c_pago_id AS TipoCondicionPagoId,
+                    cp.cond_pago_id AS Id,
+                    cp.cond_pago AS Codigo,
+                    cp.nombre AS Nombre,
+                    cp.tipo_c_pago_id AS TipoCondicionPagoId,
                     ISNULL(tcp.nombre, '') AS TipoCondicionPagoNombre,
-                    dia AS Dias,
-                    estado AS Estado
+                    cp.dia AS Dias,
+                    cp.estado AS Estado
                 FROM cond_pago cp
                 INNER JOIN tipo_c_pago tcp ON tcp.tipo_c_pago_id = cp.tipo_c_pago_id
                 WHERE cp.empresa_id = @EmpresaId
@@ -643,11 +643,11 @@ namespace AspNet10ArcoERP.Services
         // =========================================================================
         // 7. FAMILIA DE PRODUCTO
         // =========================================================================
-        public async Task<List<GrupoClaseFamiliaModel>> GetFamiliasProductoAsync()
+        public async Task<List<GrupoClaseFamiliaModel>> GetFamiliasProductoAsync(int? claseId = null, int? grupoId = null)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = @"
-                SELECT TOP 300
+                SELECT 
                     g.grupo_producto_id AS GrupoId,
                     g.grupo_producto AS GrupoCodigo,
                     g.nombre AS GrupoNombre,
@@ -662,9 +662,14 @@ namespace AspNet10ArcoERP.Services
                 FROM familia_producto f
                 INNER JOIN clase_producto c ON f.clase_producto_id = c.clase_producto_id
                 INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id
+                WHERE (@ClaseId IS NULL OR f.clase_producto_id = @ClaseId)
+                  AND (@GrupoId IS NULL OR c.grupo_producto_id = @GrupoId)
                 ORDER BY g.nombre, c.nombre, f.nombre";
 
-            var rows = await conn.QueryAsync<GrupoClaseFamiliaModel>(sql);
+            var rows = await conn.QueryAsync<GrupoClaseFamiliaModel>(sql, new {
+                ClaseId = (claseId > 0) ? claseId : null,
+                GrupoId = (grupoId > 0) ? grupoId : null
+            });
             return rows.ToList();
         }
 
@@ -754,7 +759,7 @@ namespace AspNet10ArcoERP.Services
             return rows.ToList();
         }
 
-        public async Task<List<GrupoProductoModel>> GetGruposProductoAsync(int? tipoProductoId = null)
+        public async Task<List<GrupoProductoModel>> GetGruposProductoAsync(int? tipoProductoId = null, string? search = null, string? estado = null)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = @"
@@ -762,12 +767,20 @@ namespace AspNet10ArcoERP.Services
                        tp.nombre AS TipoProductoNombre, g.grupo_producto AS Codigo, g.nombre AS Nombre,
                        g.correla AS Correlativo, g.usar_inc_fracc AS UsarIncrementoFraccion,
                        g.es_combo AS EsCombo, g.es_insumo AS EsInsumo, g.estado AS Estado,
-                       g.fecha_alta AS FechaAlta, g.fecha_baja AS FechaBaja
+                       g.fecha_alta AS FechaAlta, g.fecha_baja AS FechaBaja,
+                       (SELECT COUNT(1) FROM clase_producto cp WHERE cp.grupo_producto_id = g.grupo_producto_id) AS ClasesCount,
+                       (SELECT COUNT(1) FROM familia_producto fp INNER JOIN clase_producto cp ON fp.clase_producto_id = cp.clase_producto_id WHERE cp.grupo_producto_id = g.grupo_producto_id) AS FamiliasCount
                 FROM grupo_producto g
                 INNER JOIN tipo_producto tp ON tp.tipo_producto_id = g.tipo_producto_id
                 WHERE (@TipoProductoId IS NULL OR g.tipo_producto_id = @TipoProductoId)
+                  AND (@Estado IS NULL OR g.estado = @Estado)
+                  AND (@Search IS NULL OR g.grupo_producto LIKE '%' + @Search + '%' OR g.nombre LIKE '%' + @Search + '%')
                 ORDER BY tp.nombre, g.nombre";
-            var rows = await conn.QueryAsync<GrupoProductoModel>(sql, new { TipoProductoId = tipoProductoId > 0 ? tipoProductoId : null });
+            var rows = await conn.QueryAsync<GrupoProductoModel>(sql, new { 
+                TipoProductoId = tipoProductoId > 0 ? tipoProductoId : null,
+                Estado = string.IsNullOrWhiteSpace(estado) ? null : estado.Trim(),
+                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()
+            });
             return rows.ToList();
         }
 
@@ -779,7 +792,9 @@ namespace AspNet10ArcoERP.Services
                        tp.nombre AS TipoProductoNombre, g.grupo_producto AS Codigo, g.nombre AS Nombre,
                        g.correla AS Correlativo, g.usar_inc_fracc AS UsarIncrementoFraccion,
                        g.es_combo AS EsCombo, g.es_insumo AS EsInsumo, g.estado AS Estado,
-                       g.fecha_alta AS FechaAlta, g.fecha_baja AS FechaBaja
+                       g.fecha_alta AS FechaAlta, g.fecha_baja AS FechaBaja,
+                       (SELECT COUNT(1) FROM clase_producto cp WHERE cp.grupo_producto_id = g.grupo_producto_id) AS ClasesCount,
+                       (SELECT COUNT(1) FROM familia_producto fp INNER JOIN clase_producto cp ON fp.clase_producto_id = cp.clase_producto_id WHERE cp.grupo_producto_id = g.grupo_producto_id) AS FamiliasCount
                 FROM grupo_producto g
                 INNER JOIN tipo_producto tp ON tp.tipo_producto_id = g.tipo_producto_id
                 WHERE g.grupo_producto_id = @Id";
@@ -865,12 +880,14 @@ namespace AspNet10ArcoERP.Services
                 SELECT c.clase_producto_id AS Id, c.grupo_producto_id AS GrupoId, g.nombre AS GrupoNombre,
                        c.clase_producto AS Codigo, c.nombre AS Nombre, c.correla AS Correlativo,
                        c.tipo_detrac_id AS TipoDetraccionId, ISNULL(td.nombre, '') AS TipoDetraccionNombre,
+                       ISNULL(td.tasa, 0) AS TipoDetraccionTasa,
+                       (SELECT COUNT(1) FROM familia_producto fp WHERE fp.clase_producto_id = c.clase_producto_id) AS FamiliasCount,
                        c.estado AS Estado, c.fecha_alta AS FechaAlta, c.fecha_baja AS FechaBaja
                 FROM clase_producto c
                 INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
                 LEFT JOIN tipo_detrac td ON td.tipo_detrac_id = c.tipo_detrac_id
                 WHERE (@GrupoId IS NULL OR c.grupo_producto_id = @GrupoId)
-                ORDER BY g.nombre, c.nombre";
+                ORDER BY c.clase_producto, c.nombre";
             var rows = await conn.QueryAsync<ClaseProductoModel>(sql, new { GrupoId = grupoId > 0 ? grupoId : null });
             return rows.ToList();
         }
@@ -882,6 +899,8 @@ namespace AspNet10ArcoERP.Services
                 SELECT c.clase_producto_id AS Id, c.grupo_producto_id AS GrupoId, g.nombre AS GrupoNombre,
                        c.clase_producto AS Codigo, c.nombre AS Nombre, c.correla AS Correlativo,
                        c.tipo_detrac_id AS TipoDetraccionId, ISNULL(td.nombre, '') AS TipoDetraccionNombre,
+                       ISNULL(td.tasa, 0) AS TipoDetraccionTasa,
+                       (SELECT COUNT(1) FROM familia_producto fp WHERE fp.clase_producto_id = c.clase_producto_id) AS FamiliasCount,
                        c.estado AS Estado, c.fecha_alta AS FechaAlta, c.fecha_baja AS FechaBaja
                 FROM clase_producto c
                 INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
@@ -2319,20 +2338,53 @@ namespace AspNet10ArcoERP.Services
         public async Task<List<LookupItemModel>> GetGruposCombosLookupAsync()
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            // Primero grupos explícitos de combo, luego el resto de grupos
             const string sql = @"
                 SELECT grupo_producto_id AS Id, grupo_producto AS Codigo, nombre AS Nombre 
                 FROM grupo_producto 
-                WHERE estado = 'A' AND es_combo = 'S'
-                ORDER BY nombre ASC";
+                WHERE estado = 'A' AND (es_combo = 'S' OR tipo_producto_id = 2)
+                ORDER BY tipo_producto_id, nombre ASC";
             var rows = await conn.QueryAsync<LookupItemModel>(sql);
             var list = rows.ToList();
             if (list.Count == 0)
             {
-                // Fallback si no hubiera flag es_combo
                 return await GetGruposProductoLookupAsync(1);
             }
             return list;
+        }
+
+        public async Task<List<LookupItemModel>> GetClasesCombosLookupAsync(int? grupoId = null)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT c.clase_producto_id AS Id, c.clase_producto AS Codigo, c.nombre AS Nombre 
+                FROM clase_producto c
+                INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
+                WHERE c.estado = 'A' 
+                  AND (g.es_combo = 'S' OR g.tipo_producto_id = 2)
+                  AND (@GrupoId IS NULL OR c.grupo_producto_id = @GrupoId)
+                ORDER BY c.nombre ASC";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql, new { GrupoId = (grupoId > 0) ? grupoId : null });
+            return rows.ToList();
+        }
+
+        public async Task<List<LookupItemModel>> GetFamiliasCombosLookupAsync(int? grupoId = null, int? claseId = null)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            string sql = @"
+                SELECT f.familia_producto_id AS Id, f.familia_producto AS Codigo, f.nombre AS Nombre 
+                FROM familia_producto f
+                INNER JOIN clase_producto c ON f.clase_producto_id = c.clase_producto_id
+                INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id
+                WHERE f.estado = 'A'
+                  AND (g.es_combo = 'S' OR g.tipo_producto_id = 2)
+                  AND (@GrupoId IS NULL OR g.grupo_producto_id = @GrupoId)
+                  AND (@ClaseId IS NULL OR f.clase_producto_id = @ClaseId)
+                ORDER BY f.nombre ASC";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql, new { 
+                GrupoId = (grupoId > 0) ? grupoId : null,
+                ClaseId = (claseId > 0) ? claseId : null 
+            });
+            return rows.ToList();
         }
 
         public async Task<List<ProductoComboModel>> GetCombosBandejaAsync(
@@ -2393,7 +2445,7 @@ namespace AspNet10ArcoERP.Services
                 INNER JOIN clase_producto cprd ON cprd.clase_producto_id = fp.clase_producto_id
                 INNER JOIN grupo_producto gp ON gp.grupo_producto_id = cprd.grupo_producto_id
                 LEFT JOIN unidad_medida um ON um.unidad_medida_id = p.unidad_medida_id
-                WHERE (gp.es_combo = 'S' OR p.producto_id IN (SELECT DISTINCT producto_id FROM combo_producto))
+                WHERE (gp.es_combo = 'S' OR gp.tipo_producto_id = 2 OR p.producto_id IN (SELECT DISTINCT producto_id FROM combo_producto))
                   AND (@Search IS NULL OR p.producto LIKE '%' + @Search + '%' OR p.descripcion LIKE '%' + @Search + '%')
                   AND (@GrupoId IS NULL OR gp.grupo_producto_id = @GrupoId)
                   AND (@ClaseId IS NULL OR cprd.clase_producto_id = @ClaseId)
@@ -2447,7 +2499,7 @@ namespace AspNet10ArcoERP.Services
         {
             if (string.IsNullOrWhiteSpace(model.Descripcion))
                 return (false, "La descripción del combo o kit es obligatoria.", 0, "");
-            if (model.FamiliaId <= 0)
+            if (model.Id == 0 && model.FamiliaId <= 0)
                 return (false, "Debe seleccionar la familia del combo.", 0, "");
 
             using var conn = _dbConnectionFactory.CreateConnection();
@@ -2456,7 +2508,7 @@ namespace AspNet10ArcoERP.Services
             using var transaction = conn.BeginTransaction();
             if (model.Id == 0)
             {
-                var sku = await GenerarCodigoSkuAsync(conn, transaction, model.FamiliaId, null, requireComboGroup: true);
+                var sku = await GenerarCodigoSkuAsync(conn, transaction, model.FamiliaId, null, requireComboGroup: false);
                 if (!sku.success)
                     return (false, sku.message, 0, string.Empty);
                 string codigo = sku.codigo;
@@ -2493,19 +2545,12 @@ namespace AspNet10ArcoERP.Services
             }
             else
             {
-                int? familiaActual = await conn.QueryFirstOrDefaultAsync<int?>(
-                    @"SELECT p.familia_producto_id
-                      FROM producto p
-                      INNER JOIN familia_producto f ON f.familia_producto_id = p.familia_producto_id
-                      INNER JOIN clase_producto c ON c.clase_producto_id = f.clase_producto_id
-                      INNER JOIN grupo_producto g ON g.grupo_producto_id = c.grupo_producto_id
-                      WHERE p.producto_id = @Id AND g.es_combo = 'S'",
+                var existingId = await conn.QueryFirstOrDefaultAsync<int?>(
+                    @"SELECT p.producto_id FROM producto p WHERE p.producto_id = @Id",
                     new { model.Id },
                     transaction);
-                if (!familiaActual.HasValue)
+                if (!existingId.HasValue)
                     return (false, "Combo no encontrado.", 0, string.Empty);
-                if (familiaActual.Value != model.FamiliaId)
-                    return (false, "No se puede modificar la jerarquía del combo porque forma parte de su SKU.", 0, string.Empty);
 
                 const string sql = @"
                     UPDATE producto 

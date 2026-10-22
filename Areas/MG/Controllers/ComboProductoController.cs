@@ -40,8 +40,8 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             var list = await _maestrosService.GetCombosBandejaAsync(search, grupoId, claseId, familiaId, estado, sort, dir, top);
 
             ViewBag.GruposCombosLookup = await _maestrosService.GetGruposCombosLookupAsync();
-            ViewBag.ClasesLookup = await _maestrosService.GetClasesProductoLookupAsync(grupoId);
-            ViewBag.FamiliasLookup = await _maestrosService.GetFamiliasProductoLookupAsync(grupoId, claseId);
+            ViewBag.ClasesLookup = await _maestrosService.GetClasesCombosLookupAsync(grupoId);
+            ViewBag.FamiliasLookup = await _maestrosService.GetFamiliasCombosLookupAsync(grupoId, claseId);
             ViewBag.UnidadesLookup = await _maestrosService.GetUnidadesMedidaLookupAsync();
             ViewBag.EstadosProductoLookup = await _maestrosService.GetEstadosProductoLookupAsync();
             ViewBag.EstadosComercialesLookup = await _maestrosService.GetEstadosComercialesProductoLookupAsync();
@@ -123,16 +123,16 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ClasesPorGrupo(int grupoId)
+        public async Task<IActionResult> ClasesPorGrupo(int? grupoId)
         {
-            var clases = await _maestrosService.GetClasesProductoLookupAsync(grupoId);
+            var clases = await _maestrosService.GetClasesCombosLookupAsync(grupoId);
             return Json(new { success = true, data = clases });
         }
 
         [HttpGet]
         public async Task<IActionResult> FamiliasPorClase(int? grupoId, int? claseId)
         {
-            var familias = await _maestrosService.GetFamiliasProductoLookupAsync(grupoId, claseId);
+            var familias = await _maestrosService.GetFamiliasCombosLookupAsync(grupoId, claseId);
             return Json(new { success = true, data = familias });
         }
     }

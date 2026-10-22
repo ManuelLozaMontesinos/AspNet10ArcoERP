@@ -29,18 +29,15 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var list = await _maestrosService.GetFamiliasProductoAsync();
-            ViewBag.ClasesLookup = await _maestrosService.GetClasesProductoLookupAsync();
-            ViewBag.Grupos = await _maestrosService.GetGruposProductoAsync();
-            ViewBag.Clases = await _maestrosService.GetClasesProductoAsync();
+            var grupos = await _maestrosService.GetGruposProductoAsync();
             ViewBag.TiposProducto = await _maestrosService.GetTiposProductoLookupAsync();
             ViewBag.TiposDetraccion = await _maestrosService.GetTiposDetraccionLookupAsync();
-            return View(list);
+            return View(grupos);
         }
 
         [HttpGet]
-        public async Task<IActionResult> ListarGrupos(int? tipoProductoId = null) =>
-            Json(new { success = true, data = await _maestrosService.GetGruposProductoAsync(tipoProductoId) });
+        public async Task<IActionResult> ListarGrupos(int? tipoProductoId = null, string? search = null, string? estado = null) =>
+            Json(new { success = true, data = await _maestrosService.GetGruposProductoAsync(tipoProductoId, search, estado) });
 
         [HttpGet]
         public async Task<IActionResult> ObtenerGrupo(int id)
@@ -89,6 +86,10 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> ListarFamilias(int? claseId = null, int? grupoId = null) =>
+            Json(new { success = true, data = await _maestrosService.GetFamiliasProductoAsync(claseId, grupoId) });
+
+        [HttpGet]
         public async Task<IActionResult> Obtener(int id)
         {
             var item = await _maestrosService.GetFamiliaProductoByIdAsync(id);
@@ -98,12 +99,18 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             return Json(new { success = true, data = item });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> ObtenerFamilia(int id) => await Obtener(id);
+
         [HttpPost]
         public async Task<IActionResult> Guardar([FromForm] GrupoClaseFamiliaModel model)
         {
             var (success, message, id) = await _maestrosService.SaveFamiliaProductoAsync(model, CurrentUserId);
             return Json(new { success, message, id });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> GuardarFamilia([FromForm] GrupoClaseFamiliaModel model) => await Guardar(model);
 
         [HttpPost]
         public async Task<IActionResult> CambiarEstado(int id)
@@ -113,6 +120,9 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> CambiarEstadoFamilia(int id) => await CambiarEstado(id);
+
+        [HttpPost]
         public async Task<IActionResult> Eliminar(int id)
         {
             var (success, message, _) = await _maestrosService.ToggleEstadoFamiliaProductoAsync(id, CurrentUserId);
@@ -120,9 +130,9 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ObtenerClases()
+        public async Task<IActionResult> ObtenerClases(int? grupoId = null)
         {
-            var list = await _maestrosService.GetClasesProductoLookupAsync();
+            var list = await _maestrosService.GetClasesProductoLookupAsync(grupoId);
             return Json(new { success = true, data = list });
         }
     }

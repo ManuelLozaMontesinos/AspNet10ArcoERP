@@ -171,6 +171,8 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
         public DateTime FechaAlta { get; set; } = DateTime.Today;
         public DateTime? FechaBaja { get; set; }
+        public int ClasesCount { get; set; }
+        public int FamiliasCount { get; set; }
     }
 
     public class ClaseProductoModel
@@ -183,6 +185,8 @@ namespace AspNet10ArcoERP.Models
         public short Correlativo { get; set; } = 1;
         public int TipoDetraccionId { get; set; } = 1;
         public string TipoDetraccionNombre { get; set; } = string.Empty;
+        public decimal TipoDetraccionTasa { get; set; }
+        public int FamiliasCount { get; set; }
         public string Estado { get; set; } = "A";
         public DateTime FechaAlta { get; set; } = DateTime.Today;
         public DateTime? FechaBaja { get; set; }

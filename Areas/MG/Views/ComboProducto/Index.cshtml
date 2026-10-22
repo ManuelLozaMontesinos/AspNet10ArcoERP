@@ -124,14 +124,14 @@
                     <input type="hidden" name="dir" value="@currentDir" />
                     <input type="hidden" name="top" value="@currentTop" />
 
-                    <!-- CONTENEDOR DE FILTROS EN LÍNEA -->
-                    <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                    <!-- CONTENEDOR DE FILTROS A LA IZQUIERDA -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- 1. Buscador Amplio -->
-                        <div class="input-group input-group-sm flex-grow-1" style="min-width: 320px; max-width: 440px;">
+                        <div class="input-group input-group-sm" style="min-width: 240px; max-width: 320px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código o descripción de combo..." value="@ViewBag.Search" />
+                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código o descripción..." value="@ViewBag.Search" />
                             <button type="submit" class="btn btn-outline-primary">Buscar</button>
                             @if (!string.IsNullOrEmpty(ViewBag.Search as string) || grupoFiltro.HasValue || claseFiltro.HasValue || familiaFiltro.HasValue || !string.IsNullOrEmpty(estadoFiltro))
                             {
@@ -144,7 +144,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-collection text-info"></i>
                             </span>
-                            <select name="grupoId" class="form-select form-select-sm border-start-0" style="min-width: 150px;" onchange="this.form.submit();" title="Filtrar por Grupo">
+                            <select id="filtro-grupo" name="grupoId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="onFiltroGrupoChange();" title="Filtrar por Grupo">
                                 <option value="" selected="@(!grupoFiltro.HasValue)">Todos los Grupos</option>
                                 @foreach (var g in gruposCombos)
                                 {
@@ -158,7 +158,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-tag text-success"></i>
                             </span>
-                            <select name="claseId" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="this.form.submit();" title="Filtrar por Clase">
+                            <select id="filtro-clase" name="claseId" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="onFiltroClaseChange();" title="Filtrar por Clase">
                                 <option value="" selected="@(!claseFiltro.HasValue)">Todas las Clases</option>
                                 @foreach (var c in clasesLookup)
                                 {
@@ -172,7 +172,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-diagram-3 text-warning"></i>
                             </span>
-                            <select name="familiaId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="this.form.submit();" title="Filtrar por Familia">
+                            <select id="filtro-familia" name="familiaId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="this.form.submit();" title="Filtrar por Familia">
                                 <option value="" selected="@(!familiaFiltro.HasValue)">Todas las Familias</option>
                                 @foreach (var f in familiasLookup)
                                 {
@@ -192,34 +192,36 @@
                                 <option value="I" selected="@(estadoFiltro == "I")">Solo Inactivos</option>
                             </select>
                         </div>
-
-                        <div class="text-muted small ms-2">
-                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> combos</span>
-                        </div>
                     </div>
 
-                    <!-- 6. BOTÓN DROPDOWN 'MOSTRANDO: 25' -->
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
-                            <i class="bi bi-funnel-fill text-primary"></i>
-                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">@currentTop</strong></span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
-                            @foreach (var cant in new[] { 25, 50, 100, 500 })
-                            {
-                                <li>
-                                    <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
-                                       href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = cant })">
-                                        <span>@cant registros</span>
-                                        @if (currentTop == cant)
-                                        {
-                                            <i class="bi bi-check text-primary"></i>
-                                        }
-                                    </a>
-                                </li>
-                            }
-                        </ul>
+                    <!-- TOTAL Y MOSTRANDO: FIRMEMENTE A LA DERECHA (ms-auto) -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> combos</span>
+                        </div>
+
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">@currentTop</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                                @foreach (var cant in new[] { 25, 50, 100, 500 })
+                                {
+                                    <li>
+                                        <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
+                                           href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = cant })">
+                                            <span>@cant registros</span>
+                                            @if (currentTop == cant)
+                                            {
+                                                <i class="bi bi-check text-primary"></i>
+                                            }
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -299,7 +301,7 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-light text-dark border">@item.UnidadMedida</span>
+                                        <span class="badge bg-body-secondary text-body border">@item.UnidadMedida</span>
                                     </td>
                                     <td class="text-center">
                                         @if (item.ItemsCount > 0)
@@ -360,10 +362,11 @@
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-crud-combo" tabindex="-1" aria-labelledby="modalComboLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <form id="form-combo-cabecera" class="modal-content shadow border-0 rounded-4" onsubmit="guardarCabeceraCombo(event);">
+        <form id="form-combo-cabecera" class="modal-content shadow border-0 rounded-4" novalidate onsubmit="guardarComboGeneral(); return false;">
             @Html.AntiForgeryToken()
             <input type="hidden" id="combo-id" name="Id" value="0" />
             <input type="hidden" id="combo-codigo" name="Codigo" value="" />
+            <input type="hidden" id="combo-familia-id" name="FamiliaId" value="0" />
 
             <!-- CABECERA MODAL FIJA -->
             <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary sticky-top">
@@ -401,7 +404,7 @@
                         <div id="row-jerarquia-crear" class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label for="combo-grupo" class="form-label fw-semibold small">Grupo de Combo <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="combo-grupo" name="GrupoId" onchange="cargarClasesPorGrupo(this.value);" required>
+                                <select class="form-select form-select-sm" id="combo-grupo" name="GrupoId" onchange="cargarClasesPorGrupo(this.value);">
                                     <option value="">-- Seleccione Grupo --</option>
                                     @foreach (var g in gruposCombos)
                                     {
@@ -411,13 +414,13 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="combo-clase" class="form-label fw-semibold small">Clase de Producto <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="combo-clase" name="ClaseId" onchange="cargarFamiliasPorClase(this.value);" required disabled>
+                                <select class="form-select form-select-sm" id="combo-clase" name="ClaseId" onchange="cargarFamiliasPorClase(this.value);" disabled>
                                     <option value="">-- Seleccione Clase --</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label for="combo-familia" class="form-label fw-semibold small">Familia de Producto <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="combo-familia" name="FamiliaId" required disabled>
+                                <select class="form-select form-select-sm" id="combo-familia" onchange="$('#combo-familia-id').val(this.value);" disabled>
                                     <option value="">-- Seleccione Familia --</option>
                                 </select>
                             </div>
@@ -438,7 +441,6 @@
                                     <span class="badge bg-body-tertiary text-body border" id="info-clase-nombre">Clase</span>
                                     <i class="bi bi-chevron-right text-muted small"></i>
                                     <span class="badge bg-body-tertiary text-body border" id="info-familia-nombre">Familia</span>
-                                    <input type="hidden" id="edit-familia-id" name="FamiliaId" value="0" />
                                 </div>
                             </div>
                         </div>
@@ -446,14 +448,14 @@
                         <!-- DESCRIPCIÓN DEL COMBO -->
                         <div class="mb-3">
                             <label for="combo-descripcion" class="form-label fw-semibold small">Descripción del Combo / Kit <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="combo-descripcion" name="Descripcion" placeholder="Ej. COMBO 1PL HISPANOS 18MM + 1CJA TORNILLOS 4X50MM" maxlength="150" required />
+                            <input type="text" class="form-control" id="combo-descripcion" name="Descripcion" placeholder="Ej. COMBO 1PL HISPANOS 18MM + 1CJA TORNILLOS 4X50MM" maxlength="150" />
                         </div>
 
                         <!-- ATRIBUTOS: U.M. - ESTADO PROD - ESTADO COMERCIAL - ESTADO -->
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label for="combo-um" class="form-label fw-semibold small">Unidad de Medida <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="combo-um" name="UnidadMedidaId" required>
+                                <select class="form-select form-select-sm" id="combo-um" name="UnidadMedidaId">
                                     @foreach (var um in unidadesLookup)
                                     {
                                         <option value="@um.Id" selected="@(um.Codigo == "UND")">@um.Nombre (@um.Codigo)</option>
@@ -485,13 +487,6 @@
                                     <option value="I">Inactivo</option>
                                 </select>
                             </div>
-                        </div>
-
-                        <!-- BOTÓN GUARDAR CABECERA -->
-                        <div class="text-end mt-3 pt-2 border-top border-secondary-subtle">
-                            <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold shadow-sm" id="btn-guardar-cabecera">
-                                <i class="bi bi-check-circle me-1"></i><span id="btn-guardar-cabecera-lbl">Guardar Cabecera</span>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -606,8 +601,11 @@
                 <span class="text-muted small">
                     <i class="bi bi-shield-check text-success me-1"></i>Gestión Integral de Kits y Combos &bull; Arco ERP
                 </span>
-                <div>
+                <div class="d-flex align-items-center gap-2">
                     <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary px-4 fw-semibold shadow-sm" id="btn-guardar-combo-principal" onclick="guardarComboGeneral();">
+                        <i class="bi bi-check-circle me-1"></i><span id="btn-guardar-combo-lbl">Guardar Combo</span>
+                    </button>
                 </div>
             </div>
         </form>
@@ -618,6 +616,21 @@
 <script>
     var timeoutBusqueda = null;
     var detallesCache = [];
+    var huboCambios = false;
+
+    // =========================================================================
+    // FILTROS EN BANDEJA PRINCIPAL (CASCADA)
+    // =========================================================================
+    function onFiltroGrupoChange() {
+        $('#filtro-clase').val('');
+        $('#filtro-familia').val('');
+        $('#filtro-form').submit();
+    }
+
+    function onFiltroClaseChange() {
+        $('#filtro-familia').val('');
+        $('#filtro-form').submit();
+    }
 
     // =========================================================================
     // CASCADA DE JERARQUÍA EN CREACIÓN
@@ -627,6 +640,7 @@
         var $fam = $('#combo-familia');
         $clase.empty().append('<option value="">-- Seleccione Clase --</option>').prop('disabled', true);
         $fam.empty().append('<option value="">-- Seleccione Familia --</option>').prop('disabled', true);
+        $('#combo-familia-id').val(0);
 
         if (!grupoId) return;
 
@@ -644,6 +658,7 @@
         var $fam = $('#combo-familia');
         var grupoId = $('#combo-grupo').val();
         $fam.empty().append('<option value="">-- Seleccione Familia --</option>').prop('disabled', true);
+        $('#combo-familia-id').val(0);
 
         if (!claseId) return;
 
@@ -661,10 +676,12 @@
     // ABRIR MODAL CREAR / EDITAR
     // =========================================================================
     function abrirModalCrear() {
+        huboCambios = false;
         $('#modal-titulo').text('Nuevo Combo / Kit');
         $('#modal-subtitulo').text('Defina la estructura del combo y luego agregue los artículos que lo componen');
         $('#combo-id').val(0);
         $('#combo-codigo').val('');
+        $('#combo-familia-id').val(0);
         $('#badge-sku-container').addClass('d-none');
 
         // Jerarquía: modo crear activo
@@ -673,7 +690,6 @@
         $('#combo-grupo').val('');
         $('#combo-clase').empty().append('<option value="">-- Seleccione Clase --</option>').prop('disabled', true);
         $('#combo-familia').empty().append('<option value="">-- Seleccione Familia --</option>').prop('disabled', true);
-        $('#edit-familia-id').val(0);
 
         $('#combo-descripcion').val('');
         $('#combo-um').val('1'); // UND
@@ -681,8 +697,8 @@
         $('#combo-estado-com').val('1'); // STOCK
         $('#combo-estado').val('A');
 
-        $('#btn-guardar-cabecera-lbl').text('Crear Combo y Habilitar Artículos');
-        $('#btn-guardar-cabecera').prop('disabled', false);
+        $('#btn-guardar-combo-lbl').text('Crear Combo');
+        $('#btn-guardar-combo-principal').prop('disabled', false);
 
         // Ocultar sección de artículos en creación
         $('#aviso-cabecera-requerida').removeClass('d-none');
@@ -697,6 +713,7 @@
     }
 
     function abrirModalEditar(id) {
+        huboCambios = false;
         $.ajax({
             url: '@Url.Action("Obtener", "ComboProducto", new { area = "MG" })',
             type: 'GET',
@@ -713,13 +730,15 @@
                     $('#badge-sku-code').text(cod);
                     $('#badge-sku-container').removeClass('d-none');
 
+                    var famId = data.familiaId || data.FamiliaId || 0;
+                    $('#combo-familia-id').val(famId);
+
                     // Jerarquía: modo editar bloqueado informativo
                     $('#row-jerarquia-crear').addClass('d-none');
                     $('#panel-jerarquia-editar').removeClass('d-none');
                     $('#info-grupo-nombre').text(data.grupoNombre || data.GrupoNombre || 'Grupo');
                     $('#info-clase-nombre').text(data.claseNombre || data.ClaseNombre || 'Clase');
                     $('#info-familia-nombre').text(data.familiaNombre || data.FamiliaNombre || 'Familia');
-                    $('#edit-familia-id').val(data.familiaId || data.FamiliaId || 0);
 
                     $('#combo-descripcion').val(data.descripcion || data.Descripcion);
                     $('#combo-um').val(data.unidadMedidaId || data.UnidadMedidaId || 1);
@@ -727,8 +746,8 @@
                     $('#combo-estado-com').val(data.estadoComProdId || data.EstadoComProdId || 1);
                     $('#combo-estado').val(data.estado || data.Estado || 'A');
 
-                    $('#btn-guardar-cabecera-lbl').text('Actualizar Datos del Combo');
-                    $('#btn-guardar-cabecera').prop('disabled', false);
+                    $('#btn-guardar-combo-lbl').text('Actualizar Combo');
+                    $('#btn-guardar-combo-principal').prop('disabled', false);
 
                     // Sección de artículos desbloqueada
                     $('#aviso-cabecera-requerida').addClass('d-none');
@@ -752,34 +771,94 @@
     }
 
     // =========================================================================
-    // GUARDAR CABECERA
+    // GUARDAR COMBO GENERAL (CABECERA Y DETALLES)
     // =========================================================================
-    function guardarCabeceraCombo(e) {
-        e.preventDefault();
+    function guardarComboGeneral() {
         var id = parseInt($('#combo-id').val()) || 0;
-        var desc = $('#combo-descripcion').val().trim();
-        var famId = id === 0 ? parseInt($('#combo-familia').val()) || 0 : parseInt($('#edit-familia-id').val()) || 0;
+        var desc = ($('#combo-descripcion').val() || '').trim();
+        var famId = id === 0 
+            ? (parseInt($('#combo-familia').val()) || parseInt($('#combo-familia-id').val()) || 0) 
+            : (parseInt($('#combo-familia-id').val()) || 0);
 
-        if (id === 0 && famId === 0) {
-            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Debe seleccionar la jerarquía completa (Grupo, Clase y Familia).' });
-            return;
+        if (id === 0) {
+            if (!$('#combo-grupo').val()) {
+                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Debe seleccionar el Grupo del combo.' });
+                $('#combo-grupo').focus();
+                return;
+            }
+            if (!$('#combo-clase').val()) {
+                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Debe seleccionar la Clase de producto.' });
+                $('#combo-clase').focus();
+                return;
+            }
+            if (famId <= 0) {
+                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Debe seleccionar la Familia del combo para generar su SKU.' });
+                $('#combo-familia').focus();
+                return;
+            }
         }
+
         if (!desc) {
-            Swal.fire({ icon: 'warning', title: 'Atención', text: 'La descripción del combo es obligatoria.' });
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'La descripción del combo o kit es obligatoria.' });
+            $('#combo-descripcion').focus();
             return;
         }
 
-        var $btn = $('#btn-guardar-cabecera');
+        $('#combo-familia-id').val(famId);
+
+        // Si el usuario seleccionó un artículo en el buscador y no presionó "Agregar", lo incorporamos automáticamente
+        var pendingProdId = parseInt($('#nuevo-prod-inclu-id').val()) || 0;
+        if (pendingProdId > 0 && id > 0) {
+            var cant = parseFloat($('#nuevo-cant').val()) || 1;
+            var porc = parseFloat($('#nuevo-porc').val()) || 100;
+            var numDec = parseInt($('#nuevo-dec').val()) || 1;
+            $.ajax({
+                url: '@Url.Action("GuardarDetalle", "ComboProducto", new { area = "MG" })',
+                type: 'POST',
+                async: false,
+                data: {
+                    Id: 0,
+                    ProductoId: id,
+                    ProdIncluId: pendingProdId,
+                    Cantidad: cant,
+                    PorcentajePrecio: porc,
+                    NumDecRedo: numDec,
+                    Estado: 'A'
+                },
+                success: function(resDet) {
+                    if (resDet && resDet.success) {
+                        limpiarProductoSeleccionado();
+                        huboCambios = true;
+                    }
+                }
+            });
+        }
+
+        var $btn = $('#btn-guardar-combo-principal');
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
 
-        var formData = $('#form-combo-cabecera').serialize();
+        var token = $('input[name="__RequestVerificationToken"]', '#form-combo-cabecera').val();
+        var postData = {
+            __RequestVerificationToken: token,
+            Id: id,
+            Codigo: $('#combo-codigo').val(),
+            FamiliaId: famId,
+            Descripcion: desc,
+            UnidadMedidaId: parseInt($('#combo-um').val()) || 1,
+            EstadoProductoId: parseInt($('#combo-estado-prod').val()) || 1,
+            EstadoComProdId: parseInt($('#combo-estado-com').val()) || 1,
+            Estado: $('#combo-estado').val() || 'A'
+        };
+
         $.ajax({
             url: '@Url.Action("GuardarCabecera", "ComboProducto", new { area = "MG" })',
             type: 'POST',
-            data: formData,
+            data: postData,
             success: function (res) {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i><span id="btn-guardar-cabecera-lbl">Guardar Cabecera</span>');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i><span id="btn-guardar-combo-lbl">' + (id === 0 ? 'Crear Combo' : 'Actualizar Combo') + '</span>');
+
                 if (res && res.success) {
+                    huboCambios = true;
                     if (id === 0) {
                         // Se creó el combo: actualizar id y código, desbloquear artículos
                         $('#combo-id').val(res.id);
@@ -793,11 +872,11 @@
                         $('#info-grupo-nombre').text($('#combo-grupo option:selected').text());
                         $('#info-clase-nombre').text($('#combo-clase option:selected').text());
                         $('#info-familia-nombre').text($('#combo-familia option:selected').text());
-                        $('#edit-familia-id').val(famId);
+                        $('#combo-familia-id').val(famId);
 
                         $('#aviso-cabecera-requerida').addClass('d-none');
                         $('#panel-agregar-articulo').removeClass('d-none');
-                        $('#btn-guardar-cabecera-lbl').text('Actualizar Datos del Combo');
+                        $('#btn-guardar-combo-lbl').text('Actualizar Combo');
                         $('#modal-titulo').text('Combo Creado: ' + res.codigo);
 
                         Swal.fire({
@@ -810,10 +889,15 @@
                     } else {
                         Swal.fire({
                             icon: 'success',
-                            title: '¡Actualizado!',
+                            title: '¡Guardado Correctamente!',
                             text: res.message || 'Datos del combo actualizados correctamente.',
-                            timer: 1500,
+                            timer: 1400,
                             showConfirmButton: false
+                        }).then(function () {
+                            var modalEl = document.getElementById('modal-crud-combo');
+                            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+                            if (modalInstance) modalInstance.hide();
+                            location.reload();
                         });
                     }
                 } else {
@@ -821,7 +905,7 @@
                 }
             },
             error: function () {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i><span id="btn-guardar-cabecera-lbl">Guardar Cabecera</span>');
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i><span id="btn-guardar-combo-lbl">' + (id === 0 ? 'Crear Combo' : 'Actualizar Combo') + '</span>');
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
             }
         });
@@ -956,6 +1040,7 @@
             success: function (res) {
                 $btn.prop('disabled', false).html('<i class="bi bi-plus-lg me-1"></i>Agregar');
                 if (res && res.success) {
+                    huboCambios = true;
                     limpiarProductoSeleccionado();
                     $('#nuevo-cant').val('1.00');
                     $('#nuevo-porc').val('100.00');
@@ -1008,6 +1093,7 @@
                     data: { id: detalleId },
                     success: function (res) {
                         if (res && res.success) {
+                            huboCambios = true;
                             var comboId = parseInt($('#combo-id').val()) || 0;
                             cargarDetallesCombo(comboId);
 
@@ -1080,10 +1166,9 @@
         }
     });
 
-    // Al cerrar el modal, si se guardó cabecera o se agregaron ítems, recargar página si se desea sincronizar bandeja
+    // Al cerrar el modal, si se guardó cabecera o se agregaron ítems, recargar página si hubo cambios
     $('#modal-crud-combo').on('hidden.bs.modal', function () {
-        var id = parseInt($('#combo-id').val()) || 0;
-        if (id > 0) {
+        if (huboCambios) {
             location.reload();
         }
     });

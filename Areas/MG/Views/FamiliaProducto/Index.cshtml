@@ -1,45 +1,44 @@
-@model List<AspNet10ArcoERP.Models.GrupoClaseFamiliaModel>
+@model List<AspNet10ArcoERP.Models.GrupoProductoModel>
 @{
     ViewData["Title"] = "Familias de Producto";
-    var clasesLookup = ViewBag.ClasesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
-    var grupos = ViewBag.Grupos as List<AspNet10ArcoERP.Models.GrupoProductoModel> ?? new();
-    var clases = ViewBag.Clases as List<AspNet10ArcoERP.Models.ClaseProductoModel> ?? new();
     var tiposProducto = ViewBag.TiposProducto as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new();
     var tiposDetraccion = ViewBag.TiposDetraccion as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new();
 }
 
 <style>
-    #modal-crud-familia .modal-content {
-        max-height: 90vh;
+    /* Estilos del Modal Extendido */
+    #modal-crud-grupo .modal-content {
+        max-height: 92vh;
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
-    #modal-crud-familia .modal-body {
-        max-height: calc(90vh - 135px) !important;
+    #modal-crud-grupo .modal-body {
+        max-height: calc(92vh - 130px) !important;
         overflow-y: auto !important;
         flex: 1 1 auto;
         scrollbar-width: thin;
         scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
         scroll-behavior: smooth;
     }
-    #modal-crud-familia .modal-body::-webkit-scrollbar { width: 7px; }
-    #modal-crud-familia .modal-body::-webkit-scrollbar-track { background: transparent; }
-    #modal-crud-familia .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
-    #modal-crud-familia .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
-    /* Estabilidad y altura fija compacta en cabecera de la tabla */
-    .table-fixed-header {
-        table-layout: auto;
-    }
+    #modal-crud-grupo .modal-body::-webkit-scrollbar { width: 7px; }
+    #modal-crud-grupo .modal-body::-webkit-scrollbar-track { background: transparent; }
+    #modal-crud-grupo .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
+    #modal-crud-grupo .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
+
+    /* Apilamiento ordenado para submodales sobre el modal-xl */
+    #modal-sub-clase { z-index: 1065 !important; }
+    #modal-sub-familia { z-index: 1065 !important; }
+
+    /* Cabecera compacta y fija de tablas */
     .table-header-custom th {
-        padding-top: 0.45rem !important;
-        padding-bottom: 0.45rem !important;
-        font-size: 0.78rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        font-size: 0.8rem !important;
         letter-spacing: 0.5px;
         white-space: nowrap !important;
         vertical-align: middle !important;
         height: 40px !important;
-        line-height: 1.2;
     }
     .th-sortable {
         cursor: pointer;
@@ -52,6 +51,7 @@
     }
 </style>
 
+<!-- ENCABEZADO DE PÁGINA -->
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
         <div class="row align-items-center">
@@ -59,300 +59,471 @@
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-diagram-2-fill text-danger me-2" style="font-size: 1.6rem;"></i>Familias de Producto
                 </h3>
-                <small class="text-muted">Jerarquía de categorización de catálogo: Grupo &rarr; Clase &rarr; Familia</small>
+                <small class="text-body-secondary">Catálogo estructurado por Grupos &rarr; Clases &rarr; Familias</small>
             </div>
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
-                    <i class="bi bi-plus-circle-fill me-1"></i>Nueva Familia
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalGrupoCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Grupo
                 </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- CONTENIDO PRINCIPAL -->
 <div class="app-content py-4">
     <div class="container-fluid">
-        <!-- BARRA DE FILTROS: BUSCADOR - CLASE - ESTADO - MOSTRANDO -->
+
+        <!-- BARRA DE FILTROS EN LÍNEA -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
             <div class="card-body py-2 px-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     
-                    <!-- CONTENEDOR DE FILTROS EN LÍNEA -->
+                    <!-- Filtros a la izquierda -->
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- 1. Buscador -->
                         <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por familia, clase o grupo..." onkeyup="aplicarFiltros();" />
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código o nombre de grupo..." onkeyup="aplicarFiltros();" />
                             <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
                         </div>
 
-                        <!-- 2. Clase (Select) -->
+                        <!-- 2. Tipo de Producto -->
                         <div class="input-group input-group-sm" style="width: auto;">
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
-                                <i class="bi bi-collection text-primary"></i>
+                                <i class="bi bi-tag text-primary"></i>
                             </span>
-                            <select id="filtro-clase" class="form-select form-select-sm border-start-0" style="min-width: 160px;" onchange="aplicarFiltros();" title="Filtrar por Clase">
-                                <option value="">Todas las Clases</option>
-                                @foreach (var c in clasesLookup)
+                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 170px;" onchange="aplicarFiltros();" title="Tipo de Producto">
+                                <option value="">Todos los Tipos</option>
+                                @foreach (var tp in tiposProducto)
                                 {
-                                    <option value="@c.Id">@c.Nombre</option>
+                                    <option value="@tp.Nombre">@tp.Nombre</option>
                                 }
                             </select>
                         </div>
 
-                        <!-- 3. Estado (Select) -->
+                        <!-- 3. Estado -->
                         <div class="input-group input-group-sm" style="width: auto;">
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado">
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" onchange="aplicarFiltros();" title="Filtrar por Estado">
                                 <option value="">Todos los Estados</option>
-                                <option value="A">Solo Activos</option>
-                                <option value="I">Solo Inactivos</option>
+                                <option value="A" selected>Activo</option>
+                                <option value="I">Inactivo</option>
                             </select>
                         </div>
-
-                        <div class="text-muted small ms-2">
-                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> familias</span>
-                        </div>
                     </div>
 
-                    <!-- 4. BOTÓN DROPDOWN 'MOSTRANDO: 25' -->
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
-                            <i class="bi bi-funnel-fill text-primary"></i>
-                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">25</strong></span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
-                            <li><a class="dropdown-item item-top active" href="javascript:void(0)" onclick="cambiarTop(25)">25 registros</a></li>
-                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(50)">50 registros</a></li>
-                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(100)">100 registros</a></li>
-                            <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(500)">500 registros</a></li>
-                        </ul>
+                    <!-- Paginación a la derecha -->
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                        <label for="filtro-top" class="form-label mb-0 text-muted small text-nowrap">Mostrando:</label>
+                        <select id="filtro-top" class="form-select form-select-sm" style="width: 85px;" onchange="cambiarTop(this.value)">
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
                     </div>
+
                 </div>
             </div>
         </div>
 
+        <!-- TABLA PRINCIPAL: BANDEJA DE GRUPOS DE PRODUCTO -->
         <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-familias">
-                    <thead class="table-header-custom border-bottom bg-body-tertiary">
-                        <tr>
-                            <th style="width: 70px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-familias', 0, true)">
-                                <span>ID</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th style="width: 90px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-familias', 1, false)">
-                                <span>Cód.</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th class="th-sortable" onclick="ordenarTabla('tabla-familias', 2, false)">
-                                <span>Familia</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th class="th-sortable" onclick="ordenarTabla('tabla-familias', 3, false)">
-                                <span>Clase &bull; Grupo</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th style="width: 110px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-familias', 4, false)">
-                                <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th style="width: 130px;" class="text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model != null && Model.Count > 0)
-                        {
-                            foreach (var item in Model)
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0" id="tabla-grupos">
+                        <thead class="table-light table-header-custom border-bottom">
+                            <tr>
+                                <th class="ps-3 th-sortable" onclick="ordenarTabla(0)" style="width: 140px;">
+                                    Tipo <i class="bi bi-arrow-down-up small text-muted ms-1"></i>
+                                </th>
+                                <th class="th-sortable" onclick="ordenarTabla(1)" style="width: 100px;">
+                                    Código <i class="bi bi-arrow-down-up small text-muted ms-1"></i>
+                                </th>
+                                <th class="th-sortable" onclick="ordenarTabla(2)">
+                                    Nombre del Grupo <i class="bi bi-arrow-down-up small text-muted ms-1"></i>
+                                </th>
+                                <th class="text-center" style="width: 220px;">Estructura</th>
+                                <th class="text-center" style="width: 160px;">Configuración</th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(5)" style="width: 110px;">
+                                    Estado <i class="bi bi-arrow-down-up small text-muted ms-1"></i>
+                                </th>
+                                <th class="text-end pe-3" style="width: 110px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-grupos">
+                            @foreach (var g in Model)
                             {
-                                <tr id="fila-@item.FamiliaId" data-search="@item.FamiliaCodigo.ToLower() @item.FamiliaNombre.ToLower() @item.ClaseNombre.ToLower() @item.GrupoNombre.ToLower()" data-clase="@item.ClaseId" data-estado="@item.Estado">
-                                    <td class="text-center font-monospace text-muted small">@item.FamiliaId</td>
-                                    <td class="text-center font-monospace fw-bold text-primary">@item.FamiliaCodigo</td>
-                                    <td>
-                                        <span class="fw-semibold text-body">@item.FamiliaNombre</span>
-                                    </td>
-                                    <td>
-                                        <span class="text-muted small">@item.ClaseNombre</span>
-                                        <small class="badge bg-secondary-subtle text-secondary border ms-1">@item.GrupoNombre</small>
-                                    </td>
-                                    <td class="text-center">
-                                        @if (item.Estado == "A")
+                                <tr data-tipo="@g.TipoProductoNombre" data-codigo="@g.Codigo" data-nombre="@g.Nombre" data-estado="@g.Estado">
+                                    <td class="ps-3">
+                                        @if (g.TipoProductoNombre.Contains("SERVICIO", StringComparison.OrdinalIgnoreCase))
                                         {
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
+                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-gear me-1"></i>SERVICIO</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-box-seam me-1"></i>PRODUCTO</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary border font-monospace fw-bold px-2 py-1">@g.Codigo</span>
+                                    </td>
+                                    <td class="fw-semibold">
+                                        @g.Nombre
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border me-1" title="@g.ClasesCount clases asociadas">
+                                            <i class="bi bi-diagram-3 me-1"></i>@g.ClasesCount Clases
+                                        </span>
+                                        <span class="badge bg-secondary-subtle text-body-secondary border" title="@g.FamiliasCount familias asociadas">
+                                            <i class="bi bi-collection me-1"></i>@g.FamiliasCount Familias
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        @{
+                                            var hasFlags = false;
+                                            if (g.UsarIncrementoFraccion == "S") { hasFlags = true; <span class="badge bg-warning-subtle text-dark border me-1" title="Incrementa precio si es fracción">Fracc.</span> }
+                                            if (g.EsCombo == "S") { hasFlags = true; <span class="badge bg-success-subtle text-success border me-1" title="Configurado como Combo">Combo</span> }
+                                            if (g.EsInsumo == "S") { hasFlags = true; <span class="badge bg-danger-subtle text-danger border me-1" title="Configurado como Insumo">Insumo</span> }
+                                            if (!hasFlags) { <span class="text-muted small">—</span> }
                                         }
                                     </td>
                                     <td class="text-center">
-                                        <div class="d-inline-flex gap-2 align-items-center justify-content-center">
-                                            <button class="btn btn-sm btn-outline-primary px-2 py-1 shadow-sm btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.FamiliaId);">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") px-2 py-1 shadow-sm btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.FamiliaId, '@item.Estado', '@item.FamiliaNombre');">
-                                                <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                        @if (g.Estado == "A")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="bi bi-check-circle me-1"></i>Activo
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                                <i class="bi bi-dash-circle me-1"></i>Inactivo
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-3 text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editarGrupo(@g.Id)" title="Editar Grupo y Jerarquía">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cambiarEstadoGrupo(@g.Id, '@g.Estado', '@Html.Raw(g.Nombre.Replace("'", "\\'"))')" title="Cambiar Estado">
+                                            <i class="bi bi-toggle-on"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Any())
+                            {
+                                <tr id="fila-sin-datos">
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>No se encontraron grupos registrados.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- CONTADOR DE REGISTROS -->
+                <div class="d-flex align-items-center justify-content-between p-3 border-top bg-body-tertiary">
+                    <span class="text-muted small" id="contador-registros">Cargando registros...</span>
+                    <div id="paginador-info" class="small text-muted"></div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL EXTENDIDO: GESTIÓN DE GRUPO + CLASES + FAMILIAS     -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-crud-grupo" tabindex="-1" aria-labelledby="modalGrupoLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow border-0 rounded-4 bg-body">
+            
+            <div class="modal-header sticky-top bg-body-tertiary border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold" id="modalGrupoLabel">
+                    <i class="bi bi-diagram-2 text-danger me-2"></i><span id="modal-grupo-titulo">Nuevo Grupo de Producto</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                
+                <!-- SECCIÓN SUPERIOR: DATOS GENERALES DEL GRUPO -->
+                <div class="card border shadow-none bg-body-tertiary rounded-3 mb-4">
+                    <div class="card-header bg-transparent border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold text-body"><i class="bi bi-card-heading me-1 text-primary"></i>Datos Generales del Grupo</span>
+                        <span class="badge bg-secondary-subtle text-body-secondary font-monospace" id="lbl-grupo-codigo-badge"></span>
+                    </div>
+                    <div class="card-body p-3">
+                        <form id="form-grupo" onsubmit="guardarGrupo(event);">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" id="grupo-id" value="0" />
+
+                            <div class="row g-3">
+                                <!-- Tipo de Producto -->
+                                <div class="col-md-3">
+                                    <label for="grupo-tipo-id" class="form-label fw-semibold small">Tipo de Producto <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="grupo-tipo-id" required>
+                                        <option value="">-- Seleccionar --</option>
+                                        @foreach (var tp in tiposProducto)
+                                        {
+                                            <option value="@tp.Id">@tp.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                <!-- Código -->
+                                <div class="col-md-2">
+                                    <label for="grupo-codigo" class="form-label fw-semibold small">Código <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm text-uppercase font-monospace fw-bold" id="grupo-codigo" maxlength="3" placeholder="01" required />
+                                </div>
+
+                                <!-- Nombre -->
+                                <div class="col-md-7">
+                                    <label for="grupo-nombre" class="form-label fw-semibold small">Nombre del Grupo <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm text-uppercase" id="grupo-nombre" maxlength="100" placeholder="Ej: ACABADOS..." required />
+                                </div>
+
+                                <!-- Opciones y Flags -->
+                                <div class="col-12 border-top pt-2 mt-2">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                        <div class="d-flex flex-wrap align-items-center gap-4">
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" id="grupo-inc-fracc" />
+                                                <label class="form-check-label small fw-medium" for="grupo-inc-fracc">Incrementar P.U. si es Fracción</label>
+                                            </div>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" id="grupo-combo" />
+                                                <label class="form-check-label small fw-medium" for="grupo-combo">Es Combo</label>
+                                            </div>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" id="grupo-insumo" />
+                                                <label class="form-check-label small fw-medium" for="grupo-insumo">Es Insumo</label>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <label for="grupo-estado" class="small fw-semibold mb-0 text-muted">Estado:</label>
+                                                <select class="form-select form-select-sm" id="grupo-estado" style="width: 110px;">
+                                                    <option value="A">Activo</option>
+                                                    <option value="I">Inactivo</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btn-guardar-grupo">
+                                                <i class="bi bi-save me-1"></i><span id="btn-guardar-grupo-texto">Guardar Grupo</span>
                                             </button>
                                         </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr id="fila-vacia">
-                                <td colspan="6" class="text-center text-muted py-5">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
-                                    <span>No se encontraron familias de producto</span>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN INFERIOR: PESTAÑAS DE JERARQUÍA (CLASES Y FAMILIAS) -->
+                <div id="seccion-jerarquia">
+                    
+                    <!-- Aviso cuando es grupo nuevo -->
+                    <div id="alert-grupo-nuevo" class="alert alert-info d-flex align-items-center rounded-3 mb-0" style="display: none;">
+                        <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                        <div>
+                            <strong>Grupo sin guardar:</strong> Complete los datos generales del grupo y presione <em>"Guardar Grupo"</em> para activar y gestionar sus Clases y Familias asociadas.
+                        </div>
+                    </div>
+
+                    <!-- Contenedor con Tabs cuando el grupo existe -->
+                    <div id="contenedor-tabs-jerarquia">
+                        <ul class="nav nav-tabs nav-tabs-bordered" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active fw-semibold" id="tab-clases-btn" data-bs-toggle="tab" data-bs-target="#tab-clases-pane" type="button" role="tab">
+                                    <i class="bi bi-diagram-3 me-1 text-primary"></i>Clases (<span id="count-sub-clases">0</span>)
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fw-semibold" id="tab-familias-btn" data-bs-toggle="tab" data-bs-target="#tab-familias-pane" type="button" role="tab">
+                                    <i class="bi bi-collection me-1 text-info"></i>Familias (<span id="count-sub-familias">0</span>)
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content border border-top-0 rounded-bottom-3 p-3 bg-body">
+                            
+                            <!-- PESTAÑA 1: CLASES -->
+                            <div class="tab-pane fade show active" id="tab-clases-pane" role="tabpanel">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="small text-muted">
+                                        Clases vinculadas a este Grupo de Producto
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalSubClaseCrear();">
+                                        <i class="bi bi-plus-circle me-1"></i>Nueva Clase
+                                    </button>
+                                </div>
+                                <div class="table-responsive border rounded-2">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 90px;">Código</th>
+                                                <th>Nombre de la Clase</th>
+                                                <th>Tipo Detracción</th>
+                                                <th class="text-end" style="width: 100px;">Tasa (%)</th>
+                                                <th class="text-center" style="width: 100px;">Familias</th>
+                                                <th class="text-center" style="width: 95px;">Estado</th>
+                                                <th class="text-end" style="width: 95px;">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-sub-clases">
+                                            <tr><td colspan="7" class="text-center text-muted py-3">Cargando clases...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- PESTAÑA 2: FAMILIAS -->
+                            <div class="tab-pane fade" id="tab-familias-pane" role="tabpanel">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label for="sub-filtro-clase" class="small fw-semibold text-muted text-nowrap">Clase de Producto:</label>
+                                        <select id="sub-filtro-clase" class="form-select form-select-sm" style="min-width: 260px;" onchange="cargarFamiliasDeGrupo();">
+                                            <option value="">Todas las Clases del Grupo</option>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" id="btn-nueva-sub-fam" onclick="abrirModalSubFamiliaCrear();">
+                                        <i class="bi bi-plus-circle me-1"></i>Nueva Familia
+                                    </button>
+                                </div>
+                                <div class="table-responsive border rounded-2">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 90px;">Código</th>
+                                                <th>Nombre de la Familia</th>
+                                                <th>Clase</th>
+                                                <th class="text-center" style="width: 95px;">Estado</th>
+                                                <th class="text-end" style="width: 95px;">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-sub-familias">
+                                            <tr><td colspan="5" class="text-center text-muted py-3">Seleccione una clase o espere la carga...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
-        </div>
-    </div>
-    <div class="row g-3 mt-1">
-        <div class="col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-body d-flex justify-content-between align-items-center">
-                    <div><h5 class="mb-0 fw-semibold"><i class="bi bi-collection me-2"></i>Grupos de Producto</h5><small class="text-muted">Primer nivel de la jerarquía</small></div>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirModalGrupo()"><i class="bi bi-plus-circle me-1"></i>Nuevo Grupo</button>
-                </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-striped table-hover align-middle mb-0">
-                        <thead><tr><th>Código</th><th>Grupo</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
-                        <tbody>
-                            @foreach (var grupo in grupos)
-                            {
-                                <tr>
-                                    <td><span class="badge bg-secondary-subtle text-secondary border font-monospace">@grupo.Codigo</span></td>
-                                    <td>@grupo.Nombre</td><td>@grupo.TipoProductoNombre</td>
-                                    <td>@if (grupo.Estado == "A") { <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span> } else { <span class="badge bg-secondary-subtle text-secondary border">Inactivo</span> }</td>
-                                    <td class="text-end text-nowrap">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarGrupo(@grupo.Id)" title="Editar"><i class="bi bi-pencil"></i></button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cambiarEstadoJerarquia('Grupo', @grupo.Id, '@grupo.Estado', this)" data-nombre="@grupo.Nombre" title="Cambiar estado"><i class="bi bi-toggle-on"></i></button>
-                                    </td>
-                                </tr>
-                            }
-                            @if (grupos.Count == 0) { <tr><td colspan="5" class="text-center text-muted py-3">No hay grupos registrados.</td></tr> }
-                        </tbody>
-                    </table>
-                </div>
+
+            <div class="modal-footer sticky-bottom bg-body-tertiary border-top py-2 px-4">
+                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cerrar</button>
             </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-body d-flex justify-content-between align-items-center">
-                    <div><h5 class="mb-0 fw-semibold"><i class="bi bi-diagram-3 me-2"></i>Clases de Producto</h5><small class="text-muted">Segundo nivel de la jerarquía</small></div>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirModalClase()"><i class="bi bi-plus-circle me-1"></i>Nueva Clase</button>
-                </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-striped table-hover align-middle mb-0">
-                        <thead><tr><th>Código</th><th>Clase</th><th>Grupo</th><th>Estado</th><th></th></tr></thead>
-                        <tbody>
-                            @foreach (var clase in clases)
-                            {
-                                <tr>
-                                    <td><span class="badge bg-secondary-subtle text-secondary border font-monospace">@clase.Codigo</span></td>
-                                    <td>@clase.Nombre</td><td>@clase.GrupoNombre</td>
-                                    <td>@if (clase.Estado == "A") { <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span> } else { <span class="badge bg-secondary-subtle text-secondary border">Inactivo</span> }</td>
-                                    <td class="text-end text-nowrap">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarClase(@clase.Id)" title="Editar"><i class="bi bi-pencil"></i></button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cambiarEstadoJerarquia('Clase', @clase.Id, '@clase.Estado', this)" data-nombre="@clase.Nombre" title="Cambiar estado"><i class="bi bi-toggle-on"></i></button>
-                                    </td>
-                                </tr>
-                            }
-                            @if (clases.Count == 0) { <tr><td colspan="5" class="text-center text-muted py-3">No hay clases registradas.</td></tr> }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+
         </div>
     </div>
 </div>
 
 <!-- ======================================================== -->
-<!-- MODAL ÚNICO CRUD: GRUPO, CLASE Y FAMILIA                  -->
+<!-- SUB-MODAL 1: NUEVA / EDITAR CLASE                         -->
 <!-- ======================================================== -->
-<div class="modal fade" id="modal-crud-familia" tabindex="-1" aria-labelledby="modalFamLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <form class="modal-content shadow border-0 rounded-4" id="form-familia" onsubmit="guardarJerarquia(event);">
+<div class="modal fade" id="modal-sub-clase" tabindex="-1" aria-labelledby="modalSubClaseLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content shadow border-0 rounded-4 bg-body" id="form-sub-clase" onsubmit="guardarSubClase(event);">
             @Html.AntiForgeryToken()
-            <div class="modal-header sticky-top bg-body-tertiary border-bottom py-3 px-4">
-                <h5 class="modal-title fw-bold" id="modalFamLabel">
-                    <i class="bi bi-diagram-2 text-danger me-2"></i><span id="modal-titulo">Maestros de Producto</span>
-                </h5>
+            <div class="modal-header py-2 px-3 border-bottom bg-body-tertiary">
+                <h6 class="modal-title fw-bold" id="modalSubClaseLabel"><i class="bi bi-diagram-3 me-2 text-primary"></i><span id="sub-clase-titulo">Nueva Clase</span></h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <div class="modal-body p-4">
-                <ul class="nav nav-tabs mb-3" role="tablist">
-                    <li class="nav-item"><button class="nav-link active" id="tab-familia-btn" data-bs-toggle="tab" data-bs-target="#tab-familia" type="button">Familia</button></li>
-                    <li class="nav-item"><button class="nav-link" id="tab-grupo-btn" data-bs-toggle="tab" data-bs-target="#tab-grupo" type="button">Grupo</button></li>
-                    <li class="nav-item"><button class="nav-link" id="tab-clase-btn" data-bs-toggle="tab" data-bs-target="#tab-clase" type="button">Clase</button></li>
-                </ul>
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="tab-familia">
-                <input type="hidden" id="fam-id" name="FamiliaId" value="0" />
-                    <div class="mb-3">
-                        <label for="fam-clase-id" class="form-label fw-semibold">Clase de Producto <span class="text-danger">*</span></label>
-                        <select class="form-select" id="fam-clase-id" name="ClaseId">
-                            <option value="">-- Seleccione una clase --</option>
-                            @foreach (var c in clasesLookup)
-                            {
-                                <option value="@c.Id">@c.Nombre (@c.Codigo)</option>
-                            }
-                        </select>
+            <div class="modal-body p-3">
+                <input type="hidden" id="sub-clase-id" value="0" />
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Grupo de Producto</label>
+                    <input type="text" class="form-control form-control-sm bg-body-tertiary" id="sub-clase-grupo-nombre" readonly />
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <label for="sub-clase-codigo" class="form-label small fw-semibold">Código <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm text-uppercase font-monospace fw-bold" id="sub-clase-codigo" maxlength="3" placeholder="PLA" required />
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-4">
-                            <label for="fam-codigo" class="form-label fw-semibold">Código</label>
-                            <input type="text" class="form-control text-uppercase" id="fam-codigo" name="FamiliaCodigo" placeholder="001" maxlength="3" />
-                        </div>
-                        <div class="col-8">
-                            <label for="fam-nombre" class="form-label fw-semibold">Nombre de la Familia <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="fam-nombre" name="FamiliaNombre" placeholder="Ej: Pinturas Epóxicas..." maxlength="100" />
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <label for="fam-estado" class="form-label fw-semibold">Estado</label>
-                        <select class="form-select" id="fam-estado" name="Estado">
-                            <option value="A">Activo</option>
-                            <option value="I">Inactivo</option>
-                        </select>
-                    </div>
-                    </div>
-                    <div class="tab-pane fade" id="tab-grupo">
-                        <input type="hidden" id="grupo-id" value="0" />
-                        <div class="row g-3">
-                            <div class="col-md-4"><label class="form-label fw-semibold" for="grupo-tipo">Tipo de Producto *</label><select class="form-select" id="grupo-tipo"><option value="">Seleccione...</option>@foreach (var tipo in tiposProducto) { <option value="@tipo.Id">@tipo.Nombre</option> }</select></div>
-                            <div class="col-md-2"><label class="form-label fw-semibold" for="grupo-codigo">Código *</label><input class="form-control text-uppercase font-monospace" id="grupo-codigo" maxlength="3" /></div>
-                            <div class="col-md-6"><label class="form-label fw-semibold" for="grupo-nombre">Nombre *</label><input class="form-control" id="grupo-nombre" maxlength="100" /></div>
-                            <div class="col-md-3"><label class="form-label fw-semibold" for="grupo-correlativo">Correlativo</label><input type="number" min="1" max="32767" class="form-control" id="grupo-correlativo" value="1" /></div>
-                            <div class="col-md-3"><label class="form-label fw-semibold" for="grupo-inc-fracc">Incremento fraccionario</label><select class="form-select" id="grupo-inc-fracc"><option value="N">No</option><option value="S">Sí</option></select></div>
-                            <div class="col-md-3"><label class="form-label fw-semibold" for="grupo-combo">Es combo</label><select class="form-select" id="grupo-combo"><option value="N">No</option><option value="S">Sí</option></select></div>
-                            <div class="col-md-3"><label class="form-label fw-semibold" for="grupo-insumo">Es insumo</label><select class="form-select" id="grupo-insumo"><option value="N">No</option><option value="S">Sí</option></select></div>
-                            <div class="col-md-3"><label class="form-label fw-semibold" for="grupo-estado">Estado</label><select class="form-select" id="grupo-estado"><option value="A">Activo</option><option value="I">Inactivo</option></select></div>
-                        </div>
-                    </div>
-                    <div class="tab-pane fade" id="tab-clase">
-                        <input type="hidden" id="clase-id" value="0" />
-                        <div class="row g-3">
-                            <div class="col-md-5"><label class="form-label fw-semibold" for="clase-grupo">Grupo *</label><select class="form-select" id="clase-grupo"><option value="">Seleccione...</option>@foreach (var grupo in grupos.Where(x => x.Estado == "A")) { <option value="@grupo.Id">@grupo.Nombre (@grupo.Codigo)</option> }</select></div>
-                            <div class="col-md-2"><label class="form-label fw-semibold" for="clase-codigo">Código *</label><input class="form-control text-uppercase font-monospace" id="clase-codigo" maxlength="3" /></div>
-                            <div class="col-md-5"><label class="form-label fw-semibold" for="clase-nombre">Nombre *</label><input class="form-control" id="clase-nombre" maxlength="100" /></div>
-                            <div class="col-md-3"><label class="form-label fw-semibold" for="clase-correlativo">Correlativo</label><input type="number" min="1" max="32767" class="form-control" id="clase-correlativo" value="1" /></div>
-                            <div class="col-md-5"><label class="form-label fw-semibold" for="clase-detraccion">Tipo de detracción</label><select class="form-select" id="clase-detraccion">@foreach (var tipo in tiposDetraccion) { <option value="@tipo.Id">@tipo.Nombre</option> }</select></div>
-                            <div class="col-md-4"><label class="form-label fw-semibold" for="clase-estado">Estado</label><select class="form-select" id="clase-estado"><option value="A">Activo</option><option value="I">Inactivo</option></select></div>
-                        </div>
+                    <div class="col-8">
+                        <label for="sub-clase-nombre" class="form-label small fw-semibold">Nombre de la Clase <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="sub-clase-nombre" maxlength="100" placeholder="Ej: PISOS LAMINADOS" required />
                     </div>
                 </div>
+                <div class="mb-2">
+                    <label for="sub-clase-detraccion" class="form-label small fw-semibold">Tipo de Detracción</label>
+                    <select class="form-select form-select-sm" id="sub-clase-detraccion">
+                        @foreach (var td in tiposDetraccion)
+                        {
+                            <option value="@td.Id">@td.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label for="sub-clase-estado" class="form-label small fw-semibold">Estado</label>
+                    <select class="form-select form-select-sm" id="sub-clase-estado">
+                        <option value="A">Activo</option>
+                        <option value="I">Inactivo</option>
+                    </select>
+                </div>
             </div>
-            <div class="modal-footer sticky-bottom bg-body-tertiary border-top py-3 px-4">
-                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-fam">
-                    <i class="bi bi-check-circle me-1"></i><span id="btn-guardar-texto">Guardar</span>
-                </button>
+            <div class="modal-footer py-2 px-3 border-top bg-body-tertiary">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btn-guardar-sub-clase">Guardar Clase</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- SUB-MODAL 2: NUEVA / EDITAR FAMILIA                       -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modal-sub-familia" tabindex="-1" aria-labelledby="modalSubFamiliaLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content shadow border-0 rounded-4 bg-body" id="form-sub-familia" onsubmit="guardarSubFamilia(event);">
+            @Html.AntiForgeryToken()
+            <div class="modal-header py-2 px-3 border-bottom bg-body-tertiary">
+                <h6 class="modal-title fw-bold" id="modalSubFamiliaLabel"><i class="bi bi-collection me-2 text-info"></i><span id="sub-fam-titulo">Nueva Familia</span></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-3">
+                <input type="hidden" id="sub-fam-id" value="0" />
+                <div class="mb-2">
+                    <label for="sub-fam-clase-id" class="form-label small fw-semibold">Clase de Producto <span class="text-danger">*</span></label>
+                    <select class="form-select form-select-sm" id="sub-fam-clase-id" required>
+                        <option value="">-- Seleccionar Clase --</option>
+                    </select>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <label for="sub-fam-codigo" class="form-label small fw-semibold">Código <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm text-uppercase font-monospace fw-bold" id="sub-fam-codigo" maxlength="3" placeholder="001" required />
+                    </div>
+                    <div class="col-8">
+                        <label for="sub-fam-nombre" class="form-label small fw-semibold">Nombre de la Familia <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="sub-fam-nombre" maxlength="100" placeholder="Ej: PISOS LAMINADOS" required />
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label for="sub-fam-estado" class="form-label small fw-semibold">Estado</label>
+                    <select class="form-select form-select-sm" id="sub-fam-estado">
+                        <option value="A">Activo</option>
+                        <option value="I">Inactivo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3 border-top bg-body-tertiary">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btn-guardar-sub-fam">Guardar Familia</button>
             </div>
         </form>
     </div>
@@ -363,95 +534,90 @@
     var topActual = 25;
     var sortColIdx = -1;
     var sortAsc = true;
-    var formInitialState = "";
-    var activeKind = "familia";
-    const antiForgeryToken = () => $('#form-familia input[name="__RequestVerificationToken"]').val();
-    document.querySelectorAll('#modal-crud-familia [data-bs-toggle="tab"]').forEach(function (tab) {
-        tab.addEventListener('shown.bs.tab', function (event) {
-            activeKind = event.target.id === 'tab-grupo-btn' ? 'grupo' : event.target.id === 'tab-clase-btn' ? 'clase' : 'familia';
-        });
-    });
+    var clasesCache = [];
 
+    function antiForgeryToken() {
+        return $('input[name="__RequestVerificationToken"]').first().val() || '';
+    }
+
+    // ========================================================
+    // FILTROS Y ORDENAMIENTO EN TABLA PRINCIPAL DE GRUPOS
+    // ========================================================
     function aplicarFiltros() {
-        var query = ($('#filtro-tabla').val() || '').toLowerCase().trim();
-        var clase = ($('#filtro-clase').val() || '').trim();
-        var estado = ($('#filtro-estado').val() || '').trim();
-        var totalCoincidencias = 0;
-        var mostrados = 0;
+        const texto = ($('#filtro-tabla').val() || '').toLowerCase().trim();
+        const tipo = ($('#filtro-tipo').val() || '').toLowerCase().trim();
+        const estado = $('#filtro-estado').val() || '';
 
-        $('#tabla-familias tbody tr:not(#fila-vacia)').each(function () {
-            var $row = $(this);
-            var search = ($row.data('search') || '').toString();
-            var rowClase = ($row.data('clase') || '').toString();
-            var rowEstado = ($row.data('estado') || '').toString();
+        const $filas = $('#tbody-grupos tr:not(#fila-sin-datos)');
+        let visibles = 0;
+        let cont = 0;
 
-            var cumpleQuery = !query || search.indexOf(query) >= 0;
-            var cumpleClase = !clase || rowClase === clase;
-            var cumpleEstado = !estado || rowEstado === estado;
+        $filas.each(function () {
+            const $tr = $(this);
+            const filaTipo = ($tr.data('tipo') || '').toString().toLowerCase();
+            const filaCodigo = ($tr.data('codigo') || '').toString().toLowerCase();
+            const filaNombre = ($tr.data('nombre') || '').toString().toLowerCase();
+            const filaEstado = ($tr.data('estado') || '').toString();
 
-            if (cumpleQuery && cumpleClase && cumpleEstado) {
-                totalCoincidencias++;
-                var limit = topActual > 0 ? topActual : 25;
-                if (mostrados < limit) {
-                    $row.removeClass('d-none');
-                    mostrados++;
+            const matchTexto = !texto || filaCodigo.includes(texto) || filaNombre.includes(texto);
+            const matchTipo = !tipo || filaTipo.includes(tipo);
+            const matchEstado = !estado || filaEstado === estado;
+
+            if (matchTexto && matchTipo && matchEstado) {
+                visibles++;
+                if (visibles <= topActual) {
+                    $tr.show();
+                    cont++;
                 } else {
-                    $row.addClass('d-none');
+                    $tr.hide();
                 }
             } else {
-                $row.addClass('d-none');
+                $tr.hide();
             }
         });
 
-        $('#total-registros').text(totalCoincidencias);
+        const $filaVacia = $('#fila-sin-datos');
+        if (visibles === 0) {
+            if ($filaVacia.length === 0) {
+                $('#tbody-grupos').append('<tr id="fila-sin-datos"><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-1"></i>No se encontraron grupos con los filtros aplicados.</td></tr>');
+            } else {
+                $filaVacia.show();
+            }
+        } else {
+            $filaVacia.hide();
+        }
+
+        $('#contador-registros').text('Mostrando ' + cont + ' de ' + visibles + ' grupo(s)');
+        $('#paginador-info').text(visibles > topActual ? 'Límite alcanzado (' + topActual + '). Ajuste "Mostrando" para ver más.' : '');
     }
 
     function limpiarFiltros() {
         $('#filtro-tabla').val('');
-        $('#filtro-clase').val('');
+        $('#filtro-tipo').val('');
         $('#filtro-estado').val('');
         aplicarFiltros();
     }
 
-    function cambiarTop(cant) {
-        topActual = cant > 0 ? cant : 25;
-        $('#lbl-top-actual').text(topActual);
-        $('.item-top').removeClass('active');
-        $(event.target).addClass('active');
+    function cambiarTop(val) {
+        topActual = parseInt(val) || 25;
         aplicarFiltros();
     }
 
-    function ordenarTabla(tablaId, colIndex, isNumeric) {
-        var $table = $('#' + tablaId);
-        var $tbody = $table.find('tbody');
-        var rows = $tbody.find('tr:not(#fila-vacia)').get();
-
-        if (sortColIdx === colIndex) {
+    function ordenarTabla(colIdx) {
+        if (sortColIdx === colIdx) {
             sortAsc = !sortAsc;
         } else {
-            sortColIdx = colIndex;
+            sortColIdx = colIdx;
             sortAsc = true;
         }
 
-        // Actualizar iconos
-        $table.find('thead th .sort-icon').attr('class', 'bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon');
-        var $th = $table.find('thead th').eq(colIndex);
-        var iconClass = isNumeric
-            ? (sortAsc ? 'bi-sort-numeric-down text-primary fw-bold' : 'bi-sort-numeric-down-alt text-primary fw-bold')
-            : (sortAsc ? 'bi-sort-alpha-down text-primary fw-bold' : 'bi-sort-alpha-down-alt text-primary fw-bold');
-        $th.find('.sort-icon').attr('class', 'bi ' + iconClass + ' ms-1 sort-icon');
+        const $tbody = $('#tbody-grupos');
+        const rows = $tbody.find('tr:not(#fila-sin-datos)').get();
 
         rows.sort(function (a, b) {
-            var aVal = $(a).children('td').eq(colIndex).text().trim();
-            var bVal = $(b).children('td').eq(colIndex).text().trim();
-
-            if (isNumeric) {
-                var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
-                var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
-                return sortAsc ? (aNum - bNum) : (bNum - aNum);
-            } else {
-                return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-            }
+            let valA = $(a).find('td').eq(colIdx).text().trim();
+            let valB = $(b).find('td').eq(colIdx).text().trim();
+            return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
         $.each(rows, function (index, row) {
@@ -461,172 +627,135 @@
         aplicarFiltros();
     }
 
-    function abrirModalCrear() {
-        abrirModalGrupoFamilia("familia", "Nueva Familia de Producto");
-        $('#fam-id').val(0);
-        $('#fam-clase-id').val('');
-        $('#fam-codigo').val('');
-        $('#fam-nombre').val('');
-        $('#fam-estado').val('A');
-        $('#fam-codigo').prop('disabled', false);
-        $('#fam-codigo').prop('disabled', false);
-        setTimeout(function () { $('#fam-clase-id').focus(); }, 300);
-    }
+    // ========================================================
+    // MODAL EXTENDIDO: GRUPO DE PRODUCTO
+    // ========================================================
+    function abrirModalGrupoCrear() {
+        $('#modal-grupo-titulo').text('Nuevo Grupo de Producto');
+        $('#lbl-grupo-codigo-badge').text('NUEVO');
+        $('#grupo-id').val('0');
+        $('#grupo-tipo-id').val('').prop('disabled', false);
+        $('#grupo-codigo').val('').prop('disabled', false);
+        $('#grupo-nombre').val('');
+        $('#grupo-inc-fracc').prop('checked', false);
+        $('#grupo-combo').prop('checked', false);
+        $('#grupo-insumo').prop('checked', false);
+        $('#grupo-estado').val('A');
+        $('#btn-guardar-grupo-texto').text('Guardar Grupo');
 
-    function abrirModalGrupo() {
-        abrirModalGrupoFamilia("grupo", "Nuevo Grupo de Producto");
-        $('#grupo-id').val(0); $('#grupo-tipo').val(''); $('#grupo-codigo').val('');
-        $('#grupo-nombre').val(''); $('#grupo-correlativo').val(1);
-        $('#grupo-inc-fracc, #grupo-combo, #grupo-insumo').val('N'); $('#grupo-estado').val('A');
-        $('#grupo-tipo, #grupo-codigo').prop('disabled', false);
-        $('#grupo-correlativo').prop('disabled', false);
-    }
+        $('#alert-grupo-nuevo').show();
+        $('#contenedor-tabs-jerarquia').hide();
+        clasesCache = [];
 
-    function abrirModalClase() {
-        abrirModalGrupoFamilia("clase", "Nueva Clase de Producto");
-        $('#clase-id').val(0); $('#clase-grupo').val(''); $('#clase-codigo').val('');
-        $('#clase-nombre').val(''); $('#clase-correlativo').val(1);
-        $('#clase-detraccion').val(1); $('#clase-estado').val('A');
-        $('#clase-grupo, #clase-codigo').prop('disabled', false);
-        $('#clase-correlativo').prop('disabled', false);
-    }
-
-    function abrirModalGrupoFamilia(kind, title) {
-        activeKind = kind;
-        formInitialState = "";
-        $('#modal-titulo').text(title);
-        const target = kind === "grupo" ? "#tab-grupo-btn" : kind === "clase" ? "#tab-clase-btn" : "#tab-familia-btn";
-        bootstrap.Tab.getOrCreateInstance(document.querySelector(target)).show();
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-crud-familia')).show();
-    }
-
-    function abrirModalEditar(id) {
-        $.ajax({
-            url: '@Url.Action("Obtener", "FamiliaProducto", new { area = "MG" })',
-            type: 'GET',
-            data: { id: id },
-            success: function (res) {
-                if (res && res.success && res.data) {
-                    abrirModalGrupoFamilia("familia", 'Editar Familia #' + id);
-                    $('#modal-titulo').text('Editar Familia #' + id);
-                    $('#fam-id').val(res.data.familiaId || res.data.FamiliaId);
-                    $('#fam-clase-id').val(res.data.claseId || res.data.ClaseId);
-                    $('#fam-codigo').val(res.data.familiaCodigo || res.data.FamiliaCodigo || '');
-                    $('#fam-codigo').prop('disabled', true);
-                    $('#fam-nombre').val(res.data.familiaNombre || res.data.FamiliaNombre);
-                    $('#fam-estado').val(res.data.estado || res.data.Estado || 'A');
-
-                    setTimeout(function () {
-                        formInitialState = JSON.stringify({
-                            clase: $('#fam-clase-id').val(),
-                            codigo: $('#fam-codigo').val(),
-                            nombre: $('#fam-nombre').val(),
-                            estado: $('#fam-estado').val()
-                        });
-                        $('#fam-nombre').focus();
-                    }, 300);
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar la familia.' });
-                }
-            },
-            error: function () {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
-            }
-        });
+        const modalEl = document.getElementById('modal-crud-grupo');
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        setTimeout(function () { $('#grupo-tipo-id').focus(); }, 300);
     }
 
     function editarGrupo(id) {
-        $.get('@Url.Action("ObtenerGrupo", "FamiliaProducto", new { area = "MG" })', { id }, function (res) {
-            if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message }); return; }
-            const d = res.data;
-            abrirModalGrupoFamilia("grupo", 'Editar Grupo #' + id);
-            $('#grupo-id').val(d.id || d.Id); $('#grupo-tipo').val(d.tipoProductoId || d.TipoProductoId);
-            $('#grupo-codigo').val(d.codigo || d.Codigo).prop('disabled', true);
-            $('#grupo-nombre').val(d.nombre || d.Nombre); $('#grupo-correlativo').val(d.correlativo || d.Correlativo);
-            $('#grupo-inc-fracc').val(d.usarIncrementoFraccion || d.UsarIncrementoFraccion);
-            $('#grupo-combo').val(d.esCombo || d.EsCombo); $('#grupo-insumo').val(d.esInsumo || d.EsInsumo);
-            $('#grupo-estado').val(d.estado || d.Estado); $('#grupo-tipo').prop('disabled', true);
-            $('#grupo-correlativo').prop('disabled', true);
-        }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar el grupo.' }); });
+        $.get('@Url.Action("ObtenerGrupo", "FamiliaProducto", new { area = "MG" })', { id: id }, function (res) {
+            if (!res || !res.success || !res.data) {
+                Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo cargar la información del grupo.' });
+                return;
+            }
+
+            const g = res.data;
+            $('#modal-grupo-titulo').text('Editar Grupo de Producto: ' + (g.codigo || g.Codigo) + ' - ' + (g.nombre || g.Nombre));
+            $('#lbl-grupo-codigo-badge').text((g.codigo || g.Codigo));
+            $('#grupo-id').val(g.id || g.Id);
+
+            // En edición, Tipo y Código están bloqueados (igual que en sistema legacy)
+            $('#grupo-tipo-id').val(g.tipoProductoId || g.TipoProductoId).prop('disabled', true);
+            $('#grupo-codigo').val(g.codigo || g.Codigo).prop('disabled', true);
+            $('#grupo-nombre').val(g.nombre || g.Nombre);
+
+            $('#grupo-inc-fracc').prop('checked', (g.usarIncrementoFraccion || g.UsarIncrementoFraccion) === 'S');
+            $('#grupo-combo').prop('checked', (g.esCombo || g.EsCombo) === 'S');
+            $('#grupo-insumo').prop('checked', (g.esInsumo || g.EsInsumo) === 'S');
+            $('#grupo-estado').val(g.estado || g.Estado || 'A');
+            $('#btn-guardar-grupo-texto').text('Actualizar Grupo');
+
+            // Habilitar pestañas de jerarquía
+            $('#alert-grupo-nuevo').hide();
+            $('#contenedor-tabs-jerarquia').show();
+
+            // Cargar datos de clases y familias para este grupo
+            cargarClasesDeGrupo(g.id || g.Id);
+
+            const modalEl = document.getElementById('modal-crud-grupo');
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }).fail(function () {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.' });
+        });
     }
 
-    function editarClase(id) {
-        $.get('@Url.Action("ObtenerClase", "FamiliaProducto", new { area = "MG" })', { id }, function (res) {
-            if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message }); return; }
-            const d = res.data;
-            abrirModalGrupoFamilia("clase", 'Editar Clase #' + id);
-            $('#clase-id').val(d.id || d.Id); $('#clase-grupo').val(d.grupoId || d.GrupoId).prop('disabled', true);
-            $('#clase-codigo').val(d.codigo || d.Codigo).prop('disabled', true);
-            $('#clase-nombre').val(d.nombre || d.Nombre); $('#clase-correlativo').val(d.correlativo || d.Correlativo);
-            $('#clase-detraccion').val(d.tipoDetraccionId || d.TipoDetraccionId);
-            $('#clase-estado').val(d.estado || d.Estado);
-            $('#clase-correlativo').prop('disabled', true);
-        }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar la clase.' }); });
-    }
+    function guardarGrupo(e) {
+        if (e) e.preventDefault();
 
-    function guardarJerarquia(e) {
-        e.preventDefault();
-        var $btn = $('#btn-guardar-fam');
-        let url;
-        let data;
-        if (activeKind === "grupo") {
-            if (!$('#grupo-tipo').val() || !$('#grupo-codigo').val().trim() || !$('#grupo-nombre').val().trim()) {
-                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Tipo, código y nombre son obligatorios.' }); return;
-            }
-            url = '@Url.Action("GuardarGrupo", "FamiliaProducto", new { area = "MG" })';
-            data = { __RequestVerificationToken: antiForgeryToken(), Id: $('#grupo-id').val(), TipoProductoId: $('#grupo-tipo').val(), Codigo: $('#grupo-codigo').val(), Nombre: $('#grupo-nombre').val(), Correlativo: $('#grupo-correlativo').val(), UsarIncrementoFraccion: $('#grupo-inc-fracc').val(), EsCombo: $('#grupo-combo').val(), EsInsumo: $('#grupo-insumo').val(), Estado: $('#grupo-estado').val() };
-        } else if (activeKind === "clase") {
-            if (!$('#clase-grupo').val() || !$('#clase-codigo').val().trim() || !$('#clase-nombre').val().trim()) {
-                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Grupo, código y nombre son obligatorios.' }); return;
-            }
-            url = '@Url.Action("GuardarClase", "FamiliaProducto", new { area = "MG" })';
-            data = { __RequestVerificationToken: antiForgeryToken(), Id: $('#clase-id').val(), GrupoId: $('#clase-grupo').val(), Codigo: $('#clase-codigo').val(), Nombre: $('#clase-nombre').val(), Correlativo: $('#clase-correlativo').val(), TipoDetraccionId: $('#clase-detraccion').val(), Estado: $('#clase-estado').val() };
-        } else {
-            if (!$('#fam-clase-id').val() || !$('#fam-codigo').val().trim() || !$('#fam-nombre').val().trim()) {
-                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Seleccione la clase e ingrese el código y nombre de la familia.' }); return;
-            }
-            url = '@Url.Action("Guardar", "FamiliaProducto", new { area = "MG" })';
-            data = { __RequestVerificationToken: antiForgeryToken(), FamiliaId: $('#fam-id').val(), ClaseId: $('#fam-clase-id').val(), FamiliaCodigo: $('#fam-codigo').val(), FamiliaNombre: $('#fam-nombre').val(), Estado: $('#fam-estado').val() };
+        const id = parseInt($('#grupo-id').val()) || 0;
+        const tipoId = $('#grupo-tipo-id').val();
+        const codigo = $('#grupo-codigo').val().trim().toUpperCase();
+        const nombre = $('#grupo-nombre').val().trim().toUpperCase();
+
+        if (!tipoId) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Seleccione el tipo de producto.' });
+            return;
         }
+        if (!codigo) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Ingrese el código de grupo (máx 3 caracteres).' });
+            return;
+        }
+        if (!nombre) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Ingrese el nombre del grupo.' });
+            return;
+        }
+
+        const data = {
+            __RequestVerificationToken: antiForgeryToken(),
+            Id: id,
+            TipoProductoId: tipoId,
+            Codigo: codigo,
+            Nombre: nombre,
+            UsarIncrementoFraccion: $('#grupo-inc-fracc').is(':checked') ? 'S' : 'N',
+            EsCombo: $('#grupo-combo').is(':checked') ? 'S' : 'N',
+            EsInsumo: $('#grupo-insumo').is(':checked') ? 'S' : 'N',
+            Estado: $('#grupo-estado').val()
+        };
+
+        const $btn = $('#btn-guardar-grupo');
         $btn.prop('disabled', true);
-        $.ajax({
-            url,
-            type: 'POST',
-            data,
-            success: function (res) {
-                $btn.prop('disabled', false);
-                if (res && res.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-familia')).hide();
-                    Swal.fire({ icon: 'success', title: 'Guardado', text: res.message, timer: 1300, showConfirmButton: false }).then(function () { location.reload(); });
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar.' });
+
+        $.post('@Url.Action("GuardarGrupo", "FamiliaProducto", new { area = "MG" })', data, function (res) {
+            $btn.prop('disabled', false);
+            if (res && res.success) {
+                Swal.fire({ icon: 'success', title: 'Guardado', text: res.message, timer: 1200, showConfirmButton: false });
+                
+                // Si era nuevo, actualizamos el ID y activamos las pestañas
+                if (id === 0 && res.id) {
+                    $('#grupo-id').val(res.id);
+                    $('#grupo-tipo-id').prop('disabled', true);
+                    $('#grupo-codigo').prop('disabled', true);
+                    $('#modal-grupo-titulo').text('Editar Grupo de Producto: ' + codigo + ' - ' + nombre);
+                    $('#lbl-grupo-codigo-badge').text(codigo);
+                    $('#btn-guardar-grupo-texto').text('Actualizar Grupo');
+                    $('#alert-grupo-nuevo').hide();
+                    $('#contenedor-tabs-jerarquia').show();
+                    cargarClasesDeGrupo(res.id);
                 }
-            },
-            error: function () {
-                $btn.prop('disabled', false);
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo guardar el grupo.' });
             }
+        }).fail(function () {
+            $btn.prop('disabled', false);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.' });
         });
     }
 
-    function cambiarEstadoJerarquia(tipo, id, estado, button) {
-        const nombre = button.dataset.nombre;
-        const action = estado === 'A' ? 'desactivar' : 'activar';
-        const endpoint = tipo === 'Grupo' ? '@Url.Action("CambiarEstadoGrupo", "FamiliaProducto", new { area = "MG" })' : '@Url.Action("CambiarEstadoClase", "FamiliaProducto", new { area = "MG" })';
-        Swal.fire({ title: `¿Desea ${action} ${tipo.toLowerCase()}?`, text: nombre, icon: 'question', showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar' }).then(function (result) {
-            if (!result.isConfirmed) return;
-            $.post(endpoint, { id, __RequestVerificationToken: antiForgeryToken() }, function (res) {
-                if (res.success) location.reload();
-                else Swal.fire({ icon: 'error', title: 'Error', text: res.message });
-            }).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: `No se pudo cambiar el estado del ${tipo.toLowerCase()}.` }); });
-        });
-    }
-
-    function cambiarEstado(id, estadoActual, descripcion) {
-        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+    function cambiarEstadoGrupo(id, estadoActual, nombre) {
+        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
         Swal.fire({
             title: '¿Confirmar cambio de estado?',
-            text: '¿Desea ' + accion + ' la familia "' + descripcion + '"?',
+            text: '¿Desea ' + accion + ' el grupo "' + nombre + '"?',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, ' + accion,
@@ -634,31 +763,369 @@
             confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
         }).then(function (result) {
             if (result.isConfirmed) {
-                $.ajax({
-                    url: '@Url.Action("CambiarEstado", "FamiliaProducto", new { area = "MG" })',
-                    type: 'POST',
-                    data: { id: id, __RequestVerificationToken: antiForgeryToken() },
-                    success: function (res) {
-                        if (res && res.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Actualizado',
-                                text: res.message,
-                                timer: 1200,
-                                showConfirmButton: false
-                            }).then(function () {
-                                location.reload();
-                            });
-                        } else {
-                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
-                        }
-                    },
-                    error: function () {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                $.post('@Url.Action("CambiarEstadoGrupo", "FamiliaProducto", new { area = "MG" })', {
+                    id: id,
+                    __RequestVerificationToken: antiForgeryToken()
+                }, function (res) {
+                    if (res && res.success) {
+                        Swal.fire({ icon: 'success', title: 'Actualizado', text: res.message, timer: 1200, showConfirmButton: false })
+                            .then(function () { location.reload(); });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo cambiar el estado.' });
+                    }
+                }).fail(function () {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.' });
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // GESTIÓN DE CLASES (PESTAÑA 1)
+    // ========================================================
+    function cargarClasesDeGrupo(grupoId) {
+        $('#tbody-sub-clases').html('<tr><td colspan="7" class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando clases...</td></tr>');
+        
+        $.get('@Url.Action("ListarClases", "FamiliaProducto", new { area = "MG" })', { grupoId: grupoId }, function (res) {
+            if (res && res.success && res.data) {
+                clasesCache = res.data;
+                renderizarTablaSubClases(res.data);
+                actualizarComboClasesEnFamilias(res.data);
+                cargarFamiliasDeGrupo();
+            } else {
+                $('#tbody-sub-clases').html('<tr><td colspan="7" class="text-center text-danger py-3">Error al cargar las clases.</td></tr>');
+            }
+        }).fail(function () {
+            $('#tbody-sub-clases').html('<tr><td colspan="7" class="text-center text-danger py-3">Error de comunicación.</td></tr>');
+        });
+    }
+
+    function renderizarTablaSubClases(lista) {
+        $('#count-sub-clases').text(lista.length);
+        if (lista.length === 0) {
+            $('#tbody-sub-clases').html('<tr><td colspan="7" class="text-center text-muted py-3">No hay clases registradas en este grupo. Haga clic en <strong>"+ Nueva Clase"</strong> para registrar una.</td></tr>');
+            return;
+        }
+
+        let html = '';
+        lista.forEach(function (c) {
+            const estadoBadge = c.estado === 'A' 
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span>'
+                : '<span class="badge bg-secondary-subtle text-secondary border">Inactivo</span>';
+
+            const tasaStr = (c.tipoDetraccionTasa || 0).toFixed(2) + '%';
+
+            html += `<tr>
+                <td><span class="badge bg-secondary-subtle text-secondary border font-monospace">${escapeHtml(c.codigo)}</span></td>
+                <td class="fw-semibold">${escapeHtml(c.nombre)}</td>
+                <td class="small text-muted">${escapeHtml(c.tipoDetraccionNombre || '—')}</td>
+                <td class="text-end small">${tasaStr}</td>
+                <td class="text-center"><span class="badge bg-info-subtle text-info border">${c.familiasCount || 0}</span></td>
+                <td class="text-center">${estadoBadge}</td>
+                <td class="text-end text-nowrap">
+                    <button type="button" class="btn btn-xs btn-outline-primary me-1" onclick="editarSubClase(${c.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary" onclick="cambiarEstadoSubClase(${c.id}, '${c.estado}', '${escapeHtml(c.nombre)}')" title="Cambiar Estado"><i class="bi bi-toggle-on"></i></button>
+                </td>
+            </tr>`;
+        });
+        $('#tbody-sub-clases').html(html);
+    }
+
+    function abrirModalSubClaseCrear() {
+        const grupoNombre = $('#grupo-nombre').val() || '';
+        $('#sub-clase-titulo').text('Nueva Clase');
+        $('#sub-clase-id').val('0');
+        $('#sub-clase-grupo-nombre').val(grupoNombre);
+        $('#sub-clase-codigo').val('').prop('disabled', false);
+        $('#sub-clase-nombre').val('');
+        $('#sub-clase-detraccion').val('1');
+        $('#sub-clase-estado').val('A');
+
+        const modalEl = document.getElementById('modal-sub-clase');
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        setTimeout(function () { $('#sub-clase-codigo').focus(); }, 300);
+    }
+
+    function editarSubClase(id) {
+        $.get('@Url.Action("ObtenerClase", "FamiliaProducto", new { area = "MG" })', { id: id }, function (res) {
+            if (!res || !res.success || !res.data) {
+                Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo cargar la clase.' });
+                return;
+            }
+            const c = res.data;
+            $('#sub-clase-titulo').text('Editar Clase: ' + (c.codigo || c.Codigo));
+            $('#sub-clase-id').val(c.id || c.Id);
+            $('#sub-clase-grupo-nombre').val($('#grupo-nombre').val());
+            $('#sub-clase-codigo').val(c.codigo || c.Codigo).prop('disabled', true);
+            $('#sub-clase-nombre').val(c.nombre || c.Nombre);
+            $('#sub-clase-detraccion').val(c.tipoDetraccionId || c.TipoDetraccionId || 1);
+            $('#sub-clase-estado').val(c.estado || c.Estado || 'A');
+
+            const modalEl = document.getElementById('modal-sub-clase');
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+    }
+
+    function guardarSubClase(e) {
+        e.preventDefault();
+        const grupoId = parseInt($('#grupo-id').val()) || 0;
+        const id = parseInt($('#sub-clase-id').val()) || 0;
+        const codigo = $('#sub-clase-codigo').val().trim().toUpperCase();
+        const nombre = $('#sub-clase-nombre').val().trim().toUpperCase();
+        const detracId = $('#sub-clase-detraccion').val();
+
+        if (!codigo || !nombre) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Código y nombre de la clase son obligatorios.' });
+            return;
+        }
+
+        const data = {
+            __RequestVerificationToken: antiForgeryToken(),
+            Id: id,
+            GrupoId: grupoId,
+            Codigo: codigo,
+            Nombre: nombre,
+            TipoDetraccionId: detracId,
+            Estado: $('#sub-clase-estado').val()
+        };
+
+        const $btn = $('#btn-guardar-sub-clase');
+        $btn.prop('disabled', true);
+
+        $.post('@Url.Action("GuardarClase", "FamiliaProducto", new { area = "MG" })', data, function (res) {
+            $btn.prop('disabled', false);
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-sub-clase')).hide();
+                Swal.fire({ icon: 'success', title: 'Clase Guardada', text: res.message, timer: 1200, showConfirmButton: false });
+                cargarClasesDeGrupo(grupoId);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo guardar la clase.' });
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.' });
+        });
+    }
+
+    function cambiarEstadoSubClase(id, estadoActual, nombre) {
+        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' la clase "' + nombre + '"?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("CambiarEstadoClase", "FamiliaProducto", new { area = "MG" })', {
+                    id: id,
+                    __RequestVerificationToken: antiForgeryToken()
+                }, function (res) {
+                    if (res && res.success) {
+                        cargarClasesDeGrupo(parseInt($('#grupo-id').val()));
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo cambiar el estado.' });
                     }
                 });
             }
         });
+    }
+
+    // ========================================================
+    // GESTIÓN DE FAMILIAS (PESTAÑA 2)
+    // ========================================================
+    function actualizarComboClasesEnFamilias(clases) {
+        const $selFiltro = $('#sub-filtro-clase');
+        const $selModal = $('#sub-fam-clase-id');
+        const valActual = $selFiltro.val();
+
+        let optFiltro = '<option value="">Todas las Clases del Grupo</option>';
+        let optModal = '<option value="">-- Seleccionar Clase --</option>';
+
+        clases.forEach(function (c) {
+            optFiltro += `<option value="${c.id}">${escapeHtml(c.nombre)} (${escapeHtml(c.codigo)})</option>`;
+            optModal += `<option value="${c.id}">${escapeHtml(c.nombre)} (${escapeHtml(c.codigo)})</option>`;
+        });
+
+        $selFiltro.html(optFiltro);
+        $selModal.html(optModal);
+
+        if (valActual && clases.some(c => c.id == valActual)) {
+            $selFiltro.val(valActual);
+        }
+    }
+
+    function cargarFamiliasDeGrupo() {
+        const grupoId = parseInt($('#grupo-id').val()) || 0;
+        const claseId = parseInt($('#sub-filtro-clase').val()) || null;
+
+        $('#tbody-sub-familias').html('<tr><td colspan="5" class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm text-info me-2"></div>Cargando familias...</td></tr>');
+
+        $.get('@Url.Action("ListarFamilias", "FamiliaProducto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId }, function (res) {
+            if (res && res.success && res.data) {
+                renderizarTablaSubFamilias(res.data);
+            } else {
+                $('#tbody-sub-familias').html('<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar las familias.</td></tr>');
+            }
+        }).fail(function () {
+            $('#tbody-sub-familias').html('<tr><td colspan="5" class="text-center text-danger py-3">Error de comunicación.</td></tr>');
+        });
+    }
+
+    function renderizarTablaSubFamilias(lista) {
+        $('#count-sub-familias').text(lista.length);
+        if (lista.length === 0) {
+            $('#tbody-sub-familias').html('<tr><td colspan="5" class="text-center text-muted py-3">No hay familias registradas. Haga clic en <strong>"+ Nueva Familia"</strong> para registrar una.</td></tr>');
+            return;
+        }
+
+        let html = '';
+        lista.forEach(function (f) {
+            const estadoBadge = f.estado === 'A' 
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span>'
+                : '<span class="badge bg-secondary-subtle text-secondary border">Inactivo</span>';
+
+            html += `<tr>
+                <td><span class="badge bg-secondary-subtle text-secondary border font-monospace">${escapeHtml(f.familiaCodigo)}</span></td>
+                <td class="fw-semibold">${escapeHtml(f.familiaNombre)}</td>
+                <td class="small text-muted">${escapeHtml(f.claseNombre || '—')}</td>
+                <td class="text-center">${estadoBadge}</td>
+                <td class="text-end text-nowrap">
+                    <button type="button" class="btn btn-xs btn-outline-primary me-1" onclick="editarSubFamilia(${f.familiaId})" title="Editar"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary" onclick="cambiarEstadoSubFamilia(${f.familiaId}, '${f.estado}', '${escapeHtml(f.familiaNombre)}')" title="Cambiar Estado"><i class="bi bi-toggle-on"></i></button>
+                </td>
+            </tr>`;
+        });
+        $('#tbody-sub-familias').html(html);
+    }
+
+    function abrirModalSubFamiliaCrear() {
+        if (!clasesCache || clasesCache.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Debe registrar al menos una Clase de Producto antes de crear Familias.' });
+            return;
+        }
+
+        $('#sub-fam-titulo').text('Nueva Familia');
+        $('#sub-fam-id').val('0');
+
+        // Preseleccionar la clase activa del filtro si existe
+        const claseActiva = $('#sub-filtro-clase').val();
+        if (claseActiva) {
+            $('#sub-fam-clase-id').val(claseActiva);
+        } else if (clasesCache.length > 0) {
+            $('#sub-fam-clase-id').val(clasesCache[0].id);
+        }
+
+        $('#sub-fam-codigo').val('').prop('disabled', false);
+        $('#sub-fam-nombre').val('');
+        $('#sub-fam-estado').val('A');
+
+        const modalEl = document.getElementById('modal-sub-familia');
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        setTimeout(function () { $('#sub-fam-codigo').focus(); }, 300);
+    }
+
+    function editarSubFamilia(id) {
+        $.get('@Url.Action("ObtenerFamilia", "FamiliaProducto", new { area = "MG" })', { id: id }, function (res) {
+            if (!res || !res.success || !res.data) {
+                Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo cargar la familia.' });
+                return;
+            }
+            const f = res.data;
+            $('#sub-fam-titulo').text('Editar Familia: ' + (f.familiaCodigo || f.FamiliaCodigo));
+            $('#sub-fam-id').val(f.familiaId || f.FamiliaId);
+            $('#sub-fam-clase-id').val(f.claseId || f.ClaseId);
+            $('#sub-fam-codigo').val(f.familiaCodigo || f.FamiliaCodigo).prop('disabled', true);
+            $('#sub-fam-nombre').val(f.familiaNombre || f.FamiliaNombre);
+            $('#sub-fam-estado').val(f.estado || f.Estado || 'A');
+
+            const modalEl = document.getElementById('modal-sub-familia');
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+    }
+
+    function guardarSubFamilia(e) {
+        e.preventDefault();
+        const id = parseInt($('#sub-fam-id').val()) || 0;
+        const claseId = parseInt($('#sub-fam-clase-id').val()) || 0;
+        const codigo = $('#sub-fam-codigo').val().trim().toUpperCase();
+        const nombre = $('#sub-fam-nombre').val().trim().toUpperCase();
+
+        if (!claseId) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Seleccione la clase de producto.' });
+            return;
+        }
+        if (!codigo || !nombre) {
+            Swal.fire({ icon: 'warning', title: 'Atención', text: 'Código y nombre de la familia son obligatorios.' });
+            return;
+        }
+
+        const data = {
+            __RequestVerificationToken: antiForgeryToken(),
+            FamiliaId: id,
+            ClaseId: claseId,
+            FamiliaCodigo: codigo,
+            FamiliaNombre: nombre,
+            Estado: $('#sub-fam-estado').val()
+        };
+
+        const $btn = $('#btn-guardar-sub-fam');
+        $btn.prop('disabled', true);
+
+        $.post('@Url.Action("GuardarFamilia", "FamiliaProducto", new { area = "MG" })', data, function (res) {
+            $btn.prop('disabled', false);
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-sub-familia')).hide();
+                Swal.fire({ icon: 'success', title: 'Familia Guardada', text: res.message, timer: 1200, showConfirmButton: false });
+                cargarFamiliasDeGrupo();
+                // Actualizar contador de familias en la pestaña de clases
+                cargarClasesDeGrupo(parseInt($('#grupo-id').val()));
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo guardar la familia.' });
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicarse con el servidor.' });
+        });
+    }
+
+    function cambiarEstadoSubFamilia(id, estadoActual, nombre) {
+        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' la familia "' + nombre + '"?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("CambiarEstadoFamilia", "FamiliaProducto", new { area = "MG" })', {
+                    id: id,
+                    __RequestVerificationToken: antiForgeryToken()
+                }, function (res) {
+                    if (res && res.success) {
+                        cargarFamiliasDeGrupo();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: res ? res.message : 'No se pudo cambiar el estado.' });
+                    }
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // UTILIDADES
+    // ========================================================
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     $(document).ready(function () {
