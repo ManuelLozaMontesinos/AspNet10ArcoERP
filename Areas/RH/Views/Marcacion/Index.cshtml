@@ -1,0 +1,598 @@
+@model List<AspNet10ArcoERP.Models.MarcacionPersonalModel>
+@{
+    ViewData["Title"] = "Control de Marcaciones de Personal";
+    var personalList = ViewBag.Personal as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new();
+    var horasRemList = ViewBag.HorasRemunerativas as List<AspNet10ArcoERP.Models.HoraRemunerativaModel> ?? new();
+
+    int total = Model?.Count ?? 0;
+    int verificadas = Model?.Count(m => m.Verificado == "S") ?? 0;
+    int faltas = Model?.Count(m => m.EsFalta == "S") ?? 0;
+    int conHorasExtra = Model?.Count(m => m.HorasDetalle.Any(h => h.HoraRemNombre.Contains("EXTRA", StringComparison.OrdinalIgnoreCase))) ?? 0;
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row align-items-center mb-3">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-fingerprint text-info me-2"></i>Control de Marcaciones
+                </h1>
+                <small class="text-muted">Registro de asistencia, control de reloj marcador y cómputo de horas</small>
+            </div>
+            <div class="col-sm-6 text-end">
+                <button type="button" class="btn btn-primary shadow-sm" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Marcación
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI SUMMARY CARDS -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm bg-primary-subtle text-primary h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-calendar-check"></i></div>
+                        <div>
+                            <div class="fs-4 fw-bold">@total</div>
+                            <div class="small fw-semibold text-uppercase">Marcaciones Listadas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm bg-success-subtle text-success h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-shield-check"></i></div>
+                        <div>
+                            <div class="fs-4 fw-bold">@verificadas</div>
+                            <div class="small fw-semibold text-uppercase">Verificadas / Aprobadas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm bg-danger-subtle text-danger h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-person-x"></i></div>
+                        <div>
+                            <div class="fs-4 fw-bold">@faltas</div>
+                            <div class="small fw-semibold text-uppercase">Inasistencias / Faltas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card border-0 shadow-sm bg-warning-subtle text-warning h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-stopwatch"></i></div>
+                        <div>
+                            <div class="fs-4 fw-bold">@conHorasExtra</div>
+                            <div class="small fw-semibold text-uppercase">Con Horas Extras</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTROS DE BÚSQUEDA -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-body-tertiary py-3">
+                <h6 class="m-0 fw-bold"><i class="bi bi-funnel me-2"></i>Filtros de Búsqueda y Rango de Fechas</h6>
+            </div>
+            <div class="card-body">
+                <form method="get" asp-action="Index" id="form-filtros" class="row g-3">
+                    <div class="col-md-2 col-sm-6">
+                        <label class="form-label small fw-semibold">Fecha Desde</label>
+                        <input type="date" name="fechaDesde" class="form-control form-control-sm" value="@ViewBag.FechaDesde" />
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <label class="form-label small fw-semibold">Fecha Hasta</label>
+                        <input type="date" name="fechaHasta" class="form-control form-control-sm" value="@ViewBag.FechaHasta" />
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label small fw-semibold">Colaborador</label>
+                        <select name="personalId" class="form-select form-select-sm">
+                            <option value="">-- Todos los Colaboradores --</option>
+                            @foreach (var p in personalList)
+                            {
+                                if (ViewBag.PersonalId != null && (int)ViewBag.PersonalId == p.Id)
+                                {
+                                    <option value="@p.Id" selected="selected">@p.Nombre</option>
+                                }
+                                else
+                                {
+                                    <option value="@p.Id">@p.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <label class="form-label small fw-semibold">Verificación</label>
+                        <select name="verificado" class="form-select form-select-sm">
+                            <option value="">-- Todos --</option>
+                            <!option value="S" @(ViewBag.Verificado == "S" ? "selected" : "")>Verificados</!option>
+                            <!option value="N" @(ViewBag.Verificado == "N" ? "selected" : "")>Pendientes</!option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-12">
+                        <label class="form-label small fw-semibold">Búsqueda rápida</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" class="form-control" placeholder="Nombre, DNI o código..." value="@ViewBag.Search" />
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i> Filtrar</button>
+                            <a href="/RH/Marcacion" class="btn btn-outline-secondary" title="Limpiar"><i class="bi bi-arrow-counterclockwise"></i></a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- TABLA DE MARCACIONES -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="tabla-marcaciones">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center px-3" style="width: 50px;">#</th>
+                                <th style="width: 110px;">FECHA</th>
+                                <th>COLABORADOR</th>
+                                <th class="text-center" style="width: 120px;">HORA / TIEMPO</th>
+                                <th>DESGLOSE DE HORAS COMPUTADAS</th>
+                                <th class="text-center" style="width: 80px;">FALTA</th>
+                                <th class="text-center" style="width: 100px;">REMUNERADO</th>
+                                <th class="text-center" style="width: 110px;">VERIFICADO</th>
+                                <th class="text-center" style="width: 90px;">ESTADO</th>
+                                <th class="text-end px-4" style="width: 100px;">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                int idx = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr id="fila-@item.Id">
+                                        <td class="text-center text-muted fw-semibold px-3">@idx</td>
+                                        <td>
+                                            <div class="fw-semibold">@item.Fecha.ToString("dd/MM/yyyy")</div>
+                                            <div class="small text-muted text-uppercase">@item.Fecha.ToString("dddd")</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold">@item.PersonalNombre</div>
+                                            <div class="small text-muted font-monospace">
+                                                <i class="bi bi-person-badge me-1"></i>DNI: @item.DocumentoIdentidad | Cód: @item.PersonalCodigo
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(item.CargoNombre) || !string.IsNullOrWhiteSpace(item.CentroCostoNombre))
+                                            {
+                                                <div class="small text-secondary">
+                                                    <span class="badge bg-secondary-subtle text-secondary me-1">@item.CargoNombre</span>
+                                                    <span class="badge bg-light text-dark border">@item.CentroCostoNombre</span>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (!string.IsNullOrWhiteSpace(item.HoraMinuto))
+                                            {
+                                                <span class="badge bg-dark-subtle text-dark border font-monospace px-2 py-1 fs-6">
+                                                    <i class="bi bi-clock me-1"></i>@item.HoraMinuto
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small fst-italic">Sin registro</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.HorasDetalle != null && item.HorasDetalle.Any())
+                                            {
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach (var h in item.HorasDetalle)
+                                                    {
+                                                        string badgeClass = "bg-primary-subtle text-primary border-primary-subtle";
+                                                        if (h.HoraRemNombre.Contains("EXTRA", StringComparison.OrdinalIgnoreCase))
+                                                            badgeClass = "bg-warning-subtle text-warning border-warning-subtle";
+                                                        else if (h.HoraRemNombre.Contains("REFRIGERIO", StringComparison.OrdinalIgnoreCase))
+                                                            badgeClass = "bg-info-subtle text-info border-info-subtle";
+                                                        else if (h.HoraRemNombre.Contains("TARDANZA", StringComparison.OrdinalIgnoreCase))
+                                                            badgeClass = "bg-danger-subtle text-danger border-danger-subtle";
+
+                                                        <span class="badge @badgeClass border px-2 py-1" title="@h.HoraRemNombre">
+                                                            @h.HoraRemNombre: <strong>@h.Cantidad.ToString("N2") h</strong>
+                                                        </span>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small fst-italic">Sin cómputo de horas</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.EsFalta == "S")
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>FALTA
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-muted border px-2 py-1">No</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.EsRemunera == "S")
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Sí</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">No</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm border-0 p-0" onclick="toggleVerificado(@item.Id);" title="Clic para alternar verificación">
+                                                @if (item.Verificado == "S")
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                        <i class="bi bi-check-circle-fill me-1"></i>Verificado
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                        <i class="bi bi-hourglass-split me-1"></i>Pendiente
+                                                    </span>
+                                                }
+                                            </button>
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.Estado == "A")
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Activo
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Inactivo
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalEditar(@item.Id);" title="Editar">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning" onclick="cambiarEstado(@item.Id, '@item.Estado');" title="@(item.Estado == "A" ? "Desactivar" : "Activar")">
+                                                    <i class="bi @(item.Estado == "A" ? "bi-toggle-on text-success" : "bi-toggle-off text-muted")"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    idx++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="10" class="text-center py-5 text-muted">
+                                        <i class="bi bi-fingerprint display-6 d-block mb-2 text-info opacity-50"></i>
+                                        <span>No se encontraron registros de marcaciones para los filtros seleccionados.</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR MARCACIÓN -->
+<div class="modal fade" id="modalMarcacion" tabindex="-1" aria-labelledby="modalMarcacionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="modalMarcacionLabel">
+                    <i class="bi bi-fingerprint me-2"></i>Nueva Marcación de Personal
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formMarcacion" onsubmit="guardarRegistro(event);">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="marca-id" name="Id" value="0" />
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold">Colaborador <span class="text-danger">*</span></label>
+                            <select id="marca-personal-id" name="PersonalId" class="form-select" required>
+                                <option value="">-- Seleccione Colaborador --</option>
+                                @foreach (var p in personalList)
+                                {
+                                    <option value="@p.Id">@p.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+                            <input type="date" id="marca-fecha" name="Fecha" class="form-control" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Hora Marcación / Horas Totales</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                <input type="text" id="marca-hora-minuto" name="HoraMinuto" class="form-control font-monospace" placeholder="Ej: 08:00" />
+                            </div>
+                            <small class="text-muted">Formato libre (ej: 08:00, 08:30)</small>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold d-block">Opciones de Asistencia</label>
+                            <div class="d-flex flex-wrap gap-3 mt-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="marca-ignora-tolera" name="IgnoraTolera" value="S" />
+                                    <label class="form-check-label" for="marca-ignora-tolera">Ignorar Tolerancia</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="marca-es-falta" name="EsFalta" value="S" />
+                                    <label class="form-check-label text-danger fw-semibold" for="marca-es-falta">¿Es Falta / Inasistencia?</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="marca-es-remunera" name="EsRemunera" value="S" checked />
+                                    <label class="form-check-label" for="marca-es-remunera">Remunerado</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="marca-verificado" name="Verificado" value="S" />
+                                    <label class="form-check-label text-success fw-semibold" for="marca-verificado">Verificado</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-body-tertiary border mb-3">
+                        <div class="card-header py-2 bg-transparent">
+                            <h6 class="m-0 fw-bold text-primary"><i class="bi bi-stopwatch me-1"></i> Desglose de Horas Remunerativas</h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="row g-2" id="contenedor-horas">
+                                @if (horasRemList.Any())
+                                {
+                                    int hIdx = 0;
+                                    foreach (var hr in horasRemList)
+                                    {
+                                        <div class="col-md-6 col-sm-12">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white" style="width: 60%; font-size: 0.85rem;" title="@hr.Nombre">
+                                                    @hr.Nombre
+                                                </span>
+                                                <input type="hidden" name="Horas[@hIdx].HoraRemId" value="@hr.Id" />
+                                                <input type="number" step="0.01" min="0" max="24" class="form-control text-end input-cantidad-hora font-monospace" 
+                                                       name="Horas[@hIdx].Cantidad" data-rem-id="@hr.Id" placeholder="0.00" value="0.00" />
+                                            </div>
+                                        </div>
+                                        hIdx++;
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="col-12 text-muted small">No hay tipos de horas remunerativas configurados.</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Estado del Registro</label>
+                            <select id="marca-estado" name="Estado" class="form-select">
+                                <option value="A">Activo</option>
+                                <option value="I">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btn-guardar-marca">
+                        <i class="bi bi-check-circle me-1"></i> Guardar Marcación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let modalMarcacionInstance = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('modalMarcacion');
+        if (modalEl) {
+            modalMarcacionInstance = new bootstrap.Modal(modalEl);
+        }
+    });
+
+    function abrirModalCrear() {
+        document.getElementById('formMarcacion').reset();
+        document.getElementById('marca-id').value = '0';
+        document.getElementById('marca-fecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('marca-hora-minuto').value = '08:00';
+        document.getElementById('marca-es-remunera').checked = true;
+        document.getElementById('marca-es-falta').checked = false;
+        document.getElementById('marca-ignora-tolera').checked = false;
+        document.getElementById('marca-verificado').checked = false;
+        document.getElementById('marca-estado').value = 'A';
+
+        // Reset cantidades horas
+        document.querySelectorAll('.input-cantidad-hora').forEach(i => i.value = '0.00');
+
+        document.getElementById('modalMarcacionLabel').innerHTML = '<i class="bi bi-fingerprint me-2"></i>Nueva Marcación de Personal';
+        modalMarcacionInstance.show();
+    }
+
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/RH/Marcacion/Obtener/${id}`);
+            const res = await resp.json();
+            if (!res.success) {
+                Swal.fire('Error', res.message || 'No se pudo obtener la información.', 'error');
+                return;
+            }
+
+            const data = res.data;
+            document.getElementById('marca-id').value = data.id;
+            document.getElementById('marca-personal-id').value = data.personalId;
+            document.getElementById('marca-fecha').value = data.fecha ? data.fecha.split('T')[0] : '';
+            document.getElementById('marca-hora-minuto').value = data.horaMinuto || '';
+            document.getElementById('marca-ignora-tolera').checked = data.ignoraTolera === 'S';
+            document.getElementById('marca-es-falta').checked = data.esFalta === 'S';
+            document.getElementById('marca-es-remunera').checked = data.esRemunera === 'S';
+            document.getElementById('marca-verificado').checked = data.verificado === 'S';
+            document.getElementById('marca-estado').value = data.estado || 'A';
+
+            // Reset y rellenar cantidades horas
+            document.querySelectorAll('.input-cantidad-hora').forEach(i => i.value = '0.00');
+            if (data.horasDetalle && data.horasDetalle.length > 0) {
+                data.horasDetalle.forEach(h => {
+                    const inp = document.querySelector(`.input-cantidad-hora[data-rem-id="${h.horaRemId}"]`);
+                    if (inp) {
+                        inp.value = h.cantidad.toFixed(2);
+                    }
+                });
+            }
+
+            document.getElementById('modalMarcacionLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Marcación de Personal';
+            modalMarcacionInstance.show();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        }
+    }
+
+    async function guardarRegistro(event) {
+        event.preventDefault();
+        const form = document.getElementById('formMarcacion');
+        const formData = new FormData(form);
+
+        // Convertir switches checkbox si están desmarcados
+        if (!document.getElementById('marca-ignora-tolera').checked) formData.set('IgnoraTolera', 'N');
+        if (!document.getElementById('marca-es-falta').checked) formData.set('EsFalta', 'N');
+        if (!document.getElementById('marca-es-remunera').checked) formData.set('EsRemunera', 'N');
+        if (!document.getElementById('marca-verificado').checked) formData.set('Verificado', 'N');
+
+        const btn = document.getElementById('btn-guardar-marca');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Guardando...';
+
+        try {
+            const resp = await fetch('/RH/Marcacion/Guardar', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                modalMarcacionInstance.hide();
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Operación Exitosa!',
+                    text: res.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', res.message || 'No se pudo guardar la marcación.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Guardar Marcación';
+        }
+    }
+
+    async function cambiarEstado(id, estadoActual) {
+        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        const result = await Swal.fire({
+            title: `¿Desea ${accion} este registro?`,
+            text: `Se actualizará el estado de la marcación.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: `Sí, ${accion}`,
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+
+            const resp = await fetch('/RH/Marcacion/ToggleEstado', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Actualizado',
+                    text: res.message,
+                    timer: 1200,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', res.message || 'No se pudo cambiar el estado.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        }
+    }
+
+    async function toggleVerificado(id) {
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+
+            const resp = await fetch('/RH/Marcacion/ToggleVerificado', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Verificación',
+                    text: res.message,
+                    timer: 1000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', res.message || 'No se pudo alternar verificación.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        }
+    }
+</script>
+}

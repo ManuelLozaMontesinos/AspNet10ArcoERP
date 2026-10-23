@@ -1,0 +1,357 @@
+@model AspNet10ArcoERP.Models.BoletaPagoModel
+@{
+    ViewData["Title"] = "Emisión de Boletas de Pago";
+    var planillas = ViewBag.Planillas as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new();
+    var colaboradores = ViewBag.Colaboradores as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new();
+    int selectedPlanId = ViewBag.PlanProceId != null ? (int)ViewBag.PlanProceId : 0;
+    int selectedPersoId = ViewBag.PersonalId != null ? (int)ViewBag.PersonalId : 0;
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row align-items-center mb-3">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>Boletas de Pago
+                </h1>
+                <small class="text-muted">Generación, previsualización e impresión de boletas individuales o por lote</small>
+            </div>
+            <div class="col-sm-6 text-end">
+                @if (selectedPlanId > 0 && selectedPersoId > 0 && Model != null)
+                {
+                    <a href="/RH/ReporteBoleta/Imprimir?planProceId=@selectedPlanId&personalId=@selectedPersoId" target="_blank" class="btn btn-outline-danger shadow-sm me-2">
+                        <i class="bi bi-printer me-1"></i> Imprimir Boleta Actual
+                    </a>
+                }
+                @if (selectedPlanId > 0)
+                {
+                    <a href="/RH/ReporteBoleta/Imprimir?planProceId=@selectedPlanId" target="_blank" class="btn btn-primary shadow-sm">
+                        <i class="bi bi-files me-1"></i> Imprimir Lote Completo
+                    </a>
+                }
+            </div>
+        </div>
+
+        <!-- BARRA DE SELECCIÓN DE PLANILLA Y TRABAJADOR -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <form method="get" asp-action="Index" id="form-selector" class="row g-3 align-items-end">
+                    <div class="col-md-5 col-sm-12">
+                        <label class="form-label fw-semibold">Proceso de Planilla / Período</label>
+                        <select name="planProceId" id="select-planilla" class="form-select" onchange="onPlanillaChange();">
+                            <option value="">-- Seleccione Proceso de Planilla --</option>
+                            @foreach (var pl in planillas)
+                            {
+                                if (selectedPlanId == pl.Id)
+                                {
+                                    <option value="@pl.Id" selected="selected">@pl.Nombre</option>
+                                }
+                                else
+                                {
+                                    <option value="@pl.Id">@pl.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-5 col-sm-12">
+                        <label class="form-label fw-semibold">Colaborador / Trabajador</label>
+                        <select name="personalId" id="select-personal" class="form-select">
+                            <option value="">-- Seleccione Colaborador --</option>
+                            @foreach (var c in colaboradores)
+                            {
+                                if (selectedPersoId == c.Id)
+                                {
+                                    <option value="@c.Id" selected="selected">@c.Nombre</option>
+                                }
+                                else
+                                {
+                                    <option value="@c.Id">@c.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-12">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-eye me-1"></i> Ver Boleta
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if (Model != null)
+        {
+            <!-- PREVIEW DE LA BOLETA DE PAGO ESTILO SUNAT -->
+            <div class="card border-0 shadow-lg mb-4" id="boleta-container">
+                <div class="card-body p-4 p-md-5">
+                    <!-- ENCABEZADO DE LA BOLETA -->
+                    <div class="border-bottom pb-4 mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <h4 class="fw-bold m-0 text-primary">
+                                    <i class="bi bi-building me-2"></i>@Model.EmpresaRazonSocial
+                                </h4>
+                                <div class="text-muted small"><strong>RUC:</strong> @Model.EmpresaRuc | @Model.EmpresaDireccion</div>
+                            </div>
+                            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                                <div class="badge bg-danger-subtle text-danger border border-danger-subtle fs-6 px-3 py-2 text-uppercase">
+                                    BOLETA DE PAGO DE REMUNERACIONES
+                                </div>
+                                <div class="small text-muted mt-1">D.S. Nº 001-98-TR | <strong>PERÍODO:</strong> @Model.PeriodoTexto</div>
+                                <div class="small text-secondary"><strong>PLANILLA:</strong> @Model.PlanillaNombre</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DATOS DEL TRABAJADOR -->
+                    <div class="card bg-body-tertiary border mb-4">
+                        <div class="card-body p-3">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <span class="text-muted small">COLABORADOR:</span>
+                                    <div class="fw-bold fs-6">@Model.PersonalNombre</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="text-muted small">DOC. IDENTIDAD (DNI):</span>
+                                    <div class="fw-semibold font-monospace">@Model.DocumentoIdentidad</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="text-muted small">CÓDIGO:</span>
+                                    <div class="fw-semibold font-monospace">@Model.PersonalCodigo</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-muted small">CARGO / PUESTO:</span>
+                                    <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.CargoNombre) ? "OPERARIO" : Model.CargoNombre)</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-muted small">CENTRO DE COSTO:</span>
+                                    <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.CentroCostoNombre) ? "GENERAL" : Model.CentroCostoNombre)</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-muted small">FECHA INGRESO:</span>
+                                    <div class="fw-semibold">@(Model.FechaIngreso?.ToString("dd/MM/yyyy") ?? "-")</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <span class="text-muted small">SISTEMA DE PENSIONES:</span>
+                                    <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.RegimenPensionario) ? "ONP (D.L. 19990)" : Model.RegimenPensionario) @(string.IsNullOrWhiteSpace(Model.Cuspp) ? "" : $" - CUSPP: {Model.Cuspp}")</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="text-muted small">DÍAS LABORADOS:</span>
+                                    <div class="fw-semibold font-monospace">@Model.DiasLaborados.ToString("N0") días</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="text-muted small">HORAS LABORADAS:</span>
+                                    <div class="fw-semibold font-monospace">@Model.HorasLaboradas.ToString("N2") h</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COLUMNAS DE CONCEPTOS (INGRESOS, DESCUENTOS, APORTES) -->
+                    <div class="row g-3 mb-4">
+                        <!-- INGRESOS -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border">
+                                <div class="card-header bg-success text-white py-2 fw-bold text-center">
+                                    <i class="bi bi-plus-circle me-1"></i> INGRESOS
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm table-striped mb-0">
+                                        <thead class="table-light small">
+                                            <tr>
+                                                <th>CONCEPTO</th>
+                                                <th class="text-end" style="width: 50px;">HORAS</th>
+                                                <th class="text-end" style="width: 80px;">MONTO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (Model.Ingresos.Any())
+                                            {
+                                                foreach (var ing in Model.Ingresos)
+                                                {
+                                                    <tr>
+                                                        <td><small class="font-monospace text-muted me-1">@ing.Codigo</small>@ing.Descripcion</td>
+                                                        <td class="text-end font-monospace small">@(ing.Horas > 0 ? ing.Horas.ToString("N2") : "-")</td>
+                                                        <td class="text-end font-monospace">@ing.Monto.ToString("N2")</td>
+                                                    </tr>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <tr><td colspan="3" class="text-center text-muted small py-3">Sin conceptos</td></tr>
+                                            }
+                                        </tbody>
+                                        <tfoot class="table-light fw-bold">
+                                            <tr>
+                                                <td colspan="2">TOTAL INGRESOS:</td>
+                                                <td class="text-end font-monospace text-success">S/ @Model.TotalIngresos.ToString("N2")</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DESCUENTOS -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border">
+                                <div class="card-header bg-danger text-white py-2 fw-bold text-center">
+                                    <i class="bi bi-dash-circle me-1"></i> DESCUENTOS AL TRABAJADOR
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm table-striped mb-0">
+                                        <thead class="table-light small">
+                                            <tr>
+                                                <th>CONCEPTO</th>
+                                                <th class="text-end" style="width: 50px;">HORAS</th>
+                                                <th class="text-end" style="width: 80px;">MONTO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (Model.Descuentos.Any())
+                                            {
+                                                foreach (var d in Model.Descuentos)
+                                                {
+                                                    <tr>
+                                                        <td><small class="font-monospace text-muted me-1">@d.Codigo</small>@d.Descripcion</td>
+                                                        <td class="text-end font-monospace small">@(d.Horas > 0 ? d.Horas.ToString("N2") : "-")</td>
+                                                        <td class="text-end font-monospace text-danger">@d.Monto.ToString("N2")</td>
+                                                    </tr>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <tr><td colspan="3" class="text-center text-muted small py-3">Sin descuentos</td></tr>
+                                            }
+                                        </tbody>
+                                        <tfoot class="table-light fw-bold">
+                                            <tr>
+                                                <td colspan="2">TOTAL DESCUENTOS:</td>
+                                                <td class="text-end font-monospace text-danger">S/ @Model.TotalDescuentos.ToString("N2")</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- APORTES DEL EMPLEADOR -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border">
+                                <div class="card-header bg-secondary text-white py-2 fw-bold text-center">
+                                    <i class="bi bi-shield-check me-1"></i> APORTES DEL EMPLEADOR
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm table-striped mb-0">
+                                        <thead class="table-light small">
+                                            <tr>
+                                                <th>CONCEPTO</th>
+                                                <th class="text-end" style="width: 50px;">HORAS</th>
+                                                <th class="text-end" style="width: 80px;">MONTO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (Model.AportesEmpleador.Any())
+                                            {
+                                                foreach (var ap in Model.AportesEmpleador)
+                                                {
+                                                    <tr>
+                                                        <td><small class="font-monospace text-muted me-1">@ap.Codigo</small>@ap.Descripcion</td>
+                                                        <td class="text-end font-monospace small">@(ap.Horas > 0 ? ap.Horas.ToString("N2") : "-")</td>
+                                                        <td class="text-end font-monospace text-secondary">@ap.Monto.ToString("N2")</td>
+                                                    </tr>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <tr><td colspan="3" class="text-center text-muted small py-3">Sin aportes registrados</td></tr>
+                                            }
+                                        </tbody>
+                                        <tfoot class="table-light fw-bold">
+                                            <tr>
+                                                <td colspan="2">TOTAL APORTES:</td>
+                                                <td class="text-end font-monospace text-secondary">S/ @Model.TotalAportes.ToString("N2")</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TOTAL NETO A PAGAR -->
+                    <div class="card bg-success-subtle border-success-subtle mb-4">
+                        <div class="card-body p-3 text-center">
+                            <div class="text-uppercase small fw-bold text-success mb-1">NETO A PAGAR AL TRABAJADOR</div>
+                            <div class="display-6 fw-bold font-monospace text-success">
+                                S/ @Model.NetoPagar.ToString("N2")
+                            </div>
+                            <div class="small text-muted mt-1 fst-italic">
+                                <strong>SON:</strong> @Model.NetoEnLetras
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FIRMAS -->
+                    <div class="row pt-5 mt-4 text-center">
+                        <div class="col-md-6 mb-4 mb-md-0">
+                            <div class="border-top border-dark w-75 mx-auto pt-2">
+                                <div class="fw-bold">@Model.EmpresaRazonSocial</div>
+                                <div class="small text-muted">EMPLEADOR / RESPONSABLE RRHH</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border-top border-dark w-75 mx-auto pt-2">
+                                <div class="fw-bold">@Model.PersonalNombre</div>
+                                <div class="small text-muted">TRABAJADOR - DNI: @Model.DocumentoIdentidad</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-file-earmark-person display-4 text-muted opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-semibold text-muted">Seleccione un proceso de planilla y colaborador para generar la boleta.</h5>
+                    <p class="text-muted small">Puede usar los selectores superiores para consultar o imprimir en lote.</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    async function onPlanillaChange() {
+        const planId = document.getElementById('select-planilla').value;
+        const selectPerso = document.getElementById('select-personal');
+        selectPerso.innerHTML = '<option value="">Cargando colaboradores...</option>';
+
+        if (!planId) {
+            selectPerso.innerHTML = '<option value="">-- Seleccione Colaborador --</option>';
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/RH/ReporteBoleta/ObtenerColaboradores?planProceId=${planId}`);
+            const res = await resp.json();
+
+            if (res.success && res.data && res.data.length > 0) {
+                let html = '<option value="">-- Seleccione Colaborador --</option>';
+                res.data.forEach(c => {
+                    html += `<option value="${c.id}">${c.nombre}</option>`;
+                });
+                selectPerso.innerHTML = html;
+            } else {
+                selectPerso.innerHTML = '<option value="">Sin colaboradores en esta planilla</option>';
+            }
+        } catch (err) {
+            console.error(err);
+            selectPerso.innerHTML = '<option value="">Error al cargar colaboradores</option>';
+        }
+    }
+</script>
+}

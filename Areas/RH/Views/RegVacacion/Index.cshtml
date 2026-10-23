@@ -1,0 +1,569 @@
+@model List<AspNet10ArcoERP.Models.PersonalVacacionModel>
+@{
+    ViewData["Title"] = "Registro de Vacaciones";
+    var estadosVacacion = ViewBag.EstadosVacacion as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var personalList = ViewBag.Personal as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+}
+
+<style>
+    .table-fixed-header {
+        table-layout: auto;
+    }
+    .table-header-custom th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        height: 40px !important;
+        line-height: 1.2;
+    }
+    .th-sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .th-sortable:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-primary);
+    }
+    [data-bs-theme="dark"] .table-header-custom {
+        background-color: #1e2227 !important;
+        color: #e9ecef !important;
+    }
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e2227 !important;
+        border: 1px solid #343a40 !important;
+    }
+    [data-bs-theme="dark"] .modal-header,
+    [data-bs-theme="dark"] .modal-footer {
+        background-color: #181b1f !important;
+        border-color: #2b3035 !important;
+    }
+</style>
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-sun text-warning me-2" style="font-size: 1.6rem;"></i>Registro de Vacaciones
+                </h3>
+                <small class="text-muted">Control de vacaciones anuales, descansos físicos, días a cuenta y cronograma de goce</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Programar Vacación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <!-- BARRA DE FILTROS -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <!-- Buscador -->
+                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por trabajador, DNI, código..." onkeyup="aplicarFiltros();" />
+                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
+                        </div>
+
+                        <!-- Estado Goce -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-calendar2-check text-primary"></i>
+                            </span>
+                            <select id="filtro-goce" class="form-select form-select-sm border-start-0" style="min-width: 160px;" onchange="aplicarFiltros();">
+                                <option value="">Estado de Goce</option>
+                                @foreach (var ev in estadosVacacion)
+                                {
+                                    <option value="@ev.Nombre.ToUpper()">@ev.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Estado Registro -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-toggle-on text-primary"></i>
+                            </span>
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 130px;" onchange="aplicarFiltros();">
+                                <option value="">Todos</option>
+                                <option value="A">Solo Activos</option>
+                                <option value="I">Solo Inactivos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- TOTAL Y MOSTRANDO -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> registros</span>
+                        </div>
+
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-list-ol"></i>
+                                <span>Mostrar: <strong>@(ViewBag.Top == 0 ? "Todos" : ViewBag.Top.ToString())</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item @(ViewBag.Top == 25 ? "active" : "")" asp-action="Index" asp-route-top="25" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 25</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 50 ? "active" : "")" asp-action="Index" asp-route-top="50" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 50</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 100 ? "active" : "")" asp-action="Index" asp-route-top="100" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 100</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 500 ? "active" : "")" asp-action="Index" asp-route-top="500" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 500</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 0 ? "active" : "")" asp-action="Index" asp-route-top="0" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Ver Todos</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header" id="tabla-vacaciones">
+                        <thead class="table-header-custom border-bottom bg-body-tertiary">
+                            <tr>
+                                <th class="text-center px-3" style="width: 50px;">#</th>
+                                <th class="th-sortable" onclick="ordenarTabla(1)">
+                                    TRABAJADOR <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="th-sortable" onclick="ordenarTabla(2)">
+                                    CENTRO DE COSTO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(3)" style="width: 120px;">
+                                    F. INGRESO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(4)">
+                                    PERÍODO VACACIONAL <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(5)" style="width: 100px;">
+                                    DÍAS <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(6)" style="width: 130px;">
+                                    ESTADO GOCE <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(7)" style="width: 90px;">
+                                    ESTADO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-end px-4" style="width: 100px;">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-vacaciones">
+                            @if (Model != null && Model.Any())
+                            {
+                                int idx = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr id="fila-@item.Id" data-id="@item.Id" data-estado="@item.Estado" data-goce="@item.EstadoVacacionNombre.ToUpper()">
+                                        <td class="text-center text-muted fw-semibold px-3">@idx</td>
+                                        <td>
+                                            <div class="fw-semibold">@item.PersonalNombre</div>
+                                            <div class="small text-muted font-monospace"><i class="bi bi-person-badge me-1"></i>DNI: @item.DocumentoIdentidad | Cód: @item.PersonalCodigo</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                                @(string.IsNullOrWhiteSpace(item.CentroCostoNombre) ? "GENERAL" : item.CentroCostoNombre)
+                                            </span>
+                                        </td>
+                                        <td class="text-center font-monospace small">
+                                            @(item.FechaIngreso?.ToString("dd/MM/yyyy") ?? "-")
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-body-secondary text-body border px-2 py-1 font-monospace">
+                                                <i class="bi bi-calendar-event me-1 text-primary"></i>
+                                                @(item.FechaInicio?.ToString("dd/MM/yyyy") ?? "-") al @(item.FechaFin?.ToString("dd/MM/yyyy") ?? "-")
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1 fs-6">
+                                                @item.DiasACuenta días
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.EstadoVacacionId == 2 || item.EstadoVacacionNombre == "GOZADO")
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Gozado
+                                                </span>
+                                            }
+                                            else if (item.EstadoVacacionId == 4 || item.EstadoVacacionNombre == "ANULADO")
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Anulado
+                                                </span>
+                                            }
+                                            else if (item.EstadoVacacionId == 3 || item.EstadoVacacionNombre == "COMPENSADO")
+                                            {
+                                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                                    <i class="bi bi-cash me-1"></i>Compensado
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Programado
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.Estado == "A")
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Activo
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Inactivo
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalEditar(@item.Id);" title="Editar">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning" onclick="cambiarEstado(@item.Id, '@item.Estado');" title="@(item.Estado == "A" ? "Desactivar" : "Activar")">
+                                                    <i class="bi @(item.Estado == "A" ? "bi-toggle-on text-success" : "bi-toggle-off text-muted")"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    idx++;
+                                }
+                            }
+                            else
+                            {
+                                <tr id="fila-vacia">
+                                    <td colspan="9" class="text-center py-5 text-muted">
+                                        <i class="bi bi-sun display-6 d-block mb-2 text-warning opacity-50"></i>
+                                        <span>No se encontraron registros de vacaciones.</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR VACACIONES -->
+<div class="modal fade" id="modalVacacion" tabindex="-1" aria-labelledby="modalVacacionLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title fw-bold d-flex align-items-center" id="modalVacacionLabel">
+                    <i class="bi bi-sun me-2 text-warning"></i>Programar Vacación de Personal
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formVacacion" onsubmit="guardarVacacion(event);">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="vaca-id" name="Id" value="0" />
+
+                    <div class="row g-3">
+                        <!-- Trabajador -->
+                        <div class="col-md-12">
+                            <label for="vaca-personal" class="form-label fw-semibold small">Trabajador / Personal <span class="text-danger">*</span></label>
+                            <select class="form-select" id="vaca-personal" name="PersonalId" required>
+                                <option value="">-- Seleccionar Trabajador --</option>
+                                @foreach (var p in personalList)
+                                {
+                                    <option value="@p.Id">@p.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Días a cuenta -->
+                        <div class="col-md-4">
+                            <label for="vaca-dias" class="form-label fw-semibold small">Días a Cuenta <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="vaca-dias" name="DiasACuenta" min="1" max="60" value="15" required onchange="calcularFechaFin();" />
+                        </div>
+
+                        <!-- Fecha Inicio -->
+                        <div class="col-md-4">
+                            <label for="vaca-fecha-inicio" class="form-label fw-semibold small">Fecha Inicio <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="vaca-fecha-inicio" name="FechaInicio" required onchange="calcularFechaFin();" />
+                        </div>
+
+                        <!-- Fecha Fin -->
+                        <div class="col-md-4">
+                            <label for="vaca-fecha-fin" class="form-label fw-semibold small">Fecha Fin <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="vaca-fecha-fin" name="FechaFin" required />
+                        </div>
+
+                        <!-- Estado de Goce -->
+                        <div class="col-md-6">
+                            <label for="vaca-estado-goce" class="form-label fw-semibold small">Estado de Goce <span class="text-danger">*</span></label>
+                            <select class="form-select" id="vaca-estado-goce" name="EstadoVacacionId" required>
+                                @foreach (var ev in estadosVacacion)
+                                {
+                                    <option value="@ev.Id">@ev.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Estado Registro -->
+                        <div class="col-md-6">
+                            <label for="vaca-estado" class="form-label fw-semibold small">Estado del Registro <span class="text-danger">*</span></label>
+                            <select class="form-select" id="vaca-estado" name="Estado" required>
+                                <option value="A">Activo (Válido para cómputo de planilla)</option>
+                                <option value="I">Inactivo (Deshabilitado)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarVacacion">
+                        <i class="bi bi-save me-1"></i>Guardar Registro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let ordenActual = { col: -1, asc: true };
+
+    function abrirModalCrear() {
+        document.getElementById('formVacacion').reset();
+        document.getElementById('vaca-id').value = '0';
+        document.getElementById('vaca-dias').value = '15';
+        document.getElementById('vaca-estado-goce').value = '1'; // Programado
+        document.getElementById('vaca-estado').value = 'A';
+        
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('vaca-fecha-inicio').value = hoy;
+        calcularFechaFin();
+
+        document.getElementById('modalVacacionLabel').innerHTML = '<i class="bi bi-sun me-2 text-warning"></i>Programar Vacación de Personal';
+        const modal = new bootstrap.Modal(document.getElementById('modalVacacion'));
+        modal.show();
+    }
+
+    function calcularFechaFin() {
+        const inicioStr = document.getElementById('vaca-fecha-inicio').value;
+        const dias = parseInt(document.getElementById('vaca-dias').value) || 1;
+        if (!inicioStr) return;
+
+        const inicio = new Date(inicioStr);
+        inicio.setDate(inicio.getDate() + (dias - 1));
+        document.getElementById('vaca-fecha-fin').value = inicio.toISOString().split('T')[0];
+    }
+
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/RH/RegVacacion/Obtener?id=${id}`);
+            const res = await resp.json();
+            if (!res.success) {
+                Swal.fire('Error', res.message || 'No se pudo cargar el registro de vacación.', 'error');
+                return;
+            }
+
+            const data = res.data;
+            document.getElementById('vaca-id').value = data.id;
+            document.getElementById('vaca-personal').value = data.personalId;
+            document.getElementById('vaca-dias').value = data.diasACuenta;
+            document.getElementById('vaca-fecha-inicio').value = data.fechaInicio ? data.fechaInicio.split('T')[0] : '';
+            document.getElementById('vaca-fecha-fin').value = data.fechaFin ? data.fechaFin.split('T')[0] : '';
+            document.getElementById('vaca-estado-goce').value = data.estadoVacacionId;
+            document.getElementById('vaca-estado').value = data.estado || 'A';
+
+            document.getElementById('modalVacacionLabel').innerHTML = '<i class="bi bi-pencil-square me-2 text-warning"></i>Editar Vacación de Personal';
+            const modal = new bootstrap.Modal(document.getElementById('modalVacacion'));
+            modal.show();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Ocurrió un error al obtener la información.', 'error');
+        }
+    }
+
+    async function guardarVacacion(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnGuardarVacacion');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Guardando...';
+
+        try {
+            const form = document.getElementById('formVacacion');
+            const formData = new FormData(form);
+
+            const resp = await fetch('/RH/RegVacacion/Guardar', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: res.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Atención', res.message || 'No se pudo guardar el registro de vacación.', 'warning');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save me-1"></i>Guardar Registro';
+        }
+    }
+
+    async function cambiarEstado(id, estadoActual) {
+        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        const result = await Swal.fire({
+            title: `¿Desea ${accion} este registro de vacación?`,
+            text: `El registro pasará a estar ${estadoActual === 'A' ? 'inactivo' : 'activo'}.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: `Sí, ${accion}`,
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+
+            const resp = await fetch('/RH/RegVacacion/CambiarEstado', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Estado Actualizado',
+                    text: res.message,
+                    timer: 1200,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', res.message || 'No se pudo cambiar el estado.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        }
+    }
+
+
+    function aplicarFiltros() {
+        const texto = document.getElementById('filtro-tabla').value.toLowerCase().trim();
+        const goce = document.getElementById('filtro-goce').value;
+        const estado = document.getElementById('filtro-estado').value;
+        const filas = document.querySelectorAll('#tbody-vacaciones tr:not(#fila-vacia)');
+        let visibles = 0;
+
+        filas.forEach(f => {
+            const rowText = f.innerText.toLowerCase();
+            const rowEstado = f.getAttribute('data-estado');
+            const rowGoce = f.getAttribute('data-goce');
+
+            const coincideTexto = !texto || rowText.includes(texto);
+            const coincideEstado = !estado || rowEstado === estado;
+            const coincideGoce = !goce || rowGoce === goce;
+
+            if (coincideTexto && coincideEstado && coincideGoce) {
+                f.style.display = '';
+                visibles++;
+            } else {
+                f.style.display = 'none';
+            }
+        });
+
+        const totalBadge = document.getElementById('total-registros');
+        if (totalBadge) totalBadge.innerText = visibles;
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtro-tabla').value = '';
+        document.getElementById('filtro-goce').value = '';
+        document.getElementById('filtro-estado').value = '';
+        aplicarFiltros();
+    }
+
+    function ordenarTabla(n) {
+        const table = document.getElementById('tabla-vacaciones');
+        let switching = true;
+        let dir = 'asc';
+        let switchcount = 0;
+
+        if (ordenActual.col === n) {
+            dir = ordenActual.asc ? 'desc' : 'asc';
+            ordenActual.asc = !ordenActual.asc;
+        } else {
+            ordenActual.col = n;
+            ordenActual.asc = true;
+            dir = 'asc';
+        }
+
+        while (switching) {
+            switching = false;
+            const rows = table.rows;
+            let shouldSwitch = false;
+            let i;
+
+            for (i = 1; i < (rows.length - 1); i++) {
+                if (rows[i].id === 'fila-vacia') continue;
+                let x = rows[i].getElementsByTagName('TD')[n];
+                let y = rows[i + 1].getElementsByTagName('TD')[n];
+                if (!x || !y) continue;
+
+                let cmpX = x.innerText.toLowerCase().trim();
+                let cmpY = y.innerText.toLowerCase().trim();
+
+                if (dir === 'asc') {
+                    if (cmpX > cmpY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir === 'desc') {
+                    if (cmpX < cmpY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            }
+        }
+    }
+</script>
+}

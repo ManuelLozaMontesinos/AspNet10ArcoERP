@@ -117,14 +117,25 @@
                         </div>
                     </div>
 
-                    <!-- Paginación a la derecha -->
-                    <div class="d-flex align-items-center gap-2 ms-auto">
-                        <label for="filtro-top" class="form-label mb-0 text-muted small text-nowrap">Mostrando:</label>
-                        <select id="filtro-top" class="form-select form-select-sm" style="width: 85px;" onchange="cambiarTop(this.value)">
-                            <option value="25" selected>25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
+                    <!-- TOTAL Y MOSTRANDO: FIRMEMENTE A LA DERECHA (ms-auto) -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> grupos</span>
+                        </div>
+
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">25</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                                <li><a class="dropdown-item item-top active" href="javascript:void(0)" onclick="cambiarTop(25)">25 registros</a></li>
+                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(50)">50 registros</a></li>
+                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(100)">100 registros</a></li>
+                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(500)">500 registros</a></li>
+                            </ul>
+                        </div>
                     </div>
 
                 </div>
@@ -367,15 +378,27 @@
                                     </button>
                                 </div>
                                 <div class="table-responsive border rounded-2">
-                                    <table class="table table-sm table-hover align-middle mb-0">
+                                    <table class="table table-sm table-hover align-middle mb-0" id="tabla-modal-clases">
                                         <thead class="table-light">
                                             <tr>
-                                                <th style="width: 90px;">Código</th>
-                                                <th>Nombre de la Clase</th>
-                                                <th>Tipo Detracción</th>
-                                                <th class="text-end" style="width: 100px;">Tasa (%)</th>
-                                                <th class="text-center" style="width: 100px;">Familias</th>
-                                                <th class="text-center" style="width: 95px;">Estado</th>
+                                                <th style="width: 90px;" class="th-sortable" onclick="ordenarTablaModal('tabla-modal-clases', 0, false)">
+                                                    <span>Código</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="th-sortable" onclick="ordenarTablaModal('tabla-modal-clases', 1, false)">
+                                                    <span>Nombre de la Clase</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="th-sortable" onclick="ordenarTablaModal('tabla-modal-clases', 2, false)">
+                                                    <span>Tipo Detracción</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="text-end th-sortable" style="width: 100px;" onclick="ordenarTablaModal('tabla-modal-clases', 3, true)">
+                                                    <span>Tasa (%)</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="text-center th-sortable" style="width: 100px;" onclick="ordenarTablaModal('tabla-modal-clases', 4, true)">
+                                                    <span>Familias</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="text-center th-sortable" style="width: 95px;" onclick="ordenarTablaModal('tabla-modal-clases', 5, false)">
+                                                    <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
                                                 <th class="text-end" style="width: 95px;">Acciones</th>
                                             </tr>
                                         </thead>
@@ -400,13 +423,21 @@
                                     </button>
                                 </div>
                                 <div class="table-responsive border rounded-2">
-                                    <table class="table table-sm table-hover align-middle mb-0">
+                                    <table class="table table-sm table-hover align-middle mb-0" id="tabla-modal-familias">
                                         <thead class="table-light">
                                             <tr>
-                                                <th style="width: 90px;">Código</th>
-                                                <th>Nombre de la Familia</th>
-                                                <th>Clase</th>
-                                                <th class="text-center" style="width: 95px;">Estado</th>
+                                                <th style="width: 90px;" class="th-sortable" onclick="ordenarTablaModal('tabla-modal-familias', 0, false)">
+                                                    <span>Código</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="th-sortable" onclick="ordenarTablaModal('tabla-modal-familias', 1, false)">
+                                                    <span>Nombre de la Familia</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="th-sortable" onclick="ordenarTablaModal('tabla-modal-familias', 2, false)">
+                                                    <span>Clase</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
+                                                <th class="text-center th-sortable" style="width: 95px;" onclick="ordenarTablaModal('tabla-modal-familias', 3, false)">
+                                                    <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                </th>
                                                 <th class="text-end" style="width: 95px;">Acciones</th>
                                             </tr>
                                         </thead>
@@ -600,6 +631,9 @@
 
     function cambiarTop(val) {
         topActual = parseInt(val) || 25;
+        $('#lbl-top-actual').text(topActual);
+        $('.item-top').removeClass('active');
+        $(`.item-top[onclick*="${topActual}"]`).addClass('active');
         aplicarFiltros();
     }
 
@@ -617,7 +651,8 @@
         rows.sort(function (a, b) {
             let valA = $(a).find('td').eq(colIdx).text().trim();
             let valB = $(b).find('td').eq(colIdx).text().trim();
-            return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            return sortAsc ? valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' })
+                           : valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
         });
 
         $.each(rows, function (index, row) {
@@ -625,6 +660,48 @@
         });
 
         aplicarFiltros();
+    }
+
+    function ordenarTablaModal(tablaId, colIndex, isNumeric) {
+        var $table = $('#' + tablaId);
+        if (!$table.length) return;
+        var $tbody = $table.find('tbody');
+        var rows = $tbody.find('tr:not(.fila-no-sort)').get();
+        if (rows.length <= 1) return;
+
+        var prevCol = $table.data('sort-col');
+        var sortAsc = true;
+        if (prevCol === colIndex) {
+            sortAsc = !$table.data('sort-asc');
+        }
+        $table.data('sort-col', colIndex);
+        $table.data('sort-asc', sortAsc);
+
+        // Actualizar iconos
+        $table.find('thead th .sort-icon').attr('class', 'bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon');
+        var $th = $table.find('thead th').eq(colIndex);
+        var iconClass = isNumeric
+            ? (sortAsc ? 'bi-sort-numeric-down text-primary fw-bold' : 'bi-sort-numeric-down-alt text-primary fw-bold')
+            : (sortAsc ? 'bi-sort-alpha-down text-primary fw-bold' : 'bi-sort-alpha-down-alt text-primary fw-bold');
+        $th.find('.sort-icon').attr('class', 'bi ' + iconClass + ' ms-1 sort-icon');
+
+        rows.sort(function (a, b) {
+            var aVal = $(a).children('td, th').eq(colIndex).text().trim();
+            var bVal = $(b).children('td, th').eq(colIndex).text().trim();
+
+            if (isNumeric) {
+                var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+                var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+                return sortAsc ? (aNum - bNum) : (bNum - aNum);
+            } else {
+                return sortAsc ? aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' })
+                               : bVal.localeCompare(aVal, undefined, { numeric: true, sensitivity: 'base' });
+            }
+        });
+
+        $.each(rows, function (index, row) {
+            $tbody.append(row);
+        });
     }
 
     // ========================================================

@@ -1,0 +1,1722 @@
+@model List<AspNet10ArcoERP.Models.PersonalModel>
+@{
+    ViewData["Title"] = "Registro de Personal";
+    
+    var tiposDocLookup = ViewBag.TiposDocLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var sexosLookup = ViewBag.SexosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var estadosCivilesLookup = ViewBag.EstadosCivilesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var paisesLookup = ViewBag.PaisesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var departamentosLookup = ViewBag.DepartamentosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposViaLookup = ViewBag.TiposViaLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposZonaLookup = ViewBag.TiposZonaLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposTrabajadorLookup = ViewBag.TiposTrabajadorLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var categoriasOcupacionalesLookup = ViewBag.CategoriasOcupacionalesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var regimenesLaboralesLookup = ViewBag.RegimenesLaboralesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var situacionesEducativasLookup = ViewBag.SituacionesEducativasLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var cargosLookup = ViewBag.CargosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var ocupacionesLookup = ViewBag.OcupacionesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var centrosCostoLookup = ViewBag.CentrosCostoLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposContratoLookup = ViewBag.TiposContratoLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var situacionesEspecialesLookup = ViewBag.SituacionesEspecialesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var periodicidadesRemuLookup = ViewBag.PeriodicidadesRemuLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var regimenesSaludLookup = ViewBag.RegimenesSaludLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var epsLookup = ViewBag.EpsLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var regimenesPensionariosLookup = ViewBag.RegimenesPensionariosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var sctrPensionLookup = ViewBag.SctrPensionLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var sctrSaludLookup = ViewBag.SctrSaludLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposPagoRemuLookup = ViewBag.TiposPagoRemuLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var bancosLookup = ViewBag.BancosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var conveniosDobleTribLookup = ViewBag.ConveniosDobleTribLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var motivosFinPeriodoLookup = ViewBag.MotivosFinPeriodoLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var vinculosFamiliaresLookup = ViewBag.VinculosFamiliaresLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposRemuneracionLookup = ViewBag.TiposRemuneracionLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var planillasLookup = ViewBag.PlanillasLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var monedasLookup = ViewBag.MonedasLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+
+    string? estadoFiltro = ViewBag.Estado as string;
+    string currentSort = (ViewBag.Sort as string ?? "codigo").ToLower();
+    string currentDir = (ViewBag.Dir as string ?? "desc").ToLower();
+    int currentTop = ViewBag.Top != null ? (int)ViewBag.Top : 25;
+
+    int totalCount = ViewBag.TotalCount ?? (Model?.Count ?? 0);
+    int activosCount = ViewBag.ActivosCount ?? 0;
+    int cesadosCount = ViewBag.CesadosCount ?? 0;
+}
+
+@functions {
+    string SortUrl(string col, string curSort, string curDir, string? search, string? estado, int top)
+    {
+        string nextDir = (curSort == col && curDir == "asc") ? "desc" : "asc";
+        return Url.Action("Index", new { search, estado, sort = col, dir = nextDir, top }) ?? "#";
+    }
+
+    string SortIcon(string col, string curSort, string curDir, bool isNumeric = false)
+    {
+        if (curSort != col) return "bi-arrow-down-up text-muted opacity-50";
+        if (isNumeric)
+            return curDir == "asc" ? "bi-sort-numeric-down text-primary fw-bold" : "bi-sort-numeric-down-alt text-primary fw-bold";
+        return curDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold";
+    }
+}
+
+<style>
+    .table-fixed-header th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+    }
+    .colaborador-fila-cesado {
+        background-color: rgba(220, 53, 69, 0.04) !important;
+    }
+    [data-bs-theme="dark"] .colaborador-fila-cesado {
+        background-color: rgba(220, 53, 69, 0.12) !important;
+    }
+
+    /* Pestañas (nav-tabs) dentro del modal */
+    .nav-tabs .nav-link {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--bs-body-color);
+        padding: 0.5rem 0.85rem;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        transition: all 0.15s ease-in-out;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--bs-primary);
+        border-bottom-color: rgba(var(--bs-primary-rgb), 0.4);
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: 700;
+        color: var(--bs-primary) !important;
+        border-bottom: 2px solid var(--bs-primary) !important;
+        background: transparent !important;
+    }
+
+    /* ==========================================================================
+       ADAPTACIONES COMPLETAS DE TEMA OSCURO (MODALES, CABECERAS Y CONTROLES)
+       ========================================================================== */
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e2227 !important;
+        color: #e9ecef !important;
+        border: 1px solid #2c3138 !important;
+    }
+    [data-bs-theme="dark"] .modal-header,
+    [data-bs-theme="dark"] .modal-footer {
+        background-color: #16181b !important;
+        border-color: #2c3138 !important;
+    }
+    [data-bs-theme="dark"] .modal-header .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    /* Cabeceras de tablas en modal (evita que se vean blancas en modo oscuro) */
+    [data-bs-theme="dark"] .table-light,
+    [data-bs-theme="dark"] .table thead.table-light th,
+    [data-bs-theme="dark"] thead.table-light th {
+        background-color: #16181b !important;
+        color: #adb5bd !important;
+        border-color: #2c3138 !important;
+    }
+    [data-bs-theme="dark"] .table thead.table-header-custom th,
+    [data-bs-theme="dark"] thead.table-header-custom th {
+        background-color: #16181b !important;
+        color: #adb5bd !important;
+        border-color: #2c3138 !important;
+    }
+
+    /* Barra de pestañas en modo oscuro */
+    [data-bs-theme="dark"] .nav-tabs {
+        background-color: #16181b !important;
+        border-color: #2c3138 !important;
+    }
+    [data-bs-theme="dark"] .nav-tabs .nav-link {
+        color: #adb5bd !important;
+    }
+    [data-bs-theme="dark"] .nav-tabs .nav-link:hover {
+        color: #58a6ff !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+    }
+    [data-bs-theme="dark"] .nav-tabs .nav-link.active {
+        color: #58a6ff !important;
+        border-bottom: 2px solid #58a6ff !important;
+        background: #1e2227 !important;
+    }
+
+    /* Títulos de sección dentro del modal en modo oscuro */
+    [data-bs-theme="dark"] .tab-pane h6.text-primary {
+        color: #58a6ff !important;
+    }
+    [data-bs-theme="dark"] .tab-pane .border-bottom {
+        border-color: #2c3138 !important;
+    }
+
+    /* Controles de formulario en modo oscuro */
+    [data-bs-theme="dark"] .form-control,
+    [data-bs-theme="dark"] .form-select {
+        background-color: #16181b !important;
+        color: #e9ecef !important;
+        border-color: #2c3138 !important;
+    }
+    [data-bs-theme="dark"] .form-control:focus,
+    [data-bs-theme="dark"] .form-select:focus {
+        background-color: #16181b !important;
+        color: #ffffff !important;
+        border-color: #58a6ff !important;
+        box-shadow: 0 0 0 0.2rem rgba(88, 166, 255, 0.25) !important;
+    }
+    [data-bs-theme="dark"] .form-control::placeholder {
+        color: #6c757d !important;
+    }
+    [data-bs-theme="dark"] .input-group-text {
+        background-color: #16181b !important;
+        color: #adb5bd !important;
+        border-color: #2c3138 !important;
+    }
+    [data-bs-theme="dark"] .border {
+        border-color: #2c3138 !important;
+    }
+</style>
+
+<!-- ENCABEZADO DE PÁGINA -->
+<div class="app-content-header py-3 border-bottom bg-body">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h4 class="mb-1 text-primary fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-person-lines-fill"></i> Registro de Personal
+                </h4>
+                <div class="text-muted small">Maestro de colaboradores, empleados y trabajadores de la empresa</div>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm rounded-pill" onclick="abrirModalCrear();">
+                    <i class="bi bi-person-plus-fill me-1"></i>Nuevo Colaborador
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-3">
+    <div class="container-fluid">
+        <!-- BARRA DE FILTROS SUPERIOR -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <!-- 1. Píldoras de Estado y Selector Mostrando -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
+                    <!-- Píldoras de Estado -->
+                    <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Filtro de Estado">
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, sort = currentSort, dir = currentDir, top = currentTop })" 
+                           class="btn @(string.IsNullOrEmpty(estadoFiltro) ? "btn-primary" : "btn-outline-secondary")">
+                            <i class="bi bi-people me-1"></i>Todos <span class="badge @(string.IsNullOrEmpty(estadoFiltro) ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@totalCount</span>
+                        </a>
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, estado = "A", sort = currentSort, dir = currentDir, top = currentTop })" 
+                           class="btn @(estadoFiltro == "A" ? "btn-primary" : "btn-outline-secondary")">
+                            <i class="bi bi-check-circle me-1"></i>Activos <span class="badge @(estadoFiltro == "A" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@activosCount</span>
+                        </a>
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, estado = "C", sort = currentSort, dir = currentDir, top = currentTop })" 
+                           class="btn @(estadoFiltro == "C" ? "btn-danger" : "btn-outline-secondary")">
+                            <i class="bi bi-person-dash me-1"></i>Cesados <span class="badge @(estadoFiltro == "C" ? "bg-white text-danger" : "bg-body-secondary text-body") ms-1">@cesadosCount</span>
+                        </a>
+                    </div>
+
+                    <!-- TOTAL Y MOSTRANDO -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(estadoFiltro == "A" ? activosCount : (estadoFiltro == "C" ? cesadosCount : totalCount))</strong> colaboradores</span>
+                        </div>
+
+                        <!-- Dropdown 'Mostrando' -->
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1">@currentTop</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                                @foreach (var cant in new[] { 25, 50, 100, 500 })
+                                {
+                                    <li>
+                                        <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
+                                           href="@Url.Action("Index", new { search = ViewBag.Search, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = cant })">
+                                            <span>@cant colaboradores</span>
+                                            @if (currentTop == cant)
+                                            {
+                                                <i class="bi bi-check text-primary"></i>
+                                            }
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Buscador Dinámico -->
+                <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0" id="filtro-form">
+                    @if (!string.IsNullOrEmpty(estadoFiltro))
+                    {
+                        <input type="hidden" name="estado" value="@estadoFiltro" />
+                    }
+                    <input type="hidden" name="sort" value="@currentSort" />
+                    <input type="hidden" name="dir" value="@currentDir" />
+                    <input type="hidden" name="top" value="@currentTop" />
+
+                    <div class="input-group input-group-sm flex-grow-1" style="max-width: 500px;">
+                        <span class="input-group-text bg-body-tertiary border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por DNI, apellidos, nombres o código..." value="@ViewBag.Search" />
+                        <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                        @if (!string.IsNullOrEmpty(ViewBag.Search as string) || !string.IsNullOrEmpty(estadoFiltro))
+                        {
+                            <a href="@Url.Action("Index", new { sort = currentSort, dir = currentDir, top = currentTop })" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- GRILLA DE PERSONAL -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-fixed-header" id="tabla-personal">
+                    <thead class="table-light table-header-custom border-bottom">
+                        <tr>
+                            <th class="ps-3 text-center" style="width: 85px;">
+                                <a href="@SortUrl("codigo", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    CÓDIGO <i class="bi @SortIcon("codigo", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th style="width: 130px;">
+                                <a href="@SortUrl("documento", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    DOC. IDENTIDAD <i class="bi @SortIcon("documento", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="@SortUrl("razonsocial", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    APELLIDOS Y NOMBRES <i class="bi @SortIcon("razonsocial", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th style="width: 180px;">
+                                <a href="@SortUrl("cargo", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    CARGO / PUESTO <i class="bi @SortIcon("cargo", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th style="width: 170px;">
+                                <a href="@SortUrl("centrocosto", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    CENTRO DE COSTO <i class="bi @SortIcon("centrocosto", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th class="text-center" style="width: 110px;">
+                                <a href="@SortUrl("fechaingreso", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    FEC. INGRESO <i class="bi @SortIcon("fechaingreso", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th class="text-center" style="width: 110px;">
+                                <a href="@SortUrl("fechacese", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    FEC. CESE <i class="bi @SortIcon("fechacese", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th class="text-center" style="width: 95px;">
+                                <a href="@SortUrl("estado", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
+                                    ESTADO <i class="bi @SortIcon("estado", currentSort, currentDir) ms-1 sort-icon"></i>
+                                </a>
+                            </th>
+                            <th class="text-end pe-3" style="width: 125px;">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model == null || !Model.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                    No se encontraron colaboradores registrados según el criterio de búsqueda.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var p in Model)
+                            {
+                                <tr class="@(p.EstaCesado ? "colaborador-fila-cesado" : "")">
+                                    <!-- Código -->
+                                    <td class="ps-3 text-center">
+                                        <span class="badge bg-body-secondary text-body border fw-mono">@p.Codigo</span>
+                                    </td>
+
+                                    <!-- Documento -->
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary me-1">@p.TipoDocIdentidad</span>
+                                        <span class="fw-semibold">@p.NumDocIdentidad</span>
+                                    </td>
+
+                                    <!-- Apellidos y Nombres -->
+                                    <td>
+                                        <div class="fw-bold text-body">@p.RazonSocial</div>
+                                        <small class="text-muted d-block text-truncate" style="max-width: 320px;" title="@p.DireccionCompleta">
+                                            <i class="bi bi-geo-alt me-1"></i>@p.DireccionCompleta
+                                        </small>
+                                    </td>
+
+                                    <!-- Cargo -->
+                                    <td>
+                                        <span class="text-nowrap">@(string.IsNullOrEmpty(p.CargoPersonalNombre) ? "-" : p.CargoPersonalNombre)</span>
+                                    </td>
+
+                                    <!-- Centro de Costo -->
+                                    <td>
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle text-truncate" style="max-width: 160px;" title="@p.CentroCostoNombre">
+                                            @(string.IsNullOrEmpty(p.CentroCostoNombre) ? "Sin Centro de Costo" : p.CentroCostoNombre)
+                                        </span>
+                                    </td>
+
+                                    <!-- Fecha Ingreso -->
+                                    <td class="text-center text-nowrap small">
+                                        @p.FechaIngreso.ToString("dd/MM/yyyy")
+                                    </td>
+
+                                    <!-- Fecha Cese -->
+                                    <td class="text-center text-nowrap small">
+                                        @if (p.FechaCese.HasValue)
+                                        {
+                                            <span class="text-danger fw-semibold">@p.FechaCese.Value.ToString("dd/MM/yyyy")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+
+                                    <!-- Estado -->
+                                    <td class="text-center">
+                                        @if (p.EstaCesado)
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Cesado</span>
+                                        }
+                                        else if (p.Estado == "A")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Inactivo</span>
+                                        }
+                                    </td>
+
+                                    <!-- Acciones -->
+                                    <td class="text-end pe-3 text-nowrap">
+                                        <!-- Editar -->
+                                        <button type="button" class="btn btn-outline-primary btn-sm px-2 py-1" onclick="abrirModalEditar(@p.Id);" title="Editar Colaborador">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+
+                                        <!-- Cese -->
+                                        @if (!p.EstaCesado)
+                                        {
+                                            <button type="button" class="btn btn-outline-danger btn-sm px-2 py-1" onclick="abrirModalCese(@p.Id, '@p.RazonSocial');" title="Registrar Cese Laboral">
+                                                <i class="bi bi-person-x"></i>
+                                            </button>
+                                        }
+
+                                        <!-- Activar / Desactivar -->
+                                        <button type="button" class="btn @(p.Estado == "A" ? "btn-outline-warning" : "btn-outline-success") btn-sm px-2 py-1" onclick="cambiarEstadoPersonal(@p.Id, '@p.Estado', '@p.RazonSocial');" title="@(p.Estado == "A" ? "Desactivar" : "Activar")">
+                                            <i class="bi @(p.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL CRUD PRINCIPAL DE PERSONAL (MULTI-PESTAÑAS)                         -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modal-crud-personal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow border border-secondary-subtle rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom border-secondary-subtle">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0 text-body d-flex align-items-center gap-2">
+                        <i class="bi bi-person-badge text-primary" id="modal-icono"></i>
+                        <span id="modal-titulo">Registro de Colaborador</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-2 fs-7" id="modal-codigo-badge"></span>
+                    </h5>
+                    <small class="text-muted" id="modal-subtitulo">Gestión integral de datos de personal y planilla</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            
+            <div class="modal-body p-0">
+                <!-- Pestañas de navegación -->
+                <ul class="nav nav-tabs px-3 pt-2 bg-body-tertiary border-bottom" id="personalTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-ident-btn" data-bs-toggle="tab" data-bs-target="#tab-ident" type="button" role="tab">
+                            <i class="bi bi-card-heading me-1 text-primary"></i>1. Identificación y Domicilio
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-lab-btn" data-bs-toggle="tab" data-bs-target="#tab-lab" type="button" role="tab">
+                            <i class="bi bi-briefcase me-1 text-primary"></i>2. Datos Laborales
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-soc-btn" data-bs-toggle="tab" data-bs-target="#tab-soc" type="button" role="tab">
+                            <i class="bi bi-shield-check me-1 text-primary"></i>3. Aseguramiento Social
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-pago-btn" data-bs-toggle="tab" data-bs-target="#tab-pago" type="button" role="tab">
+                            <i class="bi bi-credit-card me-1 text-primary"></i>4. Pagos y Cuentas
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-rem-btn" data-bs-toggle="tab" data-bs-target="#tab-rem" type="button" role="tab">
+                            <i class="bi bi-cash-stack me-1 text-primary"></i>5. Remuneraciones
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-dep-btn" data-bs-toggle="tab" data-bs-target="#tab-dep" type="button" role="tab">
+                            <i class="bi bi-people me-1 text-primary"></i>6. Derechohabientes
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-plan-btn" data-bs-toggle="tab" data-bs-target="#tab-plan" type="button" role="tab">
+                            <i class="bi bi-file-earmark-spreadsheet me-1 text-primary"></i>7. Planillas
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Contenido de Pestañas -->
+                <form id="form-personal" onsubmit="guardarPersonal(event);">
+                    <input type="hidden" id="pers-id" name="Id" value="0" />
+                    <input type="hidden" id="pers-proveedor-id" name="ProveedorId" value="0" />
+                    <input type="hidden" id="pers-empresa-sede-id" name="EmpresaSedeId" value="1" />
+
+                    <div class="tab-content p-3" id="personalTabsContent">
+                        
+                        <!-- PESTAÑA 1: IDENTIFICACIÓN Y DOMICILIO -->
+                        <div class="tab-pane fade show active" id="tab-ident" role="tabpanel">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">Datos Personales</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Tipo de Documento <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="pers-tipo-doc" name="TipoDocIdentidadId" required>
+                                        @foreach (var td in tiposDocLookup)
+                                        {
+                                            <option value="@td.Id">@td.Nombre (@td.Codigo)</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold"># Documento <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="pers-num-doc" name="NumDocIdentidad" required maxlength="20" placeholder="Ej: 45892134" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Sexo <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="pers-sexo-id" name="SexoId" required>
+                                        @foreach (var s in sexosLookup)
+                                        {
+                                            <option value="@s.Id">@s.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Fecha Nacimiento <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control form-control-sm" id="pers-fecha-nac" name="FechaNacimiento" required />
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm text-uppercase" id="pers-ape-pat" name="ApellidoPaterno" required maxlength="50" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Apellido Materno <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm text-uppercase" id="pers-ape-mat" name="ApellidoMaterno" required maxlength="50" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Nombres <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm text-uppercase" id="pers-nombres" name="Nombres" required maxlength="50" />
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Estado Civil</label>
+                                    <select class="form-select form-select-sm" id="pers-estado-civil" name="EstadoCivilId">
+                                        @foreach (var ec in estadosCivilesLookup)
+                                        {
+                                            <option value="@ec.Id">@ec.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Nacionalidad</label>
+                                    <select class="form-select form-select-sm" id="pers-pais-id" name="PaisId">
+                                        @foreach (var p in paisesLookup)
+                                        {
+                                            <option value="@p.Id" selected="@(p.Id == 1)">@p.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Teléfono / Celular</label>
+                                    <input type="text" class="form-control form-control-sm" id="pers-telefono" name="Telefono" maxlength="20" placeholder="Ej: 987654321" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Correo Electrónico</label>
+                                    <input type="email" class="form-control form-control-sm" id="pers-email" name="Email" maxlength="100" placeholder="correo@ejemplo.com" />
+                                </div>
+                            </div>
+
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-4">Domicilio Principal</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Tipo de Vía</label>
+                                    <select class="form-select form-select-sm" id="pers-tipo-via" name="TipoViaId">
+                                        @foreach (var tv in tiposViaLookup)
+                                        {
+                                            <option value="@tv.Id">@tv.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-semibold">Nombre de Vía (Av / Jr / Calle)</label>
+                                    <input type="text" class="form-control form-control-sm text-uppercase" id="pers-nombre-via" name="NombreVia" maxlength="50" placeholder="Ej: AV. LOS LAURELES" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Número</label>
+                                    <input type="text" class="form-control form-control-sm" id="pers-numero-via" name="NumeroVia" maxlength="10" placeholder="Ej: 145" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Interior / Dpto</label>
+                                    <input type="text" class="form-control form-control-sm" id="pers-interior" name="Interior" maxlength="10" placeholder="Ej: 201" />
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Departamento</label>
+                                    <select class="form-select form-select-sm" id="pers-dep-id" name="DepartamentoId" onchange="cargarProvincias(this.value);">
+                                        <option value="">-- Seleccionar Departamento --</option>
+                                        @foreach (var dep in departamentosLookup)
+                                        {
+                                            <option value="@dep.Id">@dep.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Provincia</label>
+                                    <select class="form-select form-select-sm" id="pers-prov-id" name="ProvinciaId" onchange="cargarDistritos(this.value);">
+                                        <option value="">-- Seleccionar Provincia --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Distrito</label>
+                                    <select class="form-select form-select-sm" id="pers-dist-id" name="DistritoId">
+                                        <option value="">-- Seleccionar Distrito --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 2: DATOS LABORALES -->
+                        <div class="tab-pane fade" id="tab-lab" role="tabpanel">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">Contratación y Cargo</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Fecha de Ingreso <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control form-control-sm" id="pers-fecha-ingreso" name="FechaIngreso" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Fecha de Alta</label>
+                                    <input type="date" class="form-control form-control-sm" id="pers-fecha-alta" name="FechaAlta" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Cargo / Puesto <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="pers-cargo-id" name="CargoPersonalId" required>
+                                        @foreach (var c in cargosLookup)
+                                        {
+                                            <option value="@c.Id">@c.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Centro de Costo</label>
+                                    <select class="form-select form-select-sm" id="pers-cc-id" name="CentroCostoId">
+                                        <option value="">-- Sin Centro de Costo --</option>
+                                        @foreach (var cc in centrosCostoLookup)
+                                        {
+                                            <option value="@cc.Id">@cc.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Tipo de Trabajador</label>
+                                    <select class="form-select form-select-sm" id="pers-tipo-trabajador" name="TipoTrabajadorId">
+                                        @foreach (var tt in tiposTrabajadorLookup)
+                                        {
+                                            <option value="@tt.Id">@tt.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Tipo de Contrato</label>
+                                    <select class="form-select form-select-sm" id="pers-tipo-contrato" name="TipoContratoId">
+                                        @foreach (var tc in tiposContratoLookup)
+                                        {
+                                            <option value="@tc.Id">@tc.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Régimen Laboral</label>
+                                    <select class="form-select form-select-sm" id="pers-reg-laboral" name="RegimenLaboralId">
+                                        @foreach (var rl in regimenesLaboralesLookup)
+                                        {
+                                            <option value="@rl.Id">@rl.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Ocupación / Función</label>
+                                    <select class="form-select form-select-sm" id="pers-ocupacion-id" name="OcupacionId">
+                                        @foreach (var o in ocupacionesLookup)
+                                        {
+                                            <option value="@o.Id">@o.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Categoría Ocupacional</label>
+                                    <select class="form-select form-select-sm" id="pers-cate-ocupa" name="CategoriaOcupacionalId">
+                                        <option value="">-- No especificado --</option>
+                                        @foreach (var co in categoriasOcupacionalesLookup)
+                                        {
+                                            <option value="@co.Id">@co.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Situación Educativa</label>
+                                    <select class="form-select form-select-sm" id="pers-situa-educa" name="SituacionEducativaId">
+                                        <option value="">-- No especificado --</option>
+                                        @foreach (var se in situacionesEducativasLookup)
+                                        {
+                                            <option value="@se.Id">@se.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Periodicidad de Remuneración</label>
+                                    <select class="form-select form-select-sm" id="pers-peri-remu" name="PeriodicidadRemunerativaId">
+                                        @foreach (var pr in periodicidadesRemuLookup)
+                                        {
+                                            <option value="@pr.Id">@pr.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold"># Fotocheck / Marcador</label>
+                                    <input type="text" class="form-control form-control-sm" id="pers-num-fotocheck" name="NumFotocheck" maxlength="15" />
+                                </div>
+                                <div class="col-md-6 pt-4 d-flex gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="pers-asig-fami" value="S" onchange="$('#pers-asig-fami-val').val(this.checked ? 'S' : 'N');" />
+                                        <input type="hidden" id="pers-asig-fami-val" name="AsignacionFamiliar" value="N" />
+                                        <label class="form-check-label small" for="pers-asig-fami">Asignación Familiar</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="pers-es-eventual" value="S" onchange="$('#pers-es-eventual-val').val(this.checked ? 'S' : 'N');" />
+                                        <input type="hidden" id="pers-es-eventual-val" name="EsEventual" value="N" />
+                                        <label class="form-check-label small" for="pers-es-eventual">Es Eventual</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="pers-es-jornada-max" value="S" checked onchange="$('#pers-es-jornada-max-val').val(this.checked ? 'S' : 'N');" />
+                                        <input type="hidden" id="pers-es-jornada-max-val" name="EsJornadaTrabajoMaxima" value="S" />
+                                        <label class="form-check-label small" for="pers-es-jornada-max">Jornada Máxima</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 3: ASEGURAMIENTO SOCIAL -->
+                        <div class="tab-pane fade" id="tab-soc" role="tabpanel">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">Salud y Pensiones</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Régimen de Salud</label>
+                                    <select class="form-select form-select-sm" id="pers-reg-salud" name="RegimenSaludId">
+                                        @foreach (var rs in regimenesSaludLookup)
+                                        {
+                                            <option value="@rs.Id">@rs.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">EPS (Entidad Prestadora)</label>
+                                    <select class="form-select form-select-sm" id="pers-eps-id" name="EpsId">
+                                        <option value="">-- Sin EPS --</option>
+                                        @foreach (var e in epsLookup)
+                                        {
+                                            <option value="@e.Id">@e.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Régimen Pensionario (AFP / ONP) <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="pers-reg-pension" name="RegimenPensionarioId" required onchange="cargarEsquemasPension(this.value);">
+                                        @foreach (var rp in regimenesPensionariosLookup)
+                                        {
+                                            <option value="@rp.Id">@rp.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Tipo Comisión / Esquema</label>
+                                    <select class="form-select form-select-sm" id="pers-reg-pens-esq" name="RegimenPensionarioEsquemaId">
+                                        <option value="">-- No aplica / Sin esquema --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold"># CUSPP (Código Único AFP)</label>
+                                    <input type="text" class="form-control form-control-sm text-uppercase" id="pers-num-cuspp" name="NumeroCuspp" maxlength="15" placeholder="Ej: 123456ABCDEF" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Fec. Inscripción Régimen Pensión</label>
+                                    <input type="date" class="form-control form-control-sm" id="pers-fecha-ins-pension" name="FechaInscripcionRegimenPensionario" />
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">SCTR Pensión</label>
+                                    <select class="form-select form-select-sm" id="pers-sctr-pension" name="SctrPensionId">
+                                        <option value="">-- Sin SCTR Pensión --</option>
+                                        @foreach (var sc in sctrPensionLookup)
+                                        {
+                                            <option value="@sc.Id">@sc.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">SCTR Salud</label>
+                                    <select class="form-select form-select-sm" id="pers-sctr-salud" name="SctrSaludId">
+                                        <option value="">-- Sin SCTR Salud --</option>
+                                        @foreach (var sc in sctrSaludLookup)
+                                        {
+                                            <option value="@sc.Id">@sc.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4 pt-4 d-flex gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="pers-es-exon-5ta" value="S" onchange="$('#pers-es-exon-5ta-val').val(this.checked ? 'S' : 'N');" />
+                                        <input type="hidden" id="pers-es-exon-5ta-val" name="EsExonerado5ta" value="N" />
+                                        <label class="form-check-label small" for="pers-es-exon-5ta">Exonerado 5ta Cat.</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="pers-es-discapa" value="S" onchange="$('#pers-es-discapa-val').val(this.checked ? 'S' : 'N');" />
+                                        <input type="hidden" id="pers-es-discapa-val" name="EsDiscapacitado" value="N" />
+                                        <label class="form-check-label small" for="pers-es-discapa">Discapacidad</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 4: PAGOS Y CUENTAS BANCARIAS -->
+                        <div class="tab-pane fade" id="tab-pago" role="tabpanel">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">Modalidad de Pago y Cuentas</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Tipo de Pago</label>
+                                    <select class="form-select form-select-sm" id="pers-tipo-pago" name="TipoPagoRemuneracionId">
+                                        @foreach (var tp in tiposPagoRemuLookup)
+                                        {
+                                            <option value="@tp.Id">@tp.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Banco Haberes</label>
+                                    <select class="form-select form-select-sm" id="pers-banco-id" name="BancoId">
+                                        <option value="">-- Sin Banco --</option>
+                                        @foreach (var b in bancosLookup)
+                                        {
+                                            <option value="@b.Id">@b.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold"># Cuenta Haberes</label>
+                                    <input type="text" class="form-control form-control-sm" id="pers-cta-haberes" name="NumeroCuentaAbono" maxlength="30" placeholder="Ej: 191-12345678-0-12" />
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Banco CTS</label>
+                                    <select class="form-select form-select-sm" id="pers-banco-cts-id" name="BancoCTSId">
+                                        <option value="">-- Sin Banco CTS --</option>
+                                        @foreach (var b in bancosLookup)
+                                        {
+                                            <option value="@b.Id">@b.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold"># Cuenta CTS</label>
+                                    <input type="text" class="form-control form-control-sm" id="pers-cta-cts" name="NumeroCuentaCTS" maxlength="30" placeholder="Ej: 191-87654321-0-34" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Convenio Doble Tributación</label>
+                                    <select class="form-select form-select-sm" id="pers-convenio-trib" name="ConvenioDobleTributacionId">
+                                        @foreach (var cv in conveniosDobleTribLookup)
+                                        {
+                                            <option value="@cv.Id">@cv.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 5: REMUNERACIONES -->
+                        <div class="tab-pane fade" id="tab-rem" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-primary mb-0">Conceptos Remunerativos Asignados</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-nueva-rem" onclick="abrirModalNuevaRem();" disabled>
+                                    <i class="bi bi-plus-circle me-1"></i>Agregar Remuneración
+                                </button>
+                            </div>
+                            <div class="table-responsive border rounded">
+                                <table class="table table-sm table-hover mb-0" id="tabla-remuneraciones">
+                                    <thead class="table-header-custom border-bottom">
+                                        <tr>
+                                            <th>CONCEPTO REMUNERATIVO</th>
+                                            <th class="text-center" style="width: 100px;">MONEDA</th>
+                                            <th class="text-end" style="width: 140px;">MONTO</th>
+                                            <th class="text-end pe-2" style="width: 80px;">ACCIÓN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-remuneraciones">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Guarde primero el colaborador para gestionar sus remuneraciones.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 6: DERECHOHABIENTES -->
+                        <div class="tab-pane fade" id="tab-dep" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-primary mb-0">Derechohabientes (Familiares Registrados)</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-nuevo-dep" onclick="abrirModalNuevoDep();" disabled>
+                                    <i class="bi bi-person-plus me-1"></i>Agregar Familiar
+                                </button>
+                            </div>
+                            <div class="table-responsive border rounded">
+                                <table class="table table-sm table-hover mb-0" id="tabla-dependientes">
+                                    <thead class="table-header-custom border-bottom">
+                                        <tr>
+                                            <th>APELLIDOS Y NOMBRES</th>
+                                            <th style="width: 130px;">DOCUMENTO</th>
+                                            <th style="width: 140px;">PARENTESCO</th>
+                                            <th class="text-center" style="width: 110px;">FEC. NAC.</th>
+                                            <th class="text-end pe-2" style="width: 80px;">ACCIÓN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-dependientes">
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-3">Guarde primero el colaborador para registrar familiares.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- PESTAÑA 7: PLANILLAS -->
+                        <div class="tab-pane fade" id="tab-plan" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-primary mb-0">Planillas de Pago Asignadas</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-nueva-plan" onclick="abrirModalNuevaPlan();" disabled>
+                                    <i class="bi bi-plus-circle me-1"></i>Asignar Planilla
+                                </button>
+                            </div>
+                            <div class="table-responsive border rounded">
+                                <table class="table table-sm table-hover mb-0" id="tabla-planillas">
+                                    <thead class="table-header-custom border-bottom">
+                                        <tr>
+                                            <th>PLANILLA DE PAGO</th>
+                                            <th class="text-center" style="width: 100px;">ESTADO</th>
+                                            <th class="text-end pe-2" style="width: 80px;">ACCIÓN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-planillas">
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-3">Guarde primero el colaborador para asignar planillas.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer py-2 px-3 bg-body-tertiary border-top border-secondary-subtle">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-3 shadow-sm">
+                            <i class="bi bi-save me-1"></i>Guardar Colaborador
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL REGISTRAR CESE LABORAL                                              -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modal-cese-personal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border border-danger-subtle rounded-3">
+            <div class="modal-header py-2 px-3 bg-danger-subtle border-bottom border-danger-subtle">
+                <h6 class="modal-title fw-bold text-danger mb-0"><i class="bi bi-person-x-fill me-2"></i>Registrar Cese de Personal</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="confirmarCese(event);">
+                <div class="modal-body p-3">
+                    <input type="hidden" id="cese-personal-id" value="0" />
+                    <div class="alert alert-warning py-2 px-3 small mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Está a punto de cesar a: <strong id="cese-personal-nombre"></strong>.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Fecha de Cese <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control form-control-sm" id="cese-fecha" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Motivo de Cese / Término <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="cese-motivo-id" required>
+                            @foreach (var m in motivosFinPeriodoLookup)
+                            {
+                                <option value="@m.Id">@m.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-danger px-3 shadow-sm">Confirmar Cese</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL RÁPIDO: AGREGAR REMUNERACIÓN                                        -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modal-nueva-rem" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content shadow border rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom">
+                <h6 class="modal-title fw-bold mb-0">Agregar Remuneración</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="guardarRemuneracionRapida(event);">
+                <div class="modal-body p-3">
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Concepto</label>
+                        <select class="form-select form-select-sm" id="modal-rem-tipo-id" required>
+                            @foreach (var tr in tiposRemuneracionLookup)
+                            {
+                                <option value="@tr.Id">@tr.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Moneda</label>
+                        <select class="form-select form-select-sm" id="modal-rem-moneda-id" required>
+                            @foreach (var m in monedasLookup)
+                            {
+                                <option value="@m.Id">@m.Nombre (@m.Codigo)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Monto</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm text-end" id="modal-rem-monto" required min="0" placeholder="0.00" />
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Asignar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL RÁPIDO: AGREGAR DERECHOHABIENTE                                     -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modal-nuevo-dep" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content shadow border rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom">
+                <h6 class="modal-title fw-bold mb-0">Agregar Derechohabiente</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="guardarDependienteRapido(event);">
+                <div class="modal-body p-3">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Tipo Documento</label>
+                            <select class="form-select form-select-sm" id="modal-dep-tipo-doc" required>
+                                @foreach (var td in tiposDocLookup)
+                                {
+                                    <option value="@td.Id">@td.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold"># Documento</label>
+                            <input type="text" class="form-control form-control-sm" id="modal-dep-num-doc" required maxlength="15" />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Apellido Paterno</label>
+                            <input type="text" class="form-control form-control-sm text-uppercase" id="modal-dep-ape-pat" required maxlength="50" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Apellido Materno</label>
+                            <input type="text" class="form-control form-control-sm text-uppercase" id="modal-dep-ape-mat" required maxlength="50" />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Nombres</label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="modal-dep-nombres" required maxlength="50" />
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Parentesco / Vínculo</label>
+                            <select class="form-select form-select-sm" id="modal-dep-vinculo-id" required>
+                                @foreach (var v in vinculosFamiliaresLookup)
+                                {
+                                    <option value="@v.Id">@v.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Fecha Nacimiento</label>
+                            <input type="date" class="form-control form-control-sm" id="modal-dep-fecha-nac" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Guardar Familiar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL RÁPIDO: ASIGNAR PLANILLA                                            -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modal-nueva-plan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content shadow border rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom">
+                <h6 class="modal-title fw-bold mb-0">Asignar a Planilla</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="guardarPlanillaRapida(event);">
+                <div class="modal-body p-3">
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Seleccionar Planilla</label>
+                        <select class="form-select form-select-sm" id="modal-plan-id" required>
+                            @foreach (var pl in planillasLookup)
+                            {
+                                <option value="@pl.Id">@pl.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Asignar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ========================================================
+    // CASCADA DE UBIGEO Y PENSIONES (AJAX)
+    // ========================================================
+    function cargarProvincias(depId, selectedProvId, callback) {
+        var $prov = $('#pers-prov-id');
+        var $dist = $('#pers-dist-id');
+        $prov.html('<option value="">-- Seleccionar Provincia --</option>');
+        $dist.html('<option value="">-- Seleccionar Distrito --</option>');
+
+        if (!depId) return;
+
+        $.get('@Url.Action("ProvinciasPorDepartamento", "Personal", new { area = "RH" })', { departamentoId: depId }, function (data) {
+            if (data && data.length > 0) {
+                $.each(data, function (i, item) {
+                    $prov.append('<option value="' + item.id + '">' + item.nombre + '</option>');
+                });
+                if (selectedProvId) {
+                    $prov.val(selectedProvId);
+                }
+            }
+            if (callback) callback();
+        });
+    }
+
+    function cargarDistritos(provId, selectedDistId) {
+        var $dist = $('#pers-dist-id');
+        $dist.html('<option value="">-- Seleccionar Distrito --</option>');
+
+        if (!provId) return;
+
+        $.get('@Url.Action("DistritosPorProvincia", "Personal", new { area = "RH" })', { provinciaId: provId }, function (data) {
+            if (data && data.length > 0) {
+                $.each(data, function (i, item) {
+                    $dist.append('<option value="' + item.id + '">' + item.nombre + '</option>');
+                });
+                if (selectedDistId) {
+                    $dist.val(selectedDistId);
+                }
+            }
+        });
+    }
+
+    function cargarEsquemasPension(regId, selectedEsqId) {
+        var $esq = $('#pers-reg-pens-esq');
+        $esq.html('<option value="">-- No aplica / Sin esquema --</option>');
+
+        if (!regId) return;
+
+        $.get('@Url.Action("EsquemasPorRegimenPensionario", "Personal", new { area = "RH" })', { regimenPensionarioId: regId }, function (data) {
+            if (data && data.length > 0) {
+                $.each(data, function (i, item) {
+                    $esq.append('<option value="' + item.id + '">' + item.nombre + '</option>');
+                });
+                if (selectedEsqId) {
+                    $esq.val(selectedEsqId);
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // ABRIR MODAL CREAR
+    // ========================================================
+    function abrirModalCrear() {
+        $('#modal-titulo').text('Nuevo Colaborador');
+        $('#modal-subtitulo').text('Registro completo de trabajador en el sistema');
+        $('#modal-codigo-badge').text('NUEVO');
+
+        $('#form-personal')[0].reset();
+        $('#pers-id').val(0);
+        $('#pers-proveedor-id').val(0);
+        $('#pers-fecha-nac').val('@DateTime.Today.AddYears(-25).ToString("yyyy-MM-dd")');
+        $('#pers-fecha-ingreso').val('@DateTime.Today.ToString("yyyy-MM-dd")');
+        $('#pers-fecha-alta').val('@DateTime.Today.ToString("yyyy-MM-dd")');
+
+        // Deshabilitar botones de pestañas hasta que exista ID
+        $('#btn-nueva-rem, #btn-nuevo-dep, #btn-nueva-plan').prop('disabled', true);
+        $('#tbody-remuneraciones').html('<tr><td colspan="4" class="text-center text-muted py-3">Guarde primero el colaborador para asignar remuneraciones.</td></tr>');
+        $('#tbody-dependientes').html('<tr><td colspan="5" class="text-center text-muted py-3">Guarde primero el colaborador para registrar derechohabientes.</td></tr>');
+        $('#tbody-planillas').html('<tr><td colspan="3" class="text-center text-muted py-3">Guarde primero el colaborador para asignar planillas.</td></tr>');
+
+        // Activar primera pestaña
+        bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-ident-btn')).show();
+
+        var modal = new bootstrap.Modal(document.getElementById('modal-crud-personal'));
+        modal.show();
+        setTimeout(function () { $('#pers-num-doc').focus(); }, 350);
+    }
+
+    // ========================================================
+    // ABRIR MODAL EDITAR
+    // ========================================================
+    function abrirModalEditar(id) {
+        $.ajax({
+            url: '@Url.Action("Obtener", "Personal", new { area = "RH" })',
+            type: 'GET',
+            data: { id: id },
+            success: function (res) {
+                if (res && res.success && res.data) {
+                    var d = res.data;
+
+                    $('#modal-titulo').text('Editar Colaborador');
+                    $('#modal-subtitulo').text('Actualización de datos personales, laborales y aseguramiento');
+                    $('#modal-codigo-badge').text(d.codigo || ('ID #' + id));
+
+                    $('#pers-id').val(d.id);
+                    $('#pers-proveedor-id').val(d.proveedorId);
+                    $('#pers-empresa-sede-id').val(d.empresaSedeId || 1);
+
+                    // Identificación
+                    $('#pers-tipo-doc').val(d.tipoDocIdentidadId);
+                    $('#pers-num-doc').val(d.numDocIdentidad);
+                    $('#pers-ape-pat').val(d.apellidoPaterno);
+                    $('#pers-ape-mat').val(d.apellidoMaterno);
+                    $('#pers-nombres').val(d.nombres);
+                    $('#pers-sexo-id').val(d.sexoId);
+                    $('#pers-estado-civil').val(d.estadoCivilId);
+                    $('#pers-pais-id').val(d.paisId || 1);
+                    $('#pers-telefono').val(d.telefono);
+                    $('#pers-email').val(d.email);
+
+                    if (d.fechaNacimiento) {
+                        $('#pers-fecha-nac').val(d.fechaNacimiento.substring(0, 10));
+                    }
+
+                    // Domicilio 1
+                    $('#pers-tipo-via').val(d.tipoViaId || 1);
+                    $('#pers-nombre-via').val(d.nombreVia);
+                    $('#pers-numero-via').val(d.numeroVia);
+                    $('#pers-interior').val(d.interior);
+
+                    // Ubigeo
+                    if (d.departamentoId) {
+                        $('#pers-dep-id').val(d.departamentoId);
+                        cargarProvincias(d.departamentoId, d.provinciaId, function () {
+                            if (d.provinciaId) {
+                                cargarDistritos(d.provinciaId, d.distritoId);
+                            }
+                        });
+                    }
+
+                    // Laboral
+                    if (d.fechaIngreso) {
+                        $('#pers-fecha-ingreso').val(d.fechaIngreso.substring(0, 10));
+                    }
+                    if (d.fechaAlta) {
+                        $('#pers-fecha-alta').val(d.fechaAlta.substring(0, 10));
+                    }
+                    $('#pers-cargo-id').val(d.cargoPersonalId);
+                    $('#pers-cc-id').val(d.centroCostoId || '');
+                    $('#pers-tipo-trabajador').val(d.tipoTrabajadorId || 1);
+                    $('#pers-tipo-contrato').val(d.tipoContratoId || 1);
+                    $('#pers-reg-laboral').val(d.regimenLaboralId || 1);
+                    $('#pers-ocupacion-id').val(d.ocupacionId || 1);
+                    $('#pers-cate-ocupa').val(d.categoriaOcupacionalId || '');
+                    $('#pers-situa-educa').val(d.situacionEducativaId || '');
+                    $('#pers-peri-remu').val(d.periodicidadRemunerativaId || 1);
+                    $('#pers-num-fotocheck').val(d.numFotocheck);
+
+                    $('#pers-asig-fami').prop('checked', d.asignacionFamiliar === 'S');
+                    $('#pers-asig-fami-val').val(d.asignacionFamiliar || 'N');
+                    $('#pers-es-eventual').prop('checked', d.esEventual === 'S');
+                    $('#pers-es-eventual-val').val(d.esEventual || 'N');
+                    $('#pers-es-jornada-max').prop('checked', d.esJornadaTrabajoMaxima === 'S');
+                    $('#pers-es-jornada-max-val').val(d.esJornadaTrabajoMaxima || 'S');
+
+                    // Aseguramiento
+                    $('#pers-reg-salud').val(d.regimenSaludId || 1);
+                    $('#pers-eps-id').val(d.epsId || '');
+                    $('#pers-reg-pension').val(d.regimenPensionarioId || 1);
+                    cargarEsquemasPension(d.regimenPensionarioId, d.regimenPensionarioEsquemaId);
+
+                    $('#pers-num-cuspp').val(d.numeroCuspp);
+                    if (d.fechaInscripcionRegimenPensionario) {
+                        $('#pers-fecha-ins-pension').val(d.fechaInscripcionRegimenPensionario.substring(0, 10));
+                    }
+                    $('#pers-sctr-pension').val(d.sctrPensionId || '');
+                    $('#pers-sctr-salud').val(d.sctrSaludId || '');
+                    $('#pers-es-exon-5ta').prop('checked', d.esExonerado5ta === 'S');
+                    $('#pers-es-exon-5ta-val').val(d.esExonerado5ta || 'N');
+                    $('#pers-es-discapa').prop('checked', d.esDiscapacitado === 'S');
+                    $('#pers-es-discapa-val').val(d.esDiscapacitado || 'N');
+
+                    // Pagos
+                    $('#pers-tipo-pago').val(d.tipoPagoRemuneracionId || 1);
+                    $('#pers-banco-id').val(d.bancoId || '');
+                    $('#pers-cta-haberes').val(d.numeroCuentaAbono);
+                    $('#pers-banco-cts-id').val(d.bancoCTSId || '');
+                    $('#pers-cta-cts').val(d.numeroCuentaCTS);
+                    $('#pers-convenio-trib').val(d.convenioDobleTributacionId || 1);
+
+                    // Habilitar pestañas secundarias
+                    $('#btn-nueva-rem, #btn-nuevo-dep, #btn-nueva-plan').prop('disabled', false);
+                    cargarRemuneraciones(id);
+                    cargarDependientes(id);
+                    cargarPlanillas(id);
+
+                    // Activar primera pestaña
+                    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-ident-btn')).show();
+
+                    var modal = new bootstrap.Modal(document.getElementById('modal-crud-personal'));
+                    modal.show();
+                    setTimeout(function () { $('#pers-num-doc').focus(); }, 350);
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el registro.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+            }
+        });
+    }
+
+    // ========================================================
+    // GUARDAR PERSONAL (SUBMIT FORM)
+    // ========================================================
+    function guardarPersonal(e) {
+        e.preventDefault();
+        var formData = $('#form-personal').serialize();
+
+        $.ajax({
+            url: '@Url.Action("Guardar", "Personal", new { area = "RH" })',
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                if (res && res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Guardado',
+                        text: res.message,
+                        timer: 1300,
+                        showConfirmButton: false
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo guardar el registro.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al procesar la solicitud en el servidor.' });
+            }
+        });
+    }
+
+    // ========================================================
+    // CAMBIAR ESTADO
+    // ========================================================
+    function cambiarEstadoPersonal(id, estadoActual, descripcion) {
+        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        Swal.fire({
+            title: '¿Confirmar cambio de estado?',
+            text: '¿Desea ' + accion + ' a "' + descripcion + '"?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, ' + accion,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("CambiarEstado", "Personal", new { area = "RH" })',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Actualizado',
+                                text: res.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            }).then(function () {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
+                    }
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // REGISTRAR CESE
+    // ========================================================
+    function abrirModalCese(id, nombre) {
+        $('#cese-personal-id').val(id);
+        $('#cese-personal-nombre').text(nombre);
+        var modal = new bootstrap.Modal(document.getElementById('modal-cese-personal'));
+        modal.show();
+    }
+
+    function confirmarCese(e) {
+        e.preventDefault();
+        var id = $('#cese-personal-id').val();
+        var fecha = $('#cese-fecha').val();
+        var motivoId = $('#cese-motivo-id').val();
+
+        $.ajax({
+            url: '@Url.Action("RegistrarCese", "Personal", new { area = "RH" })',
+            type: 'POST',
+            data: { id: id, fechaCese: fecha, motivoId: motivoId },
+            success: function (res) {
+                if (res && res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Cese Registrado',
+                        text: res.message,
+                        timer: 1400,
+                        showConfirmButton: false
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo registrar el cese.' });
+                }
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al comunicar con el servidor.' });
+            }
+        });
+    }
+
+    // ========================================================
+    // GESTIÓN DE REMUNERACIONES (PESTAÑA 5)
+    // ========================================================
+    function cargarRemuneraciones(personalId) {
+        $.get('@Url.Action("Remuneraciones", "Personal", new { area = "RH" })', { personalId: personalId }, function (res) {
+            var $tbody = $('#tbody-remuneraciones');
+            $tbody.empty();
+            if (res && res.success && res.data && res.data.length > 0) {
+                $.each(res.data, function (i, r) {
+                    $tbody.append(
+                        '<tr>' +
+                            '<td>' + r.tipoRemuneracionNombre + '</td>' +
+                            '<td class="text-center"><span class="badge bg-secondary-subtle text-secondary">' + r.monedaSimbolo + '</span></td>' +
+                            '<td class="text-end fw-semibold">' + r.monto.toFixed(2) + '</td>' +
+                            '<td class="text-end pe-2">' +
+                                '<button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" onclick="eliminarRemuneracion(' + r.id + ', ' + personalId + ');"><i class="bi bi-trash"></i></button>' +
+                            '</td>' +
+                        '</tr>'
+                    );
+                });
+            } else {
+                $tbody.append('<tr><td colspan="4" class="text-center text-muted py-2">Sin conceptos remunerativos asignados.</td></tr>');
+            }
+        });
+    }
+
+    function abrirModalNuevaRem() {
+        var modal = new bootstrap.Modal(document.getElementById('modal-nueva-rem'));
+        modal.show();
+    }
+
+    function guardarRemuneracionRapida(e) {
+        e.preventDefault();
+        var personalId = $('#pers-id').val();
+        var tipoRemId = $('#modal-rem-tipo-id').val();
+        var monedaId = $('#modal-rem-moneda-id').val();
+        var monto = $('#modal-rem-monto').val();
+
+        $.post('@Url.Action("GuardarRemuneracion", "Personal", new { area = "RH" })', {
+            PersonalId: personalId,
+            TipoRemuneracionId: tipoRemId,
+            MonedaId: monedaId,
+            Monto: monto
+        }, function (res) {
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-nueva-rem')).hide();
+                cargarRemuneraciones(personalId);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'Error al guardar remuneración.' });
+            }
+        });
+    }
+
+    function eliminarRemuneracion(id, personalId) {
+        Swal.fire({
+            title: '¿Eliminar concepto remunerativo?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("EliminarRemuneracion", "Personal", new { area = "RH" })', { id: id }, function (res) {
+                    cargarRemuneraciones(personalId);
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // GESTIÓN DE DERECHOHABIENTES (PESTAÑA 6)
+    // ========================================================
+    function cargarDependientes(personalId) {
+        $.get('@Url.Action("Dependientes", "Personal", new { area = "RH" })', { personalId: personalId }, function (res) {
+            var $tbody = $('#tbody-dependientes');
+            $tbody.empty();
+            if (res && res.success && res.data && res.data.length > 0) {
+                $.each(res.data, function (i, d) {
+                    $tbody.append(
+                        '<tr>' +
+                            '<td>' + d.nombreCompleto + '</td>' +
+                            '<td><span class="badge bg-secondary-subtle text-secondary me-1">' + d.tipoDocIdentidadNombre + '</span>' + d.numDocIdentidad + '</td>' +
+                            '<td><span class="badge bg-info-subtle text-info border">' + d.vinculoFamiliarNombre + '</span></td>' +
+                            '<td class="text-center">' + (d.fechaNacimiento ? d.fechaNacimiento.substring(0, 10) : '-') + '</td>' +
+                            '<td class="text-end pe-2">' +
+                                '<button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" onclick="eliminarDependiente(' + d.id + ', ' + personalId + ');"><i class="bi bi-trash"></i></button>' +
+                            '</td>' +
+                        '</tr>'
+                    );
+                });
+            } else {
+                $tbody.append('<tr><td colspan="5" class="text-center text-muted py-2">Sin familiares registrados.</td></tr>');
+            }
+        });
+    }
+
+    function abrirModalNuevoDep() {
+        var modal = new bootstrap.Modal(document.getElementById('modal-nuevo-dep'));
+        modal.show();
+    }
+
+    function guardarDependienteRapido(e) {
+        e.preventDefault();
+        var personalId = $('#pers-id').val();
+        var tipoDoc = $('#modal-dep-tipo-doc').val();
+        var numDoc = $('#modal-dep-num-doc').val();
+        var apePat = $('#modal-dep-ape-pat').val();
+        var apeMat = $('#modal-dep-ape-mat').val();
+        var nombres = $('#modal-dep-nombres').val();
+        var vinculo = $('#modal-dep-vinculo-id').val();
+        var fechaNac = $('#modal-dep-fecha-nac').val();
+
+        $.post('@Url.Action("GuardarDependiente", "Personal", new { area = "RH" })', {
+            PersonalId: personalId,
+            TipoDocIdentidadId: tipoDoc,
+            NumDocIdentidad: numDoc,
+            ApellidoPaterno: apePat,
+            ApellidoMaterno: apeMat,
+            Nombres: nombres,
+            VinculoFamiliarId: vinculo,
+            FechaNacimiento: fechaNac
+        }, function (res) {
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-nuevo-dep')).hide();
+                cargarDependientes(personalId);
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'Error al guardar familiar.' });
+            }
+        });
+    }
+
+    function eliminarDependiente(id, personalId) {
+        Swal.fire({
+            title: '¿Eliminar familiar registrado?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("EliminarDependiente", "Personal", new { area = "RH" })', { id: id }, function (res) {
+                    cargarDependientes(personalId);
+                });
+            }
+        });
+    }
+
+    // ========================================================
+    // GESTIÓN DE PLANILLAS ASIGNADAS (PESTAÑA 7)
+    // ========================================================
+    function cargarPlanillas(personalId) {
+        $.get('@Url.Action("Planillas", "Personal", new { area = "RH" })', { personalId: personalId }, function (res) {
+            var $tbody = $('#tbody-planillas');
+            $tbody.empty();
+            if (res && res.success && res.data && res.data.length > 0) {
+                $.each(res.data, function (i, p) {
+                    $tbody.append(
+                        '<tr>' +
+                            '<td class="fw-semibold">' + p.planillaNombre + '</td>' +
+                            '<td class="text-center"><span class="badge bg-success-subtle text-success border">Asignado</span></td>' +
+                            '<td class="text-end pe-2">' +
+                                '<button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" onclick="eliminarPlanilla(' + p.id + ', ' + personalId + ');"><i class="bi bi-trash"></i></button>' +
+                            '</td>' +
+                        '</tr>'
+                    );
+                });
+            } else {
+                $tbody.append('<tr><td colspan="3" class="text-center text-muted py-2">Sin planillas asignadas.</td></tr>');
+            }
+        });
+    }
+
+    function abrirModalNuevaPlan() {
+        var modal = new bootstrap.Modal(document.getElementById('modal-nueva-plan'));
+        modal.show();
+    }
+
+    function guardarPlanillaRapida(e) {
+        e.preventDefault();
+        var personalId = $('#pers-id').val();
+        var planId = $('#modal-plan-id').val();
+
+        $.post('@Url.Action("GuardarPlanilla", "Personal", new { area = "RH" })', {
+            PersonalId: personalId,
+            PlanillaId: planId
+        }, function (res) {
+            if (res && res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-nueva-plan')).hide();
+                cargarPlanillas(personalId);
+            } else {
+                Swal.fire({ icon: 'warning', title: 'Atención', text: res.message || 'No se pudo asignar a la planilla.' });
+            }
+        });
+    }
+
+    function eliminarPlanilla(id, personalId) {
+        Swal.fire({
+            title: '¿Remover asignación de planilla?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, remover',
+            cancelButtonText: 'Cancelar'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $.post('@Url.Action("EliminarPlanilla", "Personal", new { area = "RH" })', { id: id }, function (res) {
+                    cargarPlanillas(personalId);
+                });
+            }
+        });
+    }
+</script>
+}

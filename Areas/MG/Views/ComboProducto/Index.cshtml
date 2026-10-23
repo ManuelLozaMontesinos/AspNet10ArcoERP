@@ -574,13 +574,27 @@
                                 <table class="table table-sm table-striped table-hover align-middle mb-0" id="tabla-detalles-combo">
                                     <thead class="bg-body-secondary text-body small">
                                         <tr>
-                                            <th style="width: 40px;" class="text-center">#</th>
-                                            <th style="width: 130px;">Código</th>
-                                            <th>Descripción del Artículo</th>
-                                            <th style="width: 90px;" class="text-center">U.M.</th>
-                                            <th style="width: 100px;" class="text-end">Cantidad</th>
-                                            <th style="width: 105px;" class="text-end">% P. Lista</th>
-                                            <th style="width: 80px;" class="text-center"># Dec.</th>
+                                            <th style="width: 40px;" class="text-center th-sortable" onclick="ordenarTablaModal('tabla-detalles-combo', 0, true)">
+                                                <span>#</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                            </th>
+                                            <th style="width: 130px;" class="th-sortable" onclick="ordenarTablaModal('tabla-detalles-combo', 1, false)">
+                                                <span>Código</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                            </th>
+                                            <th class="th-sortable" onclick="ordenarTablaModal('tabla-detalles-combo', 2, false)">
+                                                <span>Descripción del Artículo</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                            </th>
+                                            <th style="width: 90px;" class="text-center th-sortable" onclick="ordenarTablaModal('tabla-detalles-combo', 3, false)">
+                                                <span>U.M.</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                            </th>
+                                            <th style="width: 100px;" class="text-end th-sortable" onclick="ordenarTablaModal('tabla-detalles-combo', 4, true)">
+                                                <span>Cantidad</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                            </th>
+                                            <th style="width: 105px;" class="text-end th-sortable" onclick="ordenarTablaModal('tabla-detalles-combo', 5, true)">
+                                                <span>% P. Lista</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                            </th>
+                                            <th style="width: 80px;" class="text-center th-sortable" onclick="ordenarTablaModal('tabla-detalles-combo', 6, true)">
+                                                <span># Dec.</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                            </th>
                                             <th style="width: 70px;" class="text-center">Quitar</th>
                                         </tr>
                                     </thead>
@@ -1172,5 +1186,47 @@
             location.reload();
         }
     });
+
+    function ordenarTablaModal(tablaId, colIndex, isNumeric) {
+        var $table = $('#' + tablaId);
+        if (!$table.length) return;
+        var $tbody = $table.find('tbody');
+        var rows = $tbody.find('tr:not(.fila-no-sort)').get();
+        if (rows.length <= 1) return;
+
+        var prevCol = $table.data('sort-col');
+        var sortAsc = true;
+        if (prevCol === colIndex) {
+            sortAsc = !$table.data('sort-asc');
+        }
+        $table.data('sort-col', colIndex);
+        $table.data('sort-asc', sortAsc);
+
+        // Actualizar iconos
+        $table.find('thead th .sort-icon').attr('class', 'bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon');
+        var $th = $table.find('thead th').eq(colIndex);
+        var iconClass = isNumeric
+            ? (sortAsc ? 'bi-sort-numeric-down text-primary fw-bold' : 'bi-sort-numeric-down-alt text-primary fw-bold')
+            : (sortAsc ? 'bi-sort-alpha-down text-primary fw-bold' : 'bi-sort-alpha-down-alt text-primary fw-bold');
+        $th.find('.sort-icon').attr('class', 'bi ' + iconClass + ' ms-1 sort-icon');
+
+        rows.sort(function (a, b) {
+            var aVal = $(a).children('td, th').eq(colIndex).text().trim();
+            var bVal = $(b).children('td, th').eq(colIndex).text().trim();
+
+            if (isNumeric) {
+                var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+                var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+                return sortAsc ? (aNum - bNum) : (bNum - aNum);
+            } else {
+                return sortAsc ? aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' })
+                               : bVal.localeCompare(aVal, undefined, { numeric: true, sensitivity: 'base' });
+            }
+        });
+
+        $.each(rows, function (index, row) {
+            $tbody.append(row);
+        });
+    }
 </script>
 }

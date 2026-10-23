@@ -187,8 +187,8 @@
                         <li class="nav-header text-uppercase text-muted fw-bold small px-3 mt-3 mb-1">MÓDULOS DEL SISTEMA</li>
 
                         <!-- MENÚ MAESTROS (Mantenimientos Generales) -->
-                        <li class="nav-item menu-open">
-                            <a href="#" class="nav-link active">
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "MG" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "MG" ? "active" : "")">
                                 <i class="nav-icon bi bi-grid-3x3-gap-fill text-warning"></i>
                                 <p>
                                     Maestros
@@ -244,8 +244,8 @@
                                 </li>
 
                                 <!-- 6. Submenú Productos -->
-                                <li class="nav-item">
-                                    <a href="#" class="nav-link">
+                                <li class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() is "Producto" or "FamiliaProducto" or "ComboProducto" ? "menu-open" : "")">
+                                    <a href="#" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() is "Producto" or "FamiliaProducto" or "ComboProducto" ? "active" : "")">
                                         <i class="nav-icon bi bi-box-seam-fill text-info"></i>
                                         <p>
                                             Productos
@@ -296,6 +296,147 @@
                                         <i class="nav-icon bi bi-table"></i>
                                         <p>Tablas Generales</p>
                                     </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <!-- MENÚ CAPITAL HUMANO (Recursos Humanos) -->
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" ? "active" : "")">
+                                <i class="nav-icon bi bi-people-fill text-info"></i>
+                                <p>
+                                    Capital Humano
+                                    <i class="nav-arrow bi bi-chevron-right"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview ps-2">
+                                <!-- Submenú 1: Maestros -->
+                                <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" && new[] { "Personal", "CargoPersonal", "Reloj", "Feriado", "RegPensionario", "TipoRemunera", "HoraRemunerativa", "Planilla", "VariableCalc", "ConceptoRemu" }.Contains(ViewContext.RouteData.Values["controller"]?.ToString()) ? "menu-open" : "")">
+                                    <a href="#" class="nav-link">
+                                        <i class="nav-icon bi bi-person-badge-fill text-warning"></i>
+                                        <p>
+                                            Maestros
+                                            <i class="nav-arrow bi bi-chevron-right"></i>
+                                        </p>
+                                    </a>
+                                    <ul class="nav nav-treeview ps-3">
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="Personal" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Personal" ? "active" : "")">
+                                                <i class="nav-icon bi bi-person-lines-fill"></i>
+                                                <p>Registro de Personal</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="CargoPersonal" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CargoPersonal" ? "active" : "")">
+                                                <i class="nav-icon bi bi-person-workspace"></i>
+                                                <p>Cargos</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="Reloj" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reloj" ? "active" : "")">
+                                                <i class="nav-icon bi bi-clock-history"></i>
+                                                <p>Reloj Marcador</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="Feriado" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Feriado" ? "active" : "")">
+                                                <i class="nav-icon bi bi-calendar-event"></i>
+                                                <p>Feriados</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="RegPensionario" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RegPensionario" ? "active" : "")">
+                                                <i class="nav-icon bi bi-shield-lock"></i>
+                                                <p>Régimen Pensionario</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="TipoRemunera" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "TipoRemunera" ? "active" : "")">
+                                                <i class="nav-icon bi bi-cash-coin"></i>
+                                                <p>Tipos de Remuneración</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="HoraRemunerativa" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "HoraRemunerativa" ? "active" : "")">
+                                                <i class="nav-icon bi bi-hourglass-split"></i>
+                                                <p>Horas</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="Planilla" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Planilla" ? "active" : "")">
+                                                <i class="nav-icon bi bi-file-earmark-spreadsheet"></i>
+                                                <p>Planilla</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="VariableCalc" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "VariableCalc" ? "active" : "")">
+                                                <i class="nav-icon bi bi-calculator"></i>
+                                                <p>Variables de Cálculo</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="ConceptoRemu" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ConceptoRemu" ? "active" : "")">
+                                                <i class="nav-icon bi bi-list-check"></i>
+                                                <p>Conceptos Remunerativos</p>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+
+                                <!-- Submenú 2: Procesos -->
+                                <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" && new[] { "Marcacion", "PlanillaProceso", "Prestamo", "RegVacacion", "AccesoExt" }.Contains(ViewContext.RouteData.Values["controller"]?.ToString()) ? "menu-open" : "")">
+                                    <a href="#" class="nav-link">
+                                        <i class="nav-icon bi bi-gear-fill text-success"></i>
+                                        <p>
+                                            Procesos
+                                            <i class="nav-arrow bi bi-chevron-right"></i>
+                                        </p>
+                                    </a>
+                                    <ul class="nav nav-treeview ps-3">
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="Marcacion" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Marcacion" ? "active" : "")">
+                                                <i class="nav-icon bi bi-fingerprint"></i>
+                                                <p>Marcaciones</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="Prestamo" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Prestamo" ? "active" : "")">
+                                                <i class="nav-icon bi bi-wallet2"></i>
+                                                <p>Préstamos / Adelantos</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="RegVacacion" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RegVacacion" ? "active" : "")">
+                                                <i class="nav-icon bi bi-sun"></i>
+                                                <p>Vacaciones</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="PlanillaProceso" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "PlanillaProceso" ? "active" : "")">
+                                                <i class="nav-icon bi bi-cpu"></i>
+                                                <p>Proceso de Planilla</p>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+
+                                <!-- Submenú 3: Reportes -->
+                                <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" && ViewContext.RouteData.Values["controller"]?.ToString() == "ReporteBoleta" ? "menu-open" : "")">
+                                    <a href="#" class="nav-link">
+                                        <i class="nav-icon bi bi-file-earmark-bar-graph-fill text-danger"></i>
+                                        <p>
+                                            Reportes
+                                            <i class="nav-arrow bi bi-chevron-right"></i>
+                                        </p>
+                                    </a>
+                                    <ul class="nav nav-treeview ps-3">
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="ReporteBoleta" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ReporteBoleta" ? "active" : "")">
+                                                <i class="nav-icon bi bi-file-earmark-pdf"></i>
+                                                <p>Boletas de Pago</p>
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                             </ul>
                         </li>

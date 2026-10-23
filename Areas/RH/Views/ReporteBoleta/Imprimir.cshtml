@@ -1,0 +1,224 @@
+@model List<AspNet10ArcoERP.Models.BoletaPagoModel>
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Impresión de Boletas de Pago</title>
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            font-size: 12px;
+        }
+        .boleta-box {
+            background: #fff;
+            max-width: 850px;
+            margin: 20px auto;
+            padding: 25px 35px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .table-sm th, .table-sm td {
+            padding: 4px 6px;
+        }
+        .firma-linea {
+            border-top: 1px solid #333;
+            width: 80%;
+            margin: 0 auto;
+            padding-top: 5px;
+        }
+        @@media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: #fff !important;
+                font-size: 11px !important;
+            }
+            .boleta-box {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 15px !important;
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+                page-break-after: always;
+            }
+            .table-sm th, .table-sm td {
+                padding: 2px 4px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print bg-dark text-white p-3 text-center sticky-top shadow-sm">
+        <button type="button" class="btn btn-success fw-bold me-2" onclick="window.print();">
+            <i class="bi bi-printer-fill me-1"></i> Imprimir Boletas Ahora
+        </button>
+        <button type="button" class="btn btn-outline-light" onclick="window.close();">
+            Cerrar Ventana
+        </button>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        foreach (var b in Model)
+        {
+            <div class="boleta-box">
+                <!-- ENCABEZADO -->
+                <div class="row align-items-center border-bottom pb-2 mb-2">
+                    <div class="col-7">
+                        <h5 class="fw-bold m-0 text-dark">@b.EmpresaRazonSocial</h5>
+                        <div class="small text-muted"><strong>RUC:</strong> @b.EmpresaRuc | @b.EmpresaDireccion</div>
+                    </div>
+                    <div class="col-5 text-end">
+                        <div class="fw-bold border border-dark p-1 text-center text-uppercase">
+                            BOLETA DE PAGO DE REMUNERACIONES
+                        </div>
+                        <div class="small mt-1">D.S. Nº 001-98-TR | <strong>PERÍODO:</strong> @b.PeriodoTexto</div>
+                        <div class="small"><strong>PLANILLA:</strong> @b.PlanillaNombre</div>
+                    </div>
+                </div>
+
+                <!-- DATOS DEL TRABAJADOR -->
+                <div class="border p-2 mb-3 bg-light">
+                    <div class="row g-1">
+                        <div class="col-7"><strong>COLABORADOR:</strong> @b.PersonalNombre</div>
+                        <div class="col-3"><strong>DNI:</strong> @b.DocumentoIdentidad</div>
+                        <div class="col-2"><strong>CÓD:</strong> @b.PersonalCodigo</div>
+
+                        <div class="col-5"><strong>CARGO:</strong> @(string.IsNullOrWhiteSpace(b.CargoNombre) ? "OPERARIO" : b.CargoNombre)</div>
+                        <div class="col-4"><strong>C. COSTO:</strong> @(string.IsNullOrWhiteSpace(b.CentroCostoNombre) ? "GENERAL" : b.CentroCostoNombre)</div>
+                        <div class="col-3"><strong>F. INGRESO:</strong> @(b.FechaIngreso?.ToString("dd/MM/yyyy") ?? "-")</div>
+
+                        <div class="col-6"><strong>RÉG. PENSIÓN:</strong> @(string.IsNullOrWhiteSpace(b.RegimenPensionario) ? "ONP" : b.RegimenPensionario) @(string.IsNullOrWhiteSpace(b.Cuspp) ? "" : $" (CUSPP: {b.Cuspp})")</div>
+                        <div class="col-3"><strong>DÍAS LAB:</strong> @b.DiasLaborados.ToString("N0")</div>
+                        <div class="col-3"><strong>HORAS LAB:</strong> @b.HorasLaboradas.ToString("N2") h</div>
+                    </div>
+                </div>
+
+                <!-- CONCEPTOS: INGRESOS, DESCUENTOS, APORTES -->
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <div class="border h-100">
+                            <div class="bg-light p-1 fw-bold text-center border-bottom">INGRESOS</div>
+                            <table class="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr class="border-bottom text-muted small">
+                                        <th>CONCEPTO</th>
+                                        <th class="text-end">HORAS</th>
+                                        <th class="text-end">MONTO</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var ing in b.Ingresos)
+                                    {
+                                        <tr>
+                                            <td><small>@ing.Codigo</small> @ing.Descripcion</td>
+                                            <td class="text-end">@(ing.Horas > 0 ? ing.Horas.ToString("N2") : "")</td>
+                                            <td class="text-end font-monospace">@ing.Monto.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="col-4">
+                        <div class="border h-100">
+                            <div class="bg-light p-1 fw-bold text-center border-bottom">DESCUENTOS AL TRABAJADOR</div>
+                            <table class="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr class="border-bottom text-muted small">
+                                        <th>CONCEPTO</th>
+                                        <th class="text-end">HORAS</th>
+                                        <th class="text-end">MONTO</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var d in b.Descuentos)
+                                    {
+                                        <tr>
+                                            <td><small>@d.Codigo</small> @d.Descripcion</td>
+                                            <td class="text-end">@(d.Horas > 0 ? d.Horas.ToString("N2") : "")</td>
+                                            <td class="text-end font-monospace">@d.Monto.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="col-4">
+                        <div class="border h-100">
+                            <div class="bg-light p-1 fw-bold text-center border-bottom">APORTES DEL EMPLEADOR</div>
+                            <table class="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr class="border-bottom text-muted small">
+                                        <th>CONCEPTO</th>
+                                        <th class="text-end">HORAS</th>
+                                        <th class="text-end">MONTO</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var a in b.AportesEmpleador)
+                                    {
+                                        <tr>
+                                            <td><small>@a.Codigo</small> @a.Descripcion</td>
+                                            <td class="text-end">@(a.Horas > 0 ? a.Horas.ToString("N2") : "")</td>
+                                            <td class="text-end font-monospace">@a.Monto.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOTALES -->
+                <div class="row g-2 mb-3 font-monospace fw-bold">
+                    <div class="col-4 text-end pe-3">TOTAL INGRESOS: S/ @b.TotalIngresos.ToString("N2")</div>
+                    <div class="col-4 text-end pe-3">TOTAL DESCUENTOS: S/ @b.TotalDescuentos.ToString("N2")</div>
+                    <div class="col-4 text-end pe-3">TOTAL APORTES: S/ @b.TotalAportes.ToString("N2")</div>
+                </div>
+
+                <!-- NETO A PAGAR -->
+                <div class="border p-2 mb-4 bg-light text-center">
+                    <div class="fw-bold fs-6">
+                        NETO A PAGAR: <span class="font-monospace text-primary">S/ @b.NetoPagar.ToString("N2")</span>
+                    </div>
+                    <div class="small text-muted mt-1">SON: @b.NetoEnLetras</div>
+                </div>
+
+                <!-- FIRMAS -->
+                <div class="row pt-4 text-center">
+                    <div class="col-6">
+                        <div class="firma-linea">
+                            <div class="fw-bold">@b.EmpresaRazonSocial</div>
+                            <div class="small text-muted">EMPLEADOR</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="firma-linea">
+                            <div class="fw-bold">@b.PersonalNombre</div>
+                            <div class="small text-muted">TRABAJADOR - DNI: @b.DocumentoIdentidad</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <h4>No hay datos de boletas para mostrar.</h4>
+        </div>
+    }
+</body>
+</html>

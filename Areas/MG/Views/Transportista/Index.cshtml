@@ -56,7 +56,7 @@
                         <!-- Buscador -->
                         <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
-                            <input class="form-control border-start-0 ps-0" type="search" name="search" value="@ViewBag.Search" placeholder="Buscar razón social, RUC o inscripción..." />
+                            <input class="form-control border-start-0 ps-0" type="search" id="filtro-tabla" name="search" value="@ViewBag.Search" placeholder="Buscar razón social, RUC o inscripción..." onkeyup="filtrarTablaCliente();" />
                             <button type="submit" class="btn btn-outline-primary">Buscar</button>
                             @if (!string.IsNullOrEmpty(ViewBag.Search as string) || !string.IsNullOrEmpty(ViewBag.Estado as string))
                             {
@@ -75,49 +75,59 @@
                                 <option value="I" selected="@(ViewBag.Estado as string == "I")">Solo Inactivos</option>
                             </select>
                         </div>
-
-                        <div class="text-muted small ms-2">
-                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6">@(Model?.Count ?? 0)</strong> transportistas</span>
-                        </div>
                     </div>
 
-                    <!-- BOTÓN DROPDOWN 'MOSTRANDO: 25' -->
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
-                            <i class="bi bi-funnel-fill text-primary"></i>
-                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">@top</strong></span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
-                            @foreach (var count in new[] { 25, 50, 100, 500 })
-                            {
-                                <li>
-                                    <a class="dropdown-item item-top @(top == count ? "active" : "")" href="javascript:void(0)" onclick="$('#filtro-top-input').val(@count); $('#filtro-form-transp').submit();">
-                                        @count registros
-                                    </a>
-                                </li>
-                            }
-                        </ul>
+                    <!-- TOTAL Y MOSTRANDO: FIRMEMENTE A LA DERECHA (ms-auto) -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> transportistas</span>
+                        </div>
+
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">@top</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                                @foreach (var count in new[] { 25, 50, 100, 500 })
+                                {
+                                    <li>
+                                        <a class="dropdown-item item-top @(top == count ? "active" : "")" href="javascript:void(0)" onclick="$('#filtro-top-input').val(@count); $('#filtro-form-transp').submit();">
+                                            @count registros
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-transportistas">
                     <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
-                            <th style="width: 140px;">RUC</th>
-                            <th>Razón Social</th>
-                            <th style="width: 220px;">Inscripción Vehicular</th>
-                            <th style="width: 110px;" class="text-center">Estado</th>
+                            <th style="width: 140px;" class="font-monospace th-sortable" onclick="ordenarTabla('tabla-transportistas', 0, false)">
+                                <span>RUC</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
+                            <th class="th-sortable" onclick="ordenarTabla('tabla-transportistas', 1, false)">
+                                <span>Razón Social</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
+                            <th style="width: 220px;" class="th-sortable" onclick="ordenarTabla('tabla-transportistas', 2, false)">
+                                <span>Inscripción Vehicular</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
+                            <th style="width: 110px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-transportistas', 3, false)">
+                                <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                            </th>
                             <th style="width: 120px;" class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            <tr>
+                            <tr class="fila-transportista">
                                 <td class="font-monospace">@item.NumeroRuc</td>
                                 <td class="fw-semibold">@item.RazonSocial</td>
                                 <td class="font-monospace">@item.NumeroInscripcionVehicular</td>
@@ -133,10 +143,9 @@
                                 </td>
                             </tr>
                         }
-                        @if (Model.Count == 0)
-                        {
-                            <tr><td colspan="5" class="text-center text-muted py-4">No se encontraron transportistas.</td></tr>
-                        }
+                        <tr id="fila-vacia" class="fila-no-sort" style="display: @(Model.Count == 0 ? "table-row" : "none");">
+                            <td colspan="5" class="text-center text-muted py-4">No se encontraron transportistas.</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -189,7 +198,28 @@
                             <div class="col-md-2"><label class="form-label">Placa adicional</label><input class="form-control form-control-sm text-uppercase" id="unidad-placa2" maxlength="6" /></div>
                             <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100" type="button" onclick="guardarUnidad();">Agregar / Guardar</button></div>
                         </div>
-                        <div class="table-responsive"><table class="table table-sm table-striped align-middle"><thead><tr><th>Marca</th><th>Modelo</th><th>Placa</th><th>Placa adicional</th><th></th></tr></thead><tbody id="unidades-body"></tbody></table></div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle" id="tabla-modal-unidades">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-unidades', 0, false)">
+                                            <span>Marca</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-unidades', 1, false)">
+                                            <span>Modelo</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-unidades', 2, false)">
+                                            <span>Placa</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-unidades', 3, false)">
+                                            <span>Placa adicional</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th style="width: 80px;" class="text-end"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="unidades-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="tab-pane fade" id="tr-tab-conductores">
                         <div class="row g-2 mb-2">
@@ -203,7 +233,28 @@
                             <div class="col-md-2"><label class="form-label">Teléfono</label><input class="form-control form-control-sm" id="cond-telefono" maxlength="15" /></div>
                             <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100" type="button" onclick="guardarConductor();">Agregar / Guardar</button></div>
                         </div>
-                        <div class="table-responsive"><table class="table table-sm table-striped align-middle"><thead><tr><th>Conductor</th><th>Documento</th><th>Licencia</th><th>Teléfono</th><th></th></tr></thead><tbody id="conductores-body"></tbody></table></div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle" id="tabla-modal-conductores">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-conductores', 0, false)">
+                                            <span>Conductor</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-conductores', 1, false)">
+                                            <span>Documento</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-conductores', 2, false)">
+                                            <span>Licencia</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th class="th-sortable" onclick="ordenarTabla('tabla-modal-conductores', 3, false)">
+                                            <span>Teléfono</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                        </th>
+                                        <th style="width: 80px;" class="text-end"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="conductores-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -357,6 +408,66 @@
     }
 
     function esc(value) { return $('<div>').text(value || '').html(); }
+
+    function filtrarTablaCliente() {
+        var query = ($('#filtro-tabla').val() || '').toLowerCase().trim();
+        var visibles = 0;
+        $('#tabla-transportistas tbody tr.fila-transportista').each(function () {
+            var text = $(this).text().toLowerCase();
+            var matches = text.indexOf(query) > -1;
+            $(this).toggle(matches);
+            if (matches) visibles++;
+        });
+        $('#fila-vacia').toggle(visibles === 0);
+        $('#total-registros').text(visibles);
+    }
+
+    function ordenarTabla(tablaId, colIndex, isNumeric) {
+        var $table = typeof tablaId === 'string' ? $('#' + tablaId) : $(tablaId);
+        if (!$table.length) return;
+        var $tbody = $table.find('tbody');
+        var rows = $tbody.find('tr:not(.fila-no-sort):not(#fila-vacia)').get();
+        if (rows.length <= 1) return;
+
+        var prevCol = $table.data('sort-col');
+        var sortAsc = true;
+        if (prevCol === colIndex) {
+            sortAsc = !$table.data('sort-asc');
+        }
+        $table.data('sort-col', colIndex);
+        $table.data('sort-asc', sortAsc);
+
+        // Actualizar iconos
+        $table.find('thead th .sort-icon').attr('class', 'bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon');
+        var $th = $table.find('thead th').eq(colIndex);
+        var iconClass = isNumeric
+            ? (sortAsc ? 'bi-sort-numeric-down text-primary fw-bold' : 'bi-sort-numeric-down-alt text-primary fw-bold')
+            : (sortAsc ? 'bi-sort-alpha-down text-primary fw-bold' : 'bi-sort-alpha-down-alt text-primary fw-bold');
+        $th.find('.sort-icon').attr('class', 'bi ' + iconClass + ' ms-1 sort-icon');
+
+        rows.sort(function (a, b) {
+            var aVal = $(a).children('td, th').eq(colIndex).text().trim();
+            var bVal = $(b).children('td, th').eq(colIndex).text().trim();
+
+            if (isNumeric) {
+                var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+                var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+                return sortAsc ? (aNum - bNum) : (bNum - aNum);
+            } else {
+                return sortAsc ? aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' })
+                               : bVal.localeCompare(aVal, undefined, { numeric: true, sensitivity: 'base' });
+            }
+        });
+
+        $.each(rows, function (index, row) {
+            $tbody.append(row);
+        });
+
+        if (tablaId === 'tabla-transportistas') {
+            filtrarTablaCliente();
+        }
+    }
+
     document.getElementById('modal-crud-transportista').addEventListener('hidden.bs.modal', function () {
         if (transportistaModificado) location.reload();
     });

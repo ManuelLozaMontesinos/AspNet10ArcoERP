@@ -143,42 +143,49 @@
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
                     <!-- Píldoras de Rol / Tipo de Ítem -->
                     <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Filtro de Tipo">
-                        <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(string.IsNullOrEmpty(tipoFiltro) ? "btn-primary" : "btn-outline-secondary")">
                             <i class="bi bi-grid-fill me-1"></i>Todos <span class="badge @(string.IsNullOrEmpty(tipoFiltro) ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@totalCount</span>
                         </a>
-                        <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "P", grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "P", estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(tipoFiltro == "P" ? "btn-primary" : "btn-outline-secondary")">
                             <i class="bi bi-box-seam me-1"></i>Productos <span class="badge @(tipoFiltro == "P" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@productosCount</span>
                         </a>
-                        <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "S", grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
+                        <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "S", estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(tipoFiltro == "S" ? "btn-primary" : "btn-outline-secondary")">
                             <i class="bi bi-gear-wide-connected me-1"></i>Servicios <span class="badge @(tipoFiltro == "S" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@serviciosCount</span>
                         </a>
                     </div>
 
-                    <!-- Dropdown 'Mostrando: 25' -->
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
-                            <i class="bi bi-funnel-fill text-primary"></i>
-                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1">@currentTop</strong></span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
-                            @foreach (var cant in new[] { 25, 50, 100, 500 })
-                            {
-                                <li>
-                                    <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
-                                       href="@Url.Action("Index", new { search = ViewBag.Search, tipo = tipoFiltro, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = cant })">
-                                        <span>@cant registros</span>
-                                        @if (currentTop == cant)
-                                        {
-                                            <i class="bi bi-check text-primary"></i>
-                                        }
-                                    </a>
-                                </li>
-                            }
-                        </ul>
+                    <!-- TOTAL Y MOSTRANDO: FIRMEMENTE A LA DERECHA (ms-auto) -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(tipoFiltro == "P" ? productosCount : (tipoFiltro == "S" ? serviciosCount : totalCount))</strong> @(tipoFiltro == "P" ? "productos" : (tipoFiltro == "S" ? "servicios" : "registros"))</span>
+                        </div>
+
+                        <!-- Dropdown 'Mostrando: 25' -->
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1">@currentTop</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                                @foreach (var cant in new[] { 25, 50, 100, 500 })
+                                {
+                                    <li>
+                                        <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
+                                           href="@Url.Action("Index", new { search = ViewBag.Search, tipo = tipoFiltro, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = cant })">
+                                            <span>@cant registros</span>
+                                            @if (currentTop == cant)
+                                            {
+                                                <i class="bi bi-check text-primary"></i>
+                                            }
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
@@ -210,7 +217,7 @@
                         <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                             <i class="bi bi-folder text-primary"></i>
                         </span>
-                        <select name="grupoId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="this.form.submit();" title="Filtrar por Grupo">
+                        <select name="grupoId" id="filtro-grupo" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="$('#filtro-clase').val(''); $('#filtro-familia').val(''); this.form.submit();" title="Filtrar por Grupo">
                             <option value="" selected="@(!grupoFiltro.HasValue)">Todos los Grupos</option>
                             @foreach (var g in gruposLookup)
                             {
@@ -224,7 +231,7 @@
                         <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                             <i class="bi bi-tag text-primary"></i>
                         </span>
-                        <select name="claseId" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Clase">
+                        <select name="claseId" id="filtro-clase" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="$('#filtro-familia').val(''); this.form.submit();" title="Filtrar por Clase">
                             <option value="" selected="@(!claseFiltro.HasValue)">Todas las Clases</option>
                             @foreach (var c in clasesLookup)
                             {
@@ -238,7 +245,7 @@
                         <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                             <i class="bi bi-diagram-3 text-primary"></i>
                         </span>
-                        <select name="familiaId" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Familia">
+                        <select name="familiaId" id="filtro-familia" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Familia">
                             <option value="" selected="@(!familiaFiltro.HasValue)">Todas las Familias</option>
                             @foreach (var f in familiasLookup)
                             {
@@ -695,11 +702,15 @@
                                     </div>
 
                                     <div class="table-responsive">
-                                        <table class="table table-sm table-hover align-middle mb-0">
+                                        <table class="table table-sm table-hover align-middle mb-0" id="tabla-modal-presentaciones">
                                             <thead class="bg-body-secondary small text-body-secondary border-bottom border-secondary-subtle">
                                                 <tr>
-                                                    <th class="py-2">Unidad de Medida</th>
-                                                    <th class="text-end py-2" style="width: 140px;">Cant. Equiv.</th>
+                                                    <th class="py-2 th-sortable" onclick="ordenarTablaModal('tabla-modal-presentaciones', 0, false)">
+                                                        <span>Unidad de Medida</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                    </th>
+                                                    <th class="text-end py-2 th-sortable" style="width: 140px;" onclick="ordenarTablaModal('tabla-modal-presentaciones', 1, true)">
+                                                        <span>Cant. Equiv.</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                    </th>
                                                     <th class="text-end py-2" style="width: 100px;">Acciones</th>
                                                 </tr>
                                             </thead>
@@ -753,12 +764,18 @@
                                     </div>
 
                                     <div class="table-responsive">
-                                        <table class="table table-sm table-hover align-middle mb-0">
+                                        <table class="table table-sm table-hover align-middle mb-0" id="tabla-modal-procesos">
                                             <thead class="bg-body-secondary small text-body-secondary border-bottom border-secondary-subtle">
                                                 <tr>
-                                                    <th class="py-2">Proceso</th>
-                                                    <th class="py-2">Sub-Proceso</th>
-                                                    <th class="text-end py-2" style="width: 100px;">Orden</th>
+                                                    <th class="py-2 th-sortable" onclick="ordenarTablaModal('tabla-modal-procesos', 0, false)">
+                                                        <span>Proceso</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                    </th>
+                                                    <th class="py-2 th-sortable" onclick="ordenarTablaModal('tabla-modal-procesos', 1, false)">
+                                                        <span>Sub-Proceso</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                    </th>
+                                                    <th class="text-end py-2 th-sortable" style="width: 100px;" onclick="ordenarTablaModal('tabla-modal-procesos', 2, true)">
+                                                        <span>Orden</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                    </th>
                                                     <th class="text-end py-2" style="width: 100px;">Acciones</th>
                                                 </tr>
                                             </thead>
@@ -817,10 +834,12 @@
                                     </div>
 
                                     <div class="table-responsive">
-                                        <table class="table table-sm table-hover align-middle mb-0">
+                                        <table class="table table-sm table-hover align-middle mb-0" id="tabla-modal-detalles">
                                             <thead class="bg-body-secondary small text-body-secondary border-bottom border-secondary-subtle">
                                                 <tr>
-                                                    <th class="py-2">Nombre</th>
+                                                    <th class="py-2 th-sortable" onclick="ordenarTablaModal('tabla-modal-detalles', 0, false)">
+                                                        <span>Nombre</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
+                                                    </th>
                                                     <th class="text-end py-2" style="width: 100px;">Acciones</th>
                                                 </tr>
                                             </thead>
@@ -885,18 +904,19 @@
     // ========================================================
     function alCambiarGrupoFiltro() {
         var grupoId = $('#filtro-grupo').val();
+        var tipo = '@(tipoFiltro ?? "")';
         $('#filtro-clase').html('<option value="">-- Todas las Clases --</option>');
         $('#filtro-familia').html('<option value="">-- Todas las Familias --</option>');
 
         if (grupoId) {
-            $.get('@Url.Action("ClasesPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId }, function (data) {
+            $.get('@Url.Action("ClasesPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, tipo: tipo }, function (data) {
                 if (data && data.length > 0) {
                     $.each(data, function (i, c) {
                         $('#filtro-clase').append('<option value="' + c.id + '">' + c.nombre + '</option>');
                     });
                 }
             });
-            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId }, function (data) {
+            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, tipo: tipo }, function (data) {
                 if (data && data.length > 0) {
                     $.each(data, function (i, f) {
                         $('#filtro-familia').append('<option value="' + f.id + '">' + f.nombre + '</option>');
@@ -909,10 +929,11 @@
     function alCambiarClaseFiltro() {
         var grupoId = $('#filtro-grupo').val();
         var claseId = $('#filtro-clase').val();
+        var tipo = '@(tipoFiltro ?? "")';
         $('#filtro-familia').html('<option value="">-- Todas las Familias --</option>');
 
         if (grupoId || claseId) {
-            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId }, function (data) {
+            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId, tipo: tipo }, function (data) {
                 if (data && data.length > 0) {
                     $.each(data, function (i, f) {
                         $('#filtro-familia').append('<option value="' + f.id + '">' + f.nombre + '</option>');
@@ -928,6 +949,7 @@
     function alCambiarTipoModal(callback) {
         var tipoId = $('input[name="TipoProductoId"]:checked').val();
         var esServicio = (tipoId === "2");
+        var tipo = esServicio ? "S" : "P";
 
         if (esServicio) {
             $('#seccion-propiedades-fisicas').addClass('d-none');
@@ -939,7 +961,7 @@
 
         // Cargar Grupos según tipo si el combo no está deshabilitado
         if (!$('#prod-grupo-id').is(':disabled')) {
-            $.get('@Url.Action("GruposPorTipo", "Producto", new { area = "MG" })', { tipoProductoId: tipoId }, function (data) {
+            $.get('@Url.Action("GruposPorTipo", "Producto", new { area = "MG" })', { tipoProductoId: tipoId, tipo: tipo }, function (data) {
                 $('#prod-grupo-id').html('<option value="">-- Seleccionar Grupo --</option>');
                 if (data && data.length > 0) {
                     $.each(data, function (i, g) {
@@ -955,11 +977,13 @@
 
     function alCambiarGrupoModal(targetClaseId, callback) {
         var grupoId = $('#prod-grupo-id').val();
+        var tipoId = $('input[name="TipoProductoId"]:checked').val();
+        var tipo = (tipoId === "2") ? "S" : "P";
         $('#prod-clase-id').html('<option value="">-- Seleccionar Clase --</option>');
         $('#prod-familia-id').html('<option value="">-- Seleccionar Familia --</option>');
 
         if (grupoId) {
-            $.get('@Url.Action("ClasesPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId }, function (data) {
+            $.get('@Url.Action("ClasesPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, tipo: tipo }, function (data) {
                 if (data && data.length > 0) {
                     $.each(data, function (i, c) {
                         $('#prod-clase-id').append('<option value="' + c.id + '">' + c.nombre + '</option>');
@@ -976,10 +1000,12 @@
     function alCambiarClaseModal(targetFamiliaId, callback) {
         var grupoId = $('#prod-grupo-id').val();
         var claseId = $('#prod-clase-id').val();
+        var tipoId = $('input[name="TipoProductoId"]:checked').val();
+        var tipo = (tipoId === "2") ? "S" : "P";
         $('#prod-familia-id').html('<option value="">-- Seleccionar Familia --</option>');
 
         if (claseId || grupoId) {
-            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId }, function (data) {
+            $.get('@Url.Action("FamiliasPorGrupo", "Producto", new { area = "MG" })', { grupoId: grupoId, claseId: claseId, tipo: tipo }, function (data) {
                 if (data && data.length > 0) {
                     $.each(data, function (i, f) {
                         $('#prod-familia-id').append('<option value="' + f.id + '">' + f.nombre + '</option>');
@@ -1559,6 +1585,48 @@
                     }
                 });
             }
+        });
+    }
+
+    function ordenarTablaModal(tablaId, colIndex, isNumeric) {
+        var $table = $('#' + tablaId);
+        if (!$table.length) return;
+        var $tbody = $table.find('tbody');
+        var rows = $tbody.find('tr:not(.fila-no-sort)').get();
+        if (rows.length <= 1) return;
+
+        var prevCol = $table.data('sort-col');
+        var sortAsc = true;
+        if (prevCol === colIndex) {
+            sortAsc = !$table.data('sort-asc');
+        }
+        $table.data('sort-col', colIndex);
+        $table.data('sort-asc', sortAsc);
+
+        // Actualizar iconos
+        $table.find('thead th .sort-icon').attr('class', 'bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon');
+        var $th = $table.find('thead th').eq(colIndex);
+        var iconClass = isNumeric
+            ? (sortAsc ? 'bi-sort-numeric-down text-primary fw-bold' : 'bi-sort-numeric-down-alt text-primary fw-bold')
+            : (sortAsc ? 'bi-sort-alpha-down text-primary fw-bold' : 'bi-sort-alpha-down-alt text-primary fw-bold');
+        $th.find('.sort-icon').attr('class', 'bi ' + iconClass + ' ms-1 sort-icon');
+
+        rows.sort(function (a, b) {
+            var aVal = $(a).children('td, th').eq(colIndex).text().trim();
+            var bVal = $(b).children('td, th').eq(colIndex).text().trim();
+
+            if (isNumeric) {
+                var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+                var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+                return sortAsc ? (aNum - bNum) : (bNum - aNum);
+            } else {
+                return sortAsc ? aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' })
+                               : bVal.localeCompare(aVal, undefined, { numeric: true, sensitivity: 'base' });
+            }
+        });
+
+        $.each(rows, function (index, row) {
+            $tbody.append(row);
         });
     }
 </script>

@@ -1,0 +1,700 @@
+@model List<AspNet10ArcoERP.Models.PrestamoPersonalModel>
+@{
+    ViewData["Title"] = "Préstamos y Adelantos";
+    var tiposPrestamo = ViewBag.TiposPrestamo as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var estadosPrestamo = ViewBag.EstadosPrestamo as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var personalList = ViewBag.Personal as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+}
+
+<style>
+    .table-fixed-header {
+        table-layout: auto;
+    }
+    .table-header-custom th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        height: 40px !important;
+        line-height: 1.2;
+    }
+    .th-sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .th-sortable:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-primary);
+    }
+    [data-bs-theme="dark"] .table-header-custom {
+        background-color: #1e2227 !important;
+        color: #e9ecef !important;
+    }
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e2227 !important;
+        border: 1px solid #343a40 !important;
+    }
+    [data-bs-theme="dark"] .modal-header,
+    [data-bs-theme="dark"] .modal-footer {
+        background-color: #181b1f !important;
+        border-color: #2b3035 !important;
+    }
+</style>
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-wallet2 text-success me-2" style="font-size: 1.6rem;"></i>Préstamos y Adelantos
+                </h3>
+                <small class="text-muted">Gestión de préstamos, adelantos de sueldo y cronogramas de amortización por cuotas</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Préstamo / Adelanto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <!-- BARRA DE FILTROS -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <!-- Buscador -->
+                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por N° préstamo, trabajador, DNI..." onkeyup="aplicarFiltros();" />
+                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
+                        </div>
+
+                        <!-- Tipo Préstamo -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-funnel text-primary"></i>
+                            </span>
+                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 150px;" onchange="aplicarFiltros();">
+                                <option value="">Todos los Tipos</option>
+                                @foreach (var tp in tiposPrestamo)
+                                {
+                                    <option value="@tp.Nombre.ToUpper()">@tp.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Estado Pago -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-check2-circle text-primary"></i>
+                            </span>
+                            <select id="filtro-estado-pago" class="form-select form-select-sm border-start-0" style="min-width: 150px;" onchange="aplicarFiltros();">
+                                <option value="">Estado de Pago</option>
+                                @foreach (var ep in estadosPrestamo)
+                                {
+                                    <option value="@ep.Nombre.ToUpper()">@ep.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Estado Registro -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-toggle-on text-primary"></i>
+                            </span>
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 130px;" onchange="aplicarFiltros();">
+                                <option value="">Todos</option>
+                                <option value="A">Solo Activos</option>
+                                <option value="I">Solo Inactivos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- TOTAL Y MOSTRANDO -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> registros</span>
+                        </div>
+
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-list-ol"></i>
+                                <span>Mostrar: <strong>@(ViewBag.Top == 0 ? "Todos" : ViewBag.Top.ToString())</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item @(ViewBag.Top == 25 ? "active" : "")" asp-action="Index" asp-route-top="25" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 25</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 50 ? "active" : "")" asp-action="Index" asp-route-top="50" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 50</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 100 ? "active" : "")" asp-action="Index" asp-route-top="100" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 100</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 500 ? "active" : "")" asp-action="Index" asp-route-top="500" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 500</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 0 ? "active" : "")" asp-action="Index" asp-route-top="0" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Ver Todos</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header" id="tabla-prestamos">
+                        <thead class="table-header-custom border-bottom bg-body-tertiary">
+                            <tr>
+                                <th class="text-center px-3" style="width: 50px;">#</th>
+                                <th class="th-sortable" onclick="ordenarTabla(1)" style="width: 100px;">
+                                    N° PRÉSTAMO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="th-sortable" onclick="ordenarTabla(2)">
+                                    TRABAJADOR <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(3)" style="width: 110px;">
+                                    FECHA <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="th-sortable" onclick="ordenarTabla(4)">
+                                    TIPO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-end px-3 th-sortable" onclick="ordenarTabla(5)">
+                                    MONTO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center" style="width: 90px;">CUOTAS</th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(7)" style="width: 110px;">
+                                    PAGO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(8)" style="width: 90px;">
+                                    ESTADO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-end px-4" style="width: 120px;">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-prestamos">
+                            @if (Model != null && Model.Any())
+                            {
+                                int idx = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr id="fila-@item.Id" data-id="@item.Id" data-estado="@item.Estado" data-tipo="@item.TipoPrestamoNombre.ToUpper()" data-pago="@item.EstadoPrestamoNombre.ToUpper()">
+                                        <td class="text-center text-muted fw-semibold px-3">@idx</td>
+                                        <td>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle font-monospace px-2 py-1 fs-6">
+                                                @item.Numero
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">@item.PersonalNombre</div>
+                                            <div class="small text-muted font-monospace"><i class="bi bi-person-badge me-1"></i>DNI: @item.DocumentoIdentidad | Cód: @item.PersonalCodigo</div>
+                                        </td>
+                                        <td class="text-center">
+                                            @item.Fecha.ToString("dd/MM/yyyy")
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                                @item.TipoPrestamoNombre
+                                            </span>
+                                        </td>
+                                        <td class="text-end px-3 font-monospace fw-bold text-primary">
+                                            @item.MonedaSimbolo @item.Monto.ToString("N2")
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 rounded-pill small" onclick="verCuotas(@item.Id, '@item.Numero');" title="Ver cronograma de cuotas">
+                                                <i class="bi bi-calendar3 me-1"></i>@item.CantidadCuotas
+                                            </button>
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.EstadoPrestamoId == 2)
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                    <i class="bi bi-check-all me-1"></i>Pagado
+                                                </span>
+                                            }
+                                            else if (item.EstadoPrestamoId == 3)
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                    <i class="bi bi-slash-circle me-1"></i>Anulado
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Pendiente
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.Estado == "A")
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Activo
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Inactivo
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-info" onclick="verCuotas(@item.Id, '@item.Numero');" title="Ver Cuotas">
+                                                    <i class="bi bi-list-ol"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalEditar(@item.Id);" title="Editar">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning" onclick="cambiarEstado(@item.Id, '@item.Estado');" title="@(item.Estado == "A" ? "Desactivar" : "Activar")">
+                                                    <i class="bi @(item.Estado == "A" ? "bi-toggle-on text-success" : "bi-toggle-off text-muted")"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    idx++;
+                                }
+                            }
+                            else
+                            {
+                                <tr id="fila-vacia">
+                                    <td colspan="10" class="text-center py-5 text-muted">
+                                        <i class="bi bi-wallet2 display-6 d-block mb-2 text-secondary opacity-50"></i>
+                                        <span>No se encontraron préstamos o adelantos registrados.</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR PRÉSTAMO -->
+<div class="modal fade" id="modalPrestamo" tabindex="-1" aria-labelledby="modalPrestamoLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title fw-bold d-flex align-items-center" id="modalPrestamoLabel">
+                    <i class="bi bi-wallet2 me-2 text-success"></i>Nuevo Préstamo / Adelanto
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formPrestamo" onsubmit="guardarPrestamo(event);">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="presta-id" name="Id" value="0" />
+
+                    <div class="row g-3">
+                        <!-- Trabajador -->
+                        <div class="col-md-12">
+                            <label for="presta-personal" class="form-label fw-semibold small">Trabajador / Personal <span class="text-danger">*</span></label>
+                            <select class="form-select" id="presta-personal" name="PersonalId" required>
+                                <option value="">-- Seleccionar Trabajador --</option>
+                                @foreach (var p in personalList)
+                                {
+                                    <option value="@p.Id">@p.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Tipo de Préstamo -->
+                        <div class="col-md-6">
+                            <label for="presta-tipo" class="form-label fw-semibold small">Tipo de Préstamo <span class="text-danger">*</span></label>
+                            <select class="form-select" id="presta-tipo" name="TipoPrestamoId" required>
+                                @foreach (var tp in tiposPrestamo)
+                                {
+                                    <option value="@tp.Id">@tp.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Fecha Préstamo -->
+                        <div class="col-md-6">
+                            <label for="presta-fecha" class="form-label fw-semibold small">Fecha del Préstamo <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="presta-fecha" name="Fecha" required />
+                        </div>
+
+                        <!-- Monto -->
+                        <div class="col-md-4">
+                            <label for="presta-monto" class="form-label fw-semibold small">Monto Total (S/) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control fw-bold" id="presta-monto" name="Monto" placeholder="0.00" required />
+                        </div>
+
+                        <!-- Cantidad de Cuotas -->
+                        <div class="col-md-4">
+                            <label for="presta-cuotas" class="form-label fw-semibold small">Cantidad de Cuotas <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="presta-cuotas" name="CantidadCuotas" min="1" max="60" value="1" required />
+                        </div>
+
+                        <!-- Días entre Cuotas -->
+                        <div class="col-md-4">
+                            <label for="presta-dias" class="form-label fw-semibold small">Frecuencia (Días)</label>
+                            <select class="form-select" id="presta-dias" name="DiasCuota">
+                                <option value="30">Mensual (30 días)</option>
+                                <option value="15">Quincenal (15 días)</option>
+                                <option value="7">Semanal (7 días)</option>
+                            </select>
+                        </div>
+
+                        <!-- Fecha Inicio 1ra Cuota -->
+                        <div class="col-md-6">
+                            <label for="presta-fecha-inicio" class="form-label fw-semibold small">Fecha 1ra Cuota (Vcto) <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="presta-fecha-inicio" name="FechaInicio" required />
+                        </div>
+
+                        <!-- Estado de Pago -->
+                        <div class="col-md-6">
+                            <label for="presta-estado-pago" class="form-label fw-semibold small">Estado de Pago</label>
+                            <select class="form-select" id="presta-estado-pago" name="EstadoPrestamoId">
+                                @foreach (var ep in estadosPrestamo)
+                                {
+                                    <option value="@ep.Id">@ep.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Estado Registro -->
+                        <div class="col-md-12">
+                            <label for="presta-estado" class="form-label fw-semibold small">Estado del Registro <span class="text-danger">*</span></label>
+                            <select class="form-select" id="presta-estado" name="Estado" required>
+                                <option value="A">Activo (Habilitado para descuento en planilla)</option>
+                                <option value="I">Inactivo (Deshabilitado)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarPrestamo">
+                        <i class="bi bi-save me-1"></i>Guardar Préstamo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CRONOGRAMA DE CUOTAS -->
+<div class="modal fade" id="modalCuotas" tabindex="-1" aria-labelledby="modalCuotasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title fw-bold d-flex align-items-center" id="modalCuotasLabel">
+                    <i class="bi bi-calendar3 me-2 text-info"></i>Cronograma de Cuotas
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header">
+                        <thead class="table-header-custom border-bottom bg-body-tertiary">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">#</th>
+                                <th class="text-center">CUOTA</th>
+                                <th class="text-end px-3">MONTO</th>
+                                <th class="text-center">FECHA VCTO</th>
+                                <th class="text-center">FECHA CANCELA</th>
+                                <th class="text-center">TIPO PAGO</th>
+                                <th class="text-center">ESTADO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-cuotas">
+                            <!-- Inyectado por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-top py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let ordenActual = { col: -1, asc: true };
+
+    function abrirModalCrear() {
+        document.getElementById('formPrestamo').reset();
+        document.getElementById('presta-id').value = '0';
+        document.getElementById('presta-tipo').value = '2'; // Préstamo
+        document.getElementById('presta-estado-pago').value = '1'; // Pendiente
+        document.getElementById('presta-estado').value = 'A';
+        document.getElementById('presta-cuotas').value = '1';
+        document.getElementById('presta-dias').value = '30';
+        
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('presta-fecha').value = hoy;
+        document.getElementById('presta-fecha-inicio').value = hoy;
+
+        document.getElementById('modalPrestamoLabel').innerHTML = '<i class="bi bi-wallet2 me-2 text-success"></i>Nuevo Préstamo / Adelanto';
+        const modal = new bootstrap.Modal(document.getElementById('modalPrestamo'));
+        modal.show();
+    }
+
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/RH/Prestamo/Obtener?id=${id}`);
+            const res = await resp.json();
+            if (!res.success) {
+                Swal.fire('Error', res.message || 'No se pudo cargar el préstamo.', 'error');
+                return;
+            }
+
+            const data = res.data;
+            document.getElementById('presta-id').value = data.id;
+            document.getElementById('presta-personal').value = data.personalId;
+            document.getElementById('presta-tipo').value = data.tipoPrestamoId;
+            document.getElementById('presta-fecha').value = data.fecha ? data.fecha.split('T')[0] : '';
+            document.getElementById('presta-monto').value = data.monto;
+            document.getElementById('presta-cuotas').value = data.cantidadCuotas;
+            document.getElementById('presta-dias').value = data.diasCuota || '30';
+            document.getElementById('presta-fecha-inicio').value = data.fechaInicio ? data.fechaInicio.split('T')[0] : '';
+            document.getElementById('presta-estado-pago').value = data.estadoPrestamoId;
+            document.getElementById('presta-estado').value = data.estado || 'A';
+
+            document.getElementById('modalPrestamoLabel').innerHTML = `<i class="bi bi-pencil-square me-2 text-success"></i>Editar Préstamo N° ${data.numero}`;
+            const modal = new bootstrap.Modal(document.getElementById('modalPrestamo'));
+            modal.show();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Ocurrió un error al obtener la información.', 'error');
+        }
+    }
+
+    async function verCuotas(id, numero) {
+        try {
+            const resp = await fetch(`/RH/Prestamo/ObtenerCuotas?id=${id}`);
+            const res = await resp.json();
+            if (!res.success) {
+                Swal.fire('Error', 'No se pudieron cargar las cuotas.', 'error');
+                return;
+            }
+
+            const tbody = document.getElementById('tbody-cuotas');
+            tbody.innerHTML = '';
+
+            document.getElementById('modalCuotasLabel').innerHTML = `<i class="bi bi-calendar3 me-2 text-info"></i>Cronograma de Cuotas - Préstamo N° ${numero}`;
+
+            if (res.data && res.data.length > 0) {
+                let idx = 1;
+                res.data.forEach(c => {
+                    const tr = document.createElement('tr');
+                    const vcto = c.fechaVencimiento ? new Date(c.fechaVencimiento).toLocaleDateString('es-PE') : '-';
+                    const canc = c.fechaCancelacion ? new Date(c.fechaCancelacion).toLocaleDateString('es-PE') : '-';
+                    
+                    let badgePago = '<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Pendiente</span>';
+                    if (c.estadoCuotaId === 2 || c.estadoCuotaNombre === 'CANCELADO' || c.estadoCuotaNombre === 'PAGADO') {
+                        badgePago = '<span class="badge bg-success-subtle text-success border border-success-subtle">Cancelado</span>';
+                    } else if (c.estadoCuotaId === 3 || c.estadoCuotaNombre === 'PROCESADO') {
+                        badgePago = '<span class="badge bg-info-subtle text-info border border-info-subtle">En Planilla</span>';
+                    }
+
+                    tr.innerHTML = `
+                        <td class="text-center text-muted fw-semibold">${idx}</td>
+                        <td class="text-center"><span class="badge bg-secondary-subtle text-secondary border font-monospace">Cuota ${c.cuota}</span></td>
+                        <td class="text-end px-3 font-monospace fw-bold text-primary">S/ ${parseFloat(c.monto).toFixed(2)}</td>
+                        <td class="text-center font-monospace">${vcto}</td>
+                        <td class="text-center font-monospace">${canc}</td>
+                        <td class="text-center"><span class="badge bg-body-secondary text-body border">${c.tipoCancelacionCuotaNombre}</span></td>
+                        <td class="text-center">${badgePago}</td>
+                    `;
+                    tbody.appendChild(tr);
+                    idx++;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No hay cuotas registradas para este préstamo.</td></tr>';
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('modalCuotas'));
+            modal.show();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error al cargar cronograma de cuotas.', 'error');
+        }
+    }
+
+    async function guardarPrestamo(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnGuardarPrestamo');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Guardando...';
+
+        try {
+            const form = document.getElementById('formPrestamo');
+            const formData = new FormData(form);
+
+            const resp = await fetch('/RH/Prestamo/Guardar', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: res.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Atención', res.message || 'No se pudo guardar el préstamo.', 'warning');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save me-1"></i>Guardar Préstamo';
+        }
+    }
+
+    async function cambiarEstado(id, estadoActual) {
+        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        const result = await Swal.fire({
+            title: `¿Desea ${accion} este préstamo?`,
+            text: `El registro pasará a estar ${estadoActual === 'A' ? 'inactivo' : 'activo'}.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: `Sí, ${accion}`,
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+
+            const resp = await fetch('/RH/Prestamo/CambiarEstado', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Estado Actualizado',
+                    text: res.message,
+                    timer: 1200,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', res.message || 'No se pudo cambiar el estado.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        }
+    }
+
+
+
+    function aplicarFiltros() {
+        const texto = document.getElementById('filtro-tabla').value.toLowerCase().trim();
+        const tipo = document.getElementById('filtro-tipo').value;
+        const estadoPago = document.getElementById('filtro-estado-pago').value;
+        const estado = document.getElementById('filtro-estado').value;
+        const filas = document.querySelectorAll('#tbody-prestamos tr:not(#fila-vacia)');
+        let visibles = 0;
+
+        filas.forEach(f => {
+            const rowText = f.innerText.toLowerCase();
+            const rowEstado = f.getAttribute('data-estado');
+            const rowTipo = f.getAttribute('data-tipo');
+            const rowPago = f.getAttribute('data-pago');
+
+            const coincideTexto = !texto || rowText.includes(texto);
+            const coincideEstado = !estado || rowEstado === estado;
+            const coincideTipo = !tipo || rowTipo === tipo;
+            const coincidePago = !estadoPago || rowPago === estadoPago;
+
+            if (coincideTexto && coincideEstado && coincideTipo && coincidePago) {
+                f.style.display = '';
+                visibles++;
+            } else {
+                f.style.display = 'none';
+            }
+        });
+
+        const totalBadge = document.getElementById('total-registros');
+        if (totalBadge) totalBadge.innerText = visibles;
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtro-tabla').value = '';
+        document.getElementById('filtro-tipo').value = '';
+        document.getElementById('filtro-estado-pago').value = '';
+        document.getElementById('filtro-estado').value = '';
+        aplicarFiltros();
+    }
+
+    function ordenarTabla(n) {
+        const table = document.getElementById('tabla-prestamos');
+        let switching = true;
+        let dir = 'asc';
+        let switchcount = 0;
+
+        if (ordenActual.col === n) {
+            dir = ordenActual.asc ? 'desc' : 'asc';
+            ordenActual.asc = !ordenActual.asc;
+        } else {
+            ordenActual.col = n;
+            ordenActual.asc = true;
+            dir = 'asc';
+        }
+
+        while (switching) {
+            switching = false;
+            const rows = table.rows;
+            let shouldSwitch = false;
+            let i;
+
+            for (i = 1; i < (rows.length - 1); i++) {
+                if (rows[i].id === 'fila-vacia') continue;
+                let x = rows[i].getElementsByTagName('TD')[n];
+                let y = rows[i + 1].getElementsByTagName('TD')[n];
+                if (!x || !y) continue;
+
+                let cmpX = x.innerText.toLowerCase().trim();
+                let cmpY = y.innerText.toLowerCase().trim();
+
+                if (dir === 'asc') {
+                    if (cmpX > cmpY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir === 'desc') {
+                    if (cmpX < cmpY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            }
+        }
+    }
+</script>
+}

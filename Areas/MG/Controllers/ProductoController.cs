@@ -38,7 +38,9 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             string? dir = null, 
             int top = 25)
         {
-            var list = await _maestrosService.GetProductosAsync(search, tipo, grupoId, claseId, familiaId, estado, sort, dir, top);
+            string? safeTipo = string.IsNullOrWhiteSpace(tipo) ? null : tipo.Trim().ToUpper();
+
+            var list = await _maestrosService.GetProductosAsync(search, safeTipo, grupoId, claseId, familiaId, estado, sort, dir, top);
             var (total, productos, servicios) = await _maestrosService.GetProductosCountsAsync();
 
             ViewBag.TotalCount = total;
@@ -46,9 +48,9 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             ViewBag.ServiciosCount = servicios;
 
             ViewBag.TiposProductoLookup = await _maestrosService.GetTiposProductoLookupAsync();
-            ViewBag.GruposProductoLookup = await _maestrosService.GetGruposProductoLookupAsync();
-            ViewBag.ClasesLookup = await _maestrosService.GetClasesProductoLookupAsync(grupoId);
-            ViewBag.FamiliasLookup = await _maestrosService.GetFamiliasProductoLookupAsync(grupoId, claseId);
+            ViewBag.GruposProductoLookup = await _maestrosService.GetGruposProductoLookupAsync(null, safeTipo);
+            ViewBag.ClasesLookup = await _maestrosService.GetClasesProductoLookupAsync(grupoId, safeTipo);
+            ViewBag.FamiliasLookup = await _maestrosService.GetFamiliasProductoLookupAsync(grupoId, claseId, safeTipo);
             ViewBag.UnidadesLookup = await _maestrosService.GetUnidadesMedidaLookupAsync();
             ViewBag.ColoresLookup = await _maestrosService.GetColoresLookupAsync();
             ViewBag.TiposIgvLookup = await _maestrosService.GetTiposIgvLookupAsync();
@@ -56,7 +58,7 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             ViewBag.EstadosComercialesLookup = await _maestrosService.GetEstadosComercialesProductoLookupAsync();
 
             ViewBag.Search = search;
-            ViewBag.Tipo = string.IsNullOrWhiteSpace(tipo) ? null : tipo.ToUpper();
+            ViewBag.Tipo = safeTipo;
             ViewBag.GrupoId = grupoId;
             ViewBag.ClaseId = claseId;
             ViewBag.FamiliaId = familiaId;
@@ -100,23 +102,23 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ClasesPorGrupo(int? grupoId)
+        public async Task<IActionResult> ClasesPorGrupo(int? grupoId, string? tipo = null)
         {
-            var clases = await _maestrosService.GetClasesProductoLookupAsync(grupoId);
+            var clases = await _maestrosService.GetClasesProductoLookupAsync(grupoId, tipo);
             return Json(clases);
         }
 
         [HttpGet]
-        public async Task<IActionResult> FamiliasPorGrupo(int? grupoId, int? claseId)
+        public async Task<IActionResult> FamiliasPorGrupo(int? grupoId, int? claseId, string? tipo = null)
         {
-            var familias = await _maestrosService.GetFamiliasProductoLookupAsync(grupoId, claseId);
+            var familias = await _maestrosService.GetFamiliasProductoLookupAsync(grupoId, claseId, tipo);
             return Json(familias);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GruposPorTipo(int? tipoProductoId)
+        public async Task<IActionResult> GruposPorTipo(int? tipoProductoId, string? tipo = null)
         {
-            var grupos = await _maestrosService.GetGruposProductoLookupAsync(tipoProductoId);
+            var grupos = await _maestrosService.GetGruposProductoLookupAsync(tipoProductoId, tipo);
             return Json(grupos);
         }
 

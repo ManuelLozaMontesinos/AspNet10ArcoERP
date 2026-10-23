@@ -747,15 +747,22 @@ namespace AspNet10ArcoERP.Services
             return (true, $"Familia {(nuevoEstado == "A" ? "activada" : "desactivada")} exitosamente.", nuevoEstado);
         }
 
-        public async Task<List<LookupItemModel>> GetClasesProductoLookupAsync(int? grupoId = null)
+        public async Task<List<LookupItemModel>> GetClasesProductoLookupAsync(int? grupoId = null, string? tipo = null)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             string sql = @"
-                SELECT clase_producto_id AS Id, clase_producto AS Codigo, nombre AS Nombre 
-                FROM clase_producto 
-                WHERE estado = 'A' AND (@GrupoId IS NULL OR grupo_producto_id = @GrupoId)
-                ORDER BY nombre ASC";
-            var rows = await conn.QueryAsync<LookupItemModel>(sql, new { GrupoId = (grupoId > 0) ? grupoId : null });
+                SELECT c.clase_producto_id AS Id, c.clase_producto AS Codigo, c.nombre AS Nombre 
+                FROM clase_producto c
+                INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id
+                LEFT JOIN tipo_producto tp ON g.tipo_producto_id = tp.tipo_producto_id
+                WHERE c.estado = 'A' 
+                  AND (@GrupoId IS NULL OR c.grupo_producto_id = @GrupoId)
+                  AND (@Tipo IS NULL OR tp.tipo_producto = @Tipo)
+                ORDER BY c.nombre ASC";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql, new { 
+                GrupoId = (grupoId > 0) ? grupoId : null,
+                Tipo = string.IsNullOrWhiteSpace(tipo) ? null : tipo.Trim().ToUpper()
+            });
             return rows.ToList();
         }
 
@@ -1329,32 +1336,42 @@ namespace AspNet10ArcoERP.Services
             return rows.ToList();
         }
 
-        public async Task<List<LookupItemModel>> GetGruposProductoLookupAsync(int? tipoProductoId = null)
+        public async Task<List<LookupItemModel>> GetGruposProductoLookupAsync(int? tipoProductoId = null, string? tipo = null)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             string sql = @"
-                SELECT grupo_producto_id AS Id, grupo_producto AS Codigo, nombre AS Nombre 
-                FROM grupo_producto 
-                WHERE estado = 'A' AND (@TipoProductoId IS NULL OR tipo_producto_id = @TipoProductoId)
-                ORDER BY nombre ASC";
-            var rows = await conn.QueryAsync<LookupItemModel>(sql, new { TipoProductoId = (tipoProductoId > 0) ? tipoProductoId : null });
+                SELECT g.grupo_producto_id AS Id, g.grupo_producto AS Codigo, g.nombre AS Nombre 
+                FROM grupo_producto g
+                LEFT JOIN tipo_producto tp ON g.tipo_producto_id = tp.tipo_producto_id
+                WHERE g.estado = 'A' 
+                  AND (@TipoProductoId IS NULL OR g.tipo_producto_id = @TipoProductoId)
+                  AND (@Tipo IS NULL OR tp.tipo_producto = @Tipo)
+                ORDER BY g.nombre ASC";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql, new { 
+                TipoProductoId = (tipoProductoId > 0) ? tipoProductoId : null,
+                Tipo = string.IsNullOrWhiteSpace(tipo) ? null : tipo.Trim().ToUpper()
+            });
             return rows.ToList();
         }
 
-        public async Task<List<LookupItemModel>> GetFamiliasProductoLookupAsync(int? grupoId = null, int? claseId = null)
+        public async Task<List<LookupItemModel>> GetFamiliasProductoLookupAsync(int? grupoId = null, int? claseId = null, string? tipo = null)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             string sql = @"
                 SELECT f.familia_producto_id AS Id, f.familia_producto AS Codigo, f.nombre AS Nombre 
                 FROM familia_producto f
                 INNER JOIN clase_producto c ON f.clase_producto_id = c.clase_producto_id
+                INNER JOIN grupo_producto g ON c.grupo_producto_id = g.grupo_producto_id
+                LEFT JOIN tipo_producto tp ON g.tipo_producto_id = tp.tipo_producto_id
                 WHERE f.estado = 'A' 
                   AND (@GrupoId IS NULL OR c.grupo_producto_id = @GrupoId)
                   AND (@ClaseId IS NULL OR f.clase_producto_id = @ClaseId)
+                  AND (@Tipo IS NULL OR tp.tipo_producto = @Tipo)
                 ORDER BY f.nombre ASC";
             var rows = await conn.QueryAsync<LookupItemModel>(sql, new { 
                 GrupoId = (grupoId > 0) ? grupoId : null,
-                ClaseId = (claseId > 0) ? claseId : null 
+                ClaseId = (claseId > 0) ? claseId : null,
+                Tipo = string.IsNullOrWhiteSpace(tipo) ? null : tipo.Trim().ToUpper()
             });
             return rows.ToList();
         }

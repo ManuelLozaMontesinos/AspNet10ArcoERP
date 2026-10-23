@@ -54,7 +54,7 @@ namespace AspNet10ArcoERP.Services
         Task<GrupoClaseFamiliaModel?> GetFamiliaProductoByIdAsync(int id);
         Task<(bool success, string message, int id)> SaveFamiliaProductoAsync(GrupoClaseFamiliaModel model, int userId);
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoFamiliaProductoAsync(int id, int userId);
-        Task<List<LookupItemModel>> GetClasesProductoLookupAsync(int? grupoId = null);
+        Task<List<LookupItemModel>> GetClasesProductoLookupAsync(int? grupoId = null, string? tipo = null);
         Task<List<GrupoProductoModel>> GetGruposProductoAsync(int? tipoProductoId = null, string? search = null, string? estado = null);
         Task<GrupoProductoModel?> GetGrupoProductoByIdAsync(int id);
         Task<(bool success, string message, int id)> SaveGrupoProductoAsync(GrupoProductoModel model, int userId);
@@ -70,7 +70,7 @@ namespace AspNet10ArcoERP.Services
             string? search = null, 
             string? tipo = null, 
             int? grupoId = null, 
-            int? claseId = null,
+            int? claseId = null, 
             int? familiaId = null, 
             string? estado = null, 
             string? sort = null, 
@@ -81,8 +81,8 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message, int id)> SaveProductoAsync(ProductoModel model, int userId);
         Task<(bool success, string message, string nuevoEstado)> ToggleEstadoProductoAsync(int id, int userId);
         Task<List<LookupItemModel>> GetTiposProductoLookupAsync();
-        Task<List<LookupItemModel>> GetGruposProductoLookupAsync(int? tipoProductoId = null);
-        Task<List<LookupItemModel>> GetFamiliasProductoLookupAsync(int? grupoId = null, int? claseId = null);
+        Task<List<LookupItemModel>> GetGruposProductoLookupAsync(int? tipoProductoId = null, string? tipo = null);
+        Task<List<LookupItemModel>> GetFamiliasProductoLookupAsync(int? grupoId = null, int? claseId = null, string? tipo = null);
         Task<List<LookupItemModel>> GetUnidadesMedidaLookupAsync();
         Task<List<LookupItemModel>> GetColoresLookupAsync();
         Task<List<LookupItemModel>> GetTiposIgvLookupAsync();

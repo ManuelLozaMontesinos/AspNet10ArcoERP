@@ -68,8 +68,12 @@
         margin-bottom: 4px;
     }
 
-    /* Small Box / KPIs AdminLTE 4 (Estándar oficial Bootstrap 5.3) */
-    .small-box {
+    /* Small Box / KPIs AdminLTE 4 - Letras SIEMPRE Blancas (Claro y Oscuro) */
+    .small-box,
+    [data-bs-theme="dark"] .small-box,
+    .dark-mode .small-box,
+    html[data-bs-theme="dark"] .small-box,
+    body[data-bs-theme="dark"] .small-box {
         border-radius: 0.625rem;
         position: relative;
         display: block;
@@ -77,6 +81,7 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06);
         overflow: hidden;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        color: #ffffff !important;
     }
     .small-box:hover {
         transform: translateY(-2px);
@@ -85,37 +90,52 @@
     .small-box > .inner {
         padding: 1rem 1rem 0.75rem 1rem;
     }
-    .small-box h3 {
+    .small-box h3,
+    [data-bs-theme="dark"] .small-box h3,
+    .dark-mode .small-box h3 {
         font-size: 1.65rem;
         font-weight: 700;
         margin: 0 0 0.35rem 0;
         white-space: nowrap;
         letter-spacing: -0.02em;
+        color: #ffffff !important;
     }
-    .small-box p {
+    .small-box p,
+    [data-bs-theme="dark"] .small-box p,
+    .dark-mode .small-box p {
         font-size: 0.875rem;
         margin-bottom: 0;
         font-weight: 500;
         opacity: 0.95;
+        color: #ffffff !important;
     }
-    .small-box .small-box-icon {
+    .small-box a,
+    [data-bs-theme="dark"] .small-box a,
+    .dark-mode .small-box a,
+    .small-box span,
+    [data-bs-theme="dark"] .small-box span,
+    .dark-mode .small-box span {
+        color: #ffffff !important;
+    }
+    .small-box .small-box-icon,
+    [data-bs-theme="dark"] .small-box .small-box-icon,
+    .dark-mode .small-box .small-box-icon {
         position: absolute;
         top: 10px;
         right: 15px;
         z-index: 0;
         font-size: 3.6rem;
         line-height: 1;
-        color: rgba(255, 255, 255, 0.22);
+        color: rgba(255, 255, 255, 0.25) !important;
         transition: transform 0.3s ease;
     }
     .small-box:hover .small-box-icon {
         transform: scale(1.12);
     }
-    .small-box.text-bg-warning .small-box-icon {
-        color: rgba(0, 0, 0, 0.16);
-    }
-    .small-box > .small-box-footer {
-        background-color: rgba(0, 0, 0, 0.1);
+    .small-box > .small-box-footer,
+    [data-bs-theme="dark"] .small-box > .small-box-footer,
+    .dark-mode .small-box > .small-box-footer {
+        background-color: rgba(0, 0, 0, 0.1) !important;
         display: block;
         padding: 6px 12px;
         position: relative;
@@ -123,10 +143,27 @@
         z-index: 10;
         font-size: 0.8rem;
         font-weight: 500;
+        color: #ffffff !important;
+        text-decoration: none;
         transition: background-color 0.15s ease;
     }
-    .small-box > .small-box-footer:hover {
-        background-color: rgba(0, 0, 0, 0.18);
+    .small-box > .small-box-footer:hover,
+    [data-bs-theme="dark"] .small-box > .small-box-footer:hover,
+    .dark-mode .small-box > .small-box-footer:hover {
+        background-color: rgba(0, 0, 0, 0.2) !important;
+        color: #ffffff !important;
+    }
+    .small-box > .small-box-footer *,
+    [data-bs-theme="dark"] .small-box > .small-box-footer *,
+    .dark-mode .small-box > .small-box-footer * {
+        color: #ffffff !important;
+    }
+
+    /* Warning (Amarillo): Sutil sombra de texto para máxima legibilidad de letras blancas sobre amarillo */
+    .small-box.text-bg-warning h3,
+    .small-box.text-bg-warning p,
+    .small-box.text-bg-warning .small-box-footer {
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     }
 
     /* Tarjeta KPI 6 (Gradiente Azul Pedidos Mes) */
@@ -275,7 +312,7 @@
                         <p>Facturación del Mes</p>
                     </div>
                     <i class="small-box-icon bi bi-cart3"></i>
-                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Comprobantes de Pago / Facturación');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Comprobantes de Pago / Facturación');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Comprobantes <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
@@ -289,7 +326,7 @@
                         <p>Pedidos Activos</p>
                     </div>
                     <i class="small-box-icon bi bi-box-seam"></i>
-                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Pedidos');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Pedidos');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Pedidos <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
@@ -303,7 +340,7 @@
                         <p>Cotizaciones Activas</p>
                     </div>
                     <i class="small-box-icon bi bi-file-earmark-text"></i>
-                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Cotizaciones');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Cotizaciones');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Cotizaciones <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
@@ -317,7 +354,7 @@
                         <p>Órdenes Producción Mes</p>
                     </div>
                     <i class="small-box-icon bi bi-gear-wide-connected"></i>
-                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Producción en Planta (O.P.)');" class="small-box-footer link-dark link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Producción en Planta (O.P.)');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Planta / O.P. <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
@@ -331,7 +368,7 @@
                         <p>Órdenes Compra Mes</p>
                     </div>
                     <i class="small-box-icon bi bi-truck"></i>
-                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Órdenes de Compra');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Módulo de Órdenes de Compra');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover">
                         Ver Órdenes de Compra <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>
                 </div>
@@ -345,7 +382,7 @@
                         <p>Pedidos del Mes</p>
                     </div>
                     <i class="small-box-icon bi bi-clipboard-check"></i>
-                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Detalle Consolidado de Pedidos');" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover d-flex justify-content-between align-items-center px-3">
+                    <a href="javascript:void(0);" onclick="mostrarEnDesarrollo('Detalle Consolidado de Pedidos');" class="small-box-footer link-underline-opacity-0 link-underline-opacity-50-hover d-flex justify-content-between align-items-center px-3">
                         <span id="kpi-pedidos-monto-footer">Total: @(Model?.PedidosMesMonto ?? "S/ 0.00")</span>
                         <i class="bi bi-arrow-right-circle ms-1"></i>
                     </a>

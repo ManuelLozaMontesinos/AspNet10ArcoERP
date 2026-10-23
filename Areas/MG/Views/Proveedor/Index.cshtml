@@ -171,28 +171,35 @@
                         </form>
                     </div>
 
-                    <!-- 5. BOTÓN DROPDOWN 'MOSTRANDO: 100' -->
-                    <div class="dropdown flex-shrink-0">
-                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
-                            <i class="bi bi-funnel-fill text-primary"></i>
-                            <span>Mostrando: <strong class="badge bg-primary text-white ms-1">@currentTop</strong></span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
-                            @foreach (var cant in new[] { 25, 50, 100, 500 })
-                            {
-                                <li>
-                                    <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
-                                       href="@Url.Action("Index", new { search = ViewBag.Search, tipo = tipoFiltro, estado = estadoFiltro, naturaleza = naturalezaFiltro, sort = currentSort, dir = currentDir, top = cant })">
-                                        <span>@cant registros</span>
-                                        @if (currentTop == cant)
-                                        {
-                                            <i class="bi bi-check-lg ms-2"></i>
-                                        }
-                                    </a>
-                                </li>
-                            }
-                        </ul>
+                    <!-- TOTAL Y MOSTRANDO: FIRMEMENTE A LA DERECHA (ms-auto) -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> proveedores</span>
+                        </div>
+
+                        <!-- 5. BOTÓN DROPDOWN 'MOSTRANDO: 100' -->
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cantidad de registros a mostrar">
+                                <i class="bi bi-funnel-fill text-primary"></i>
+                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1">@currentTop</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
+                                @foreach (var cant in new[] { 25, 50, 100, 500 })
+                                {
+                                    <li>
+                                        <a class="dropdown-item d-flex justify-content-between align-items-center @(currentTop == cant ? "active" : "")" 
+                                           href="@Url.Action("Index", new { search = ViewBag.Search, tipo = tipoFiltro, estado = estadoFiltro, naturaleza = naturalezaFiltro, sort = currentSort, dir = currentDir, top = cant })">
+                                            <span>@cant registros</span>
+                                            @if (currentTop == cant)
+                                            {
+                                                <i class="bi bi-check-lg ms-2"></i>
+                                            }
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
                     </div>
 
                 </div>

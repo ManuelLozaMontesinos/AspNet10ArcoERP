@@ -1,0 +1,656 @@
+@model List<AspNet10ArcoERP.Models.ConceptoRemunerativoModel>
+@{
+    ViewData["Title"] = "Conceptos Remunerativos";
+    var tiposConcepto = ViewBag.TiposConceptoRemu as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var variablesCalculo = ViewBag.VariablesCalculo as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+}
+
+<style>
+    .table-fixed-header {
+        table-layout: auto;
+    }
+    .table-header-custom th {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+        font-size: 0.78rem !important;
+        letter-spacing: 0.5px;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        height: 40px !important;
+        line-height: 1.2;
+    }
+    .th-sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .th-sortable:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-primary);
+    }
+    [data-bs-theme="dark"] .table-header-custom {
+        background-color: #1e2227 !important;
+        color: #e9ecef !important;
+    }
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e2227 !important;
+        border: 1px solid #343a40 !important;
+    }
+    [data-bs-theme="dark"] .modal-header,
+    [data-bs-theme="dark"] .modal-footer {
+        background-color: #181b1f !important;
+        border-color: #2b3035 !important;
+    }
+    .formula-tag {
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.1s ease;
+    }
+    .formula-tag:hover {
+        transform: scale(1.05);
+    }
+</style>
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-sm-6">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-list-check text-warning me-2" style="font-size: 1.6rem;"></i>Conceptos Remunerativos
+                </h3>
+                <small class="text-muted">Catálogo maestro de ingresos, aportaciones y retenciones con fórmulas dinámicas</small>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Concepto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <!-- BARRA DE FILTROS -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <!-- Buscador -->
+                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                            <span class="input-group-text bg-body-tertiary border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código, nombre o fórmula..." onkeyup="aplicarFiltros();" />
+                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
+                        </div>
+
+                        <!-- Tipo Concepto -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-funnel text-primary"></i>
+                            </span>
+                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 160px;" onchange="aplicarFiltros();" title="Filtrar por Tipo">
+                                <option value="">Todos los Tipos</option>
+                                @foreach (var tc in tiposConcepto)
+                                {
+                                    <option value="@tc.Nombre.ToUpper()">@tc.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
+                                <i class="bi bi-toggle-on text-primary"></i>
+                            </span>
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado">
+                                <option value="">Todos los Estados</option>
+                                <option value="A">Solo Activos</option>
+                                <option value="I">Solo Inactivos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- TOTAL Y MOSTRANDO -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-muted small text-nowrap">
+                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> conceptos</span>
+                        </div>
+
+                        <div class="dropdown flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-list-ol"></i>
+                                <span>Mostrar: <strong>@(ViewBag.Top == 0 ? "Todos" : ViewBag.Top.ToString())</strong></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item @(ViewBag.Top == 25 ? "active" : "")" asp-action="Index" asp-route-top="25" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 25</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 50 ? "active" : "")" asp-action="Index" asp-route-top="50" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 50</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 100 ? "active" : "")" asp-action="Index" asp-route-top="100" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 100</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 500 ? "active" : "")" asp-action="Index" asp-route-top="500" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 500</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 0 ? "active" : "")" asp-action="Index" asp-route-top="0" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Ver Todos</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header" id="tabla-conceptos">
+                        <thead class="table-header-custom border-bottom bg-body-tertiary">
+                            <tr>
+                                <th class="text-center px-3" style="width: 50px;">#</th>
+                                <th class="th-sortable" onclick="ordenarTabla(1)" style="width: 90px;">
+                                    CÓDIGO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="th-sortable" onclick="ordenarTabla(2)">
+                                    CONCEPTO / NOMBRE <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="th-sortable" onclick="ordenarTabla(3)">
+                                    TIPO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th>FÓRMULA / CÁLCULO</th>
+                                <th>CONDICIÓN</th>
+                                <th class="text-center" style="width: 80px;">REG.</th>
+                                <th class="text-center th-sortable" onclick="ordenarTabla(7)" style="width: 100px;">
+                                    ESTADO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
+                                </th>
+                                <th class="text-end px-4" style="width: 100px;">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-conceptos">
+                            @if (Model != null && Model.Any())
+                            {
+                                int idx = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr id="fila-@item.Id" data-id="@item.Id" data-estado="@item.Estado" data-tipo="@item.TipoConceptoRemunerativoNombre.ToUpper()">
+                                        <td class="text-center text-muted fw-semibold px-3">@idx</td>
+                                        <td>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle font-monospace px-2 py-1 fs-6">
+                                                @item.Codigo
+                                            </span>
+                                        </td>
+                                        <td class="fw-semibold">
+                                            @item.Nombre
+                                            @if (!string.IsNullOrWhiteSpace(item.NombreBoleta))
+                                            {
+                                                <div class="small text-muted"><i class="bi bi-receipt me-1"></i>Boleta: @item.NombreBoleta</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.TipoConceptoRemunerativoId == 1)
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                    <i class="bi bi-cash-stack me-1"></i>@item.TipoConceptoRemunerativoNombre
+                                                </span>
+                                            }
+                                            else if (item.TipoConceptoRemunerativoId == 2)
+                                            {
+                                                <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                                    <i class="bi bi-shield-check me-1"></i>@item.TipoConceptoRemunerativoNombre
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                    <i class="bi bi-dash-circle me-1"></i>@item.TipoConceptoRemunerativoNombre
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.UsaFormula == "S" && !string.IsNullOrWhiteSpace(item.Formula))
+                                            {
+                                                <code class="text-primary font-monospace small">@item.Formula</code>
+                                                @if (!string.IsNullOrWhiteSpace(item.FormulaHora))
+                                                {
+                                                    <div class="small text-muted font-monospace"><i class="bi bi-clock me-1"></i>Hora: @item.FormulaHora</div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small fst-italic">Ingreso directo / Sin fórmula</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(item.Condicion))
+                                            {
+                                                <span class="small font-monospace text-secondary">@item.Condicion</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.EsRegularizacion == "S")
+                                            {
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" title="Es Regularización">Sí</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">No</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.Estado == "A")
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Activo
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 estado-badge">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Inactivo
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-end px-4">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalEditar(@item.Id);" title="Editar">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning" onclick="cambiarEstado(@item.Id, '@item.Estado');" title="@(item.Estado == "A" ? "Desactivar" : "Activar")">
+                                                    <i class="bi @(item.Estado == "A" ? "bi-toggle-on text-success" : "bi-toggle-off text-muted")"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    idx++;
+                                }
+                            }
+                            else
+                            {
+                                <tr id="fila-vacia">
+                                    <td colspan="9" class="text-center py-5 text-muted">
+                                        <i class="bi bi-list-check display-6 d-block mb-2 text-secondary opacity-50"></i>
+                                        <span>No se encontraron conceptos remunerativos registrados.</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR -->
+<div class="modal fade" id="modalConcepto" tabindex="-1" aria-labelledby="modalConceptoLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title fw-bold d-flex align-items-center" id="modalConceptoLabel">
+                    <i class="bi bi-list-check me-2 text-warning"></i>Nuevo Concepto Remunerativo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formConcepto" onsubmit="guardarConcepto(event);">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="concep-id" name="Id" value="0" />
+
+                    <div class="row g-3">
+                        <!-- Código -->
+                        <div class="col-md-3">
+                            <label for="concep-codigo" class="form-label fw-semibold small">Código (3 car.)</label>
+                            <input type="text" class="form-control font-monospace" id="concep-codigo" name="Codigo" maxlength="3" placeholder="Ej: 021, S06" />
+                            <small class="text-muted">Vacío = Auto-generar</small>
+                        </div>
+
+                        <!-- Nombre -->
+                        <div class="col-md-9">
+                            <label for="concep-nombre" class="form-label fw-semibold small">Nombre del Concepto <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="concep-nombre" name="Nombre" maxlength="150" placeholder="Ej: ASIGNACION FAMILIAR, BONO PRODUCTIVIDAD" required />
+                        </div>
+
+                        <!-- Nombre en Boleta -->
+                        <div class="col-md-6">
+                            <label for="concep-nombre-boleta" class="form-label fw-semibold small">Nombre para Boleta de Pago</label>
+                            <input type="text" class="form-control" id="concep-nombre-boleta" name="NombreBoleta" maxlength="100" placeholder="Ej: ASIG. FAMILIAR" />
+                        </div>
+
+                        <!-- Tipo de Concepto -->
+                        <div class="col-md-6">
+                            <label for="concep-tipo" class="form-label fw-semibold small">Tipo de Concepto <span class="text-danger">*</span></label>
+                            <select class="form-select" id="concep-tipo" name="TipoConceptoRemunerativoId" required>
+                                <option value="">-- Seleccionar Tipo --</option>
+                                @foreach (var tc in tiposConcepto)
+                                {
+                                    <option value="@tc.Id">@tc.Codigo - @tc.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Configuración switches -->
+                        <div class="col-md-12">
+                            <div class="d-flex flex-wrap gap-4 p-3 bg-body-tertiary rounded-3 border">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="concep-usa-formula" value="S" checked onchange="toggleFormulaFields();" />
+                                    <label class="form-check-label fw-semibold small" for="concep-usa-formula">¿Usa Fórmula de Cálculo?</label>
+                                    <input type="hidden" name="UsaFormula" id="concep-usa-formula-hidden" value="S" />
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="concep-es-regula" value="S" />
+                                    <label class="form-check-label fw-semibold small" for="concep-es-regula">¿Es Concepto de Regularización?</label>
+                                    <input type="hidden" name="EsRegularizacion" id="concep-es-regula-hidden" value="N" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fórmula de Cálculo -->
+                        <div class="col-md-12" id="sec-formula">
+                            <label for="concep-formula" class="form-label fw-semibold small">Fórmula de Cálculo General</label>
+                            <input type="text" class="form-control font-monospace text-primary" id="concep-formula" name="Formula" maxlength="600" placeholder="Ej: {SueldoBasico} / {HorasMes} * {HorasTrabajadas}" />
+                            
+                            <!-- Chips de variables de cálculo rápidas -->
+                            <div class="mt-2">
+                                <small class="text-muted d-block mb-1">Variables sugeridas (click para insertar):</small>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var v in variablesCalculo.Take(12))
+                                    {
+                                        <span class="badge bg-body-secondary text-body border formula-tag px-2 py-1" onclick="insertarEnFormula('{'+'@v.Codigo'+'}');">
+                                            + {@v.Codigo}
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fórmula Hora -->
+                        <div class="col-md-6" id="sec-formula-hora">
+                            <label for="concep-formula-hora" class="form-label fw-semibold small">Fórmula Base Hora (Opcional)</label>
+                            <input type="text" class="form-control font-monospace" id="concep-formula-hora" name="FormulaHora" maxlength="450" placeholder="Ej: {HN}" />
+                        </div>
+
+                        <!-- Condición -->
+                        <div class="col-md-6">
+                            <label for="concep-condicion" class="form-label fw-semibold small">Condición de Aplicación</label>
+                            <input type="text" class="form-control font-monospace" id="concep-condicion" name="Condicion" maxlength="250" placeholder="Ej: {AsignacionFamiliar} = {SI}" />
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="col-md-12">
+                            <label for="concep-estado" class="form-label fw-semibold small">Estado del Concepto <span class="text-danger">*</span></label>
+                            <select class="form-select" id="concep-estado" name="Estado" required>
+                                <option value="A">Activo (Disponible para emisión de planilla)</option>
+                                <option value="I">Inactivo (Deshabilitado)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarConcepto">
+                        <i class="bi bi-save me-1"></i>Guardar Concepto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let ordenActual = { col: -1, asc: true };
+
+    function abrirModalCrear() {
+        document.getElementById('formConcepto').reset();
+        document.getElementById('concep-id').value = '0';
+        document.getElementById('concep-codigo').value = '';
+        document.getElementById('concep-estado').value = 'A';
+        
+        document.getElementById('concep-usa-formula').checked = true;
+        document.getElementById('concep-usa-formula-hidden').value = 'S';
+        document.getElementById('concep-es-regula').checked = false;
+        document.getElementById('concep-es-regula-hidden').value = 'N';
+
+        toggleFormulaFields();
+
+        document.getElementById('modalConceptoLabel').innerHTML = '<i class="bi bi-list-check me-2 text-warning"></i>Nuevo Concepto Remunerativo';
+        const modal = new bootstrap.Modal(document.getElementById('modalConcepto'));
+        modal.show();
+    }
+
+    document.getElementById('concep-es-regula').addEventListener('change', function() {
+        document.getElementById('concep-es-regula-hidden').value = this.checked ? 'S' : 'N';
+    });
+
+    document.getElementById('concep-usa-formula').addEventListener('change', function() {
+        document.getElementById('concep-usa-formula-hidden').value = this.checked ? 'S' : 'N';
+        toggleFormulaFields();
+    });
+
+    function toggleFormulaFields() {
+        const usa = document.getElementById('concep-usa-formula').checked;
+        const secFormula = document.getElementById('sec-formula');
+        const secFormulaHora = document.getElementById('sec-formula-hora');
+        if (secFormula) secFormula.style.opacity = usa ? '1' : '0.5';
+        if (secFormulaHora) secFormulaHora.style.opacity = usa ? '1' : '0.5';
+    }
+
+    function insertarEnFormula(token) {
+        const input = document.getElementById('concep-formula');
+        if (!input) return;
+        const cur = input.value;
+        input.value = cur ? (cur + ' ' + token) : token;
+        input.focus();
+    }
+
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/RH/ConceptoRemu/Obtener?id=${id}`);
+            const res = await resp.json();
+            if (!res.success) {
+                Swal.fire('Error', res.message || 'No se pudo cargar el concepto remunerativo.', 'error');
+                return;
+            }
+
+            const data = res.data;
+            document.getElementById('concep-id').value = data.id;
+            document.getElementById('concep-codigo').value = data.codigo || '';
+            document.getElementById('concep-nombre').value = data.nombre;
+            document.getElementById('concep-nombre-boleta').value = data.nombreBoleta || '';
+            document.getElementById('concep-tipo').value = data.tipoConceptoRemunerativoId;
+
+            const esReg = data.esRegularizacion === 'S';
+            document.getElementById('concep-es-regula').checked = esReg;
+            document.getElementById('concep-es-regula-hidden').value = esReg ? 'S' : 'N';
+
+            const usaForm = data.usaFormula === 'S';
+            document.getElementById('concep-usa-formula').checked = usaForm;
+            document.getElementById('concep-usa-formula-hidden').value = usaForm ? 'S' : 'N';
+
+            document.getElementById('concep-formula').value = data.formula || '';
+            document.getElementById('concep-formula-hora').value = data.formulaHora || '';
+            document.getElementById('concep-condicion').value = data.condicion || '';
+            document.getElementById('concep-estado').value = data.estado || 'A';
+
+            toggleFormulaFields();
+
+            document.getElementById('modalConceptoLabel').innerHTML = '<i class="bi bi-pencil-square me-2 text-warning"></i>Editar Concepto Remunerativo';
+            const modal = new bootstrap.Modal(document.getElementById('modalConcepto'));
+            modal.show();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Ocurrió un error al obtener la información.', 'error');
+        }
+    }
+
+    async function guardarConcepto(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnGuardarConcepto');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Guardando...';
+
+        try {
+            const form = document.getElementById('formConcepto');
+            const formData = new FormData(form);
+
+            const resp = await fetch('/RH/ConceptoRemu/Guardar', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: res.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Atención', res.message || 'No se pudo guardar el concepto remunerativo.', 'warning');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save me-1"></i>Guardar Concepto';
+        }
+    }
+
+    async function cambiarEstado(id, estadoActual) {
+        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
+        const result = await Swal.fire({
+            title: `¿Desea ${accion} este concepto?`,
+            text: `El registro pasará a estar ${estadoActual === 'A' ? 'inactivo' : 'activo'}.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: `Sí, ${accion}`,
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+
+            const resp = await fetch('/RH/ConceptoRemu/CambiarEstado', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await resp.json();
+
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Estado Actualizado',
+                    text: res.message,
+                    timer: 1200,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', res.message || 'No se pudo cambiar el estado.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
+        }
+    }
+
+
+
+    function aplicarFiltros() {
+        const texto = document.getElementById('filtro-tabla').value.toLowerCase().trim();
+        const tipo = document.getElementById('filtro-tipo').value;
+        const estado = document.getElementById('filtro-estado').value;
+        const filas = document.querySelectorAll('#tbody-conceptos tr:not(#fila-vacia)');
+        let visibles = 0;
+
+        filas.forEach(f => {
+            const rowText = f.innerText.toLowerCase();
+            const rowEstado = f.getAttribute('data-estado');
+            const rowTipo = f.getAttribute('data-tipo');
+
+            const coincideTexto = !texto || rowText.includes(texto);
+            const coincideEstado = !estado || rowEstado === estado;
+            const coincideTipo = !tipo || rowTipo === tipo;
+
+            if (coincideTexto && coincideEstado && coincideTipo) {
+                f.style.display = '';
+                visibles++;
+            } else {
+                f.style.display = 'none';
+            }
+        });
+
+        const totalBadge = document.getElementById('total-registros');
+        if (totalBadge) totalBadge.innerText = visibles;
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtro-tabla').value = '';
+        document.getElementById('filtro-tipo').value = '';
+        document.getElementById('filtro-estado').value = '';
+        aplicarFiltros();
+    }
+
+    function ordenarTabla(n) {
+        const table = document.getElementById('tabla-conceptos');
+        let switching = true;
+        let dir = 'asc';
+        let switchcount = 0;
+
+        if (ordenActual.col === n) {
+            dir = ordenActual.asc ? 'desc' : 'asc';
+            ordenActual.asc = !ordenActual.asc;
+        } else {
+            ordenActual.col = n;
+            ordenActual.asc = true;
+            dir = 'asc';
+        }
+
+        while (switching) {
+            switching = false;
+            const rows = table.rows;
+            let shouldSwitch = false;
+            let i;
+
+            for (i = 1; i < (rows.length - 1); i++) {
+                if (rows[i].id === 'fila-vacia') continue;
+                let x = rows[i].getElementsByTagName('TD')[n];
+                let y = rows[i + 1].getElementsByTagName('TD')[n];
+                if (!x || !y) continue;
+
+                let cmpX = x.innerText.toLowerCase().trim();
+                let cmpY = y.innerText.toLowerCase().trim();
+
+                if (dir === 'asc') {
+                    if (cmpX > cmpY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir === 'desc') {
+                    if (cmpX < cmpY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            }
+        }
+    }
+</script>
+}
