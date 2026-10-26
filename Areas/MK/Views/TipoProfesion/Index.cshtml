@@ -1,0 +1,278 @@
+@model AspNet10ArcoERP.Models.TipoProfesionPageModel
+@{
+    ViewData["Title"] = "Tipos de profesión y oficio";
+    var pageCount = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-1"><i class="bi bi-person-workspace me-2 text-primary"></i>Tipos de profesión y oficio</h3>
+                <small class="text-muted">Administra las tipificaciones utilizadas para clasificar contactos y prospectos.</small>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" id="createTipoProfesion">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo tipo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-header bg-body-tertiary py-3">
+                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
+                    <div style="min-width:320px;max-width:440px;flex:1 1 320px">
+                        <label for="search" class="form-label small fw-semibold">Buscar tipo</label>
+                        <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Profesión u oficio..." />
+                    </div>
+                    <div>
+                        <label for="estado" class="form-label small fw-semibold">Estado</label>
+                        <select id="estado" name="estado" class="form-select">
+                            <option value="">Todos los estados</option>
+                            <option value="A" selected="@(Model.Estado == "A")">Activos</option>
+                            <option value="I" selected="@(Model.Estado == "I")">Inactivos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="top" class="form-label small fw-semibold">Mostrando</label>
+                        <select id="top" name="top" class="form-select">
+                            @foreach (var size in new[] { 25, 50, 100, 500 })
+                            {
+                                <option value="@size" selected="@(Model.PageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
+                    <a asp-area="MK" asp-controller="TipoProfesion" asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">@Model.Total registro(s)</span>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
+                    <thead class="bg-body-tertiary">
+                        <tr>
+                            <th class="text-center" style="width:90px">ID</th>
+                            <th>Profesión u oficio</th>
+                            <th class="text-center" style="width:140px">Estado</th>
+                            <th class="text-end" style="width:190px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-4">No se encontraron tipos de profesión u oficio.</td></tr>
+                        }
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="text-center"><span class="badge bg-secondary-subtle text-body border font-monospace">@item.Id</span></td>
+                                <td class="fw-semibold">@item.Nombre</td>
+                                <td class="text-center">
+                                    @if (item.Estado == "A")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-body-secondary border px-2 py-1">Inactivo</span>
+                                    }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    @if (item.Estado == "A")
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-primary js-edit" data-id="@item.Id" title="Editar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger js-inactivate"
+                                                data-id="@item.Id" data-name="@item.Nombre" title="Anular">
+                                            <i class="bi bi-toggle-on"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Sin acciones disponibles</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span class="small text-muted">Página @Model.Page de @pageCount · @Model.Total registro(s)</span>
+                <div class="btn-group btn-group-sm">
+                    @if (Model.Page > 1)
+                    {
+                        <a class="btn btn-outline-secondary" asp-area="MK" asp-controller="TipoProfesion" asp-action="Index"
+                           asp-route-search="@Model.Search" asp-route-estado="@Model.Estado" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page - 1)">
+                            <i class="bi bi-chevron-left me-1"></i>Anterior
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary" disabled><i class="bi bi-chevron-left me-1"></i>Anterior</button>
+                    }
+                    @if (Model.Page < pageCount)
+                    {
+                        <a class="btn btn-outline-secondary" asp-area="MK" asp-controller="TipoProfesion" asp-action="Index"
+                           asp-route-search="@Model.Search" asp-route-estado="@Model.Estado" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page + 1)">
+                            Siguiente<i class="bi bi-chevron-right ms-1"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary" disabled>Siguiente<i class="bi bi-chevron-right ms-1"></i></button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-crud-tipo-profesion" tabindex="-1" aria-labelledby="tipoProfesionModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="tipoProfesionForm" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" id="tipoProfesionId" value="0" />
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <div>
+                    <h5 class="modal-title fw-bold" id="tipoProfesionModalTitle"><i class="bi bi-person-workspace me-2"></i>Nuevo tipo</h5>
+                    <div class="small text-muted">Registra una profesión u oficio para la clasificación de contactos.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="card border-0 bg-body-tertiary">
+                    <div class="card-body">
+                        <label for="tipoProfesionNombre" class="form-label small fw-semibold">Profesión u oficio <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="tipoProfesionNombre" name="Nombre" maxlength="50" required />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="saveTipoProfesion">
+                    <i class="bi bi-check2-circle me-1"></i>Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        #modal-crud-tipo-profesion .modal-content {
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #modal-crud-tipo-profesion .modal-body {
+            max-height: calc(90vh - 135px) !important;
+            overflow-y: auto !important;
+            flex: 1 1 auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
+            scroll-behavior: smooth;
+        }
+
+        #modal-crud-tipo-profesion .modal-body::-webkit-scrollbar { width: 7px; }
+        #modal-crud-tipo-profesion .modal-body::-webkit-scrollbar-track { background: transparent; }
+        #modal-crud-tipo-profesion .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
+        #modal-crud-tipo-profesion .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
+    </style>
+    <script>
+        (() => {
+            const modalElement = document.getElementById('modal-crud-tipo-profesion');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const form = document.getElementById('tipoProfesionForm');
+            const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+            const getUrl = '@Url.Action("Obtener", "TipoProfesion", new { area = "MK" })';
+            const saveUrl = '@Url.Action("Guardar", "TipoProfesion", new { area = "MK" })';
+            const inactivateUrl = '@Url.Action("Inactivar", "TipoProfesion", new { area = "MK" })';
+
+            async function post(url, body) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    body
+                });
+                const result = await response.json();
+                if (!response.ok || result.success === false)
+                    throw new Error(result.message || 'No se pudo completar la operación.');
+                return result;
+            }
+
+            document.getElementById('createTipoProfesion').addEventListener('click', () => {
+                form.reset();
+                document.getElementById('tipoProfesionId').value = '0';
+                document.getElementById('tipoProfesionModalTitle').innerHTML = '<i class="bi bi-person-workspace me-2"></i>Nuevo tipo';
+                modal.show();
+                setTimeout(() => document.getElementById('tipoProfesionNombre').focus(), 200);
+            });
+
+            document.querySelectorAll('.js-edit').forEach(button => {
+                button.addEventListener('click', async () => {
+                    try {
+                        const url = new URL(getUrl, window.location.origin);
+                        url.searchParams.set('id', button.dataset.id);
+                        const response = await fetch(url);
+                        const result = await response.json();
+                        if (!response.ok || !result.success)
+                            throw new Error(result.message || 'No se pudo cargar el registro.');
+                        document.getElementById('tipoProfesionId').value = result.data.id;
+                        document.getElementById('tipoProfesionNombre').value = result.data.nombre;
+                        document.getElementById('tipoProfesionModalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar tipo';
+                        modal.show();
+                    } catch (error) {
+                        Swal.fire({ icon: 'error', title: 'No se pudo abrir el registro', text: error.message });
+                    }
+                });
+            });
+
+            document.querySelectorAll('.js-inactivate').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const confirmation = await Swal.fire({
+                        title: '¿Anular este tipo de profesión u oficio?',
+                        text: button.dataset.name,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, anular',
+                        cancelButtonText: 'Cancelar'
+                    });
+                    if (!confirmation.isConfirmed)
+                        return;
+                    try {
+                        const body = new URLSearchParams({ id: button.dataset.id });
+                        const result = await post(inactivateUrl, body);
+                        await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: result.message, showConfirmButton: false, timer: 2300 });
+                        window.location.reload();
+                    } catch (error) {
+                        Swal.fire({ icon: 'error', title: 'No se pudo anular', text: error.message });
+                    }
+                });
+            });
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                if (!form.reportValidity())
+                    return;
+                try {
+                    const result = await post(saveUrl, new FormData(form));
+                    modal.hide();
+                    await Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: result.message, showConfirmButton: false, timer: 2300 });
+                    window.location.reload();
+                } catch (error) {
+                    Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: error.message });
+                }
+            });
+        })();
+    </script>
+}

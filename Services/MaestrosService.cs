@@ -1704,7 +1704,8 @@ namespace AspNet10ArcoERP.Services
             string? sort = null, 
             string? dir = null, 
             int top = 25,
-            int empresaId = 1)
+            int empresaId = 1,
+            string? esProspecto = null)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
 
@@ -1777,6 +1778,13 @@ namespace AspNet10ArcoERP.Services
                     ISNULL(tp.nombre, '') AS TipoProveedorNombre,
                     p.cond_pago_id AS CondicionPagoId,
                     ISNULL(cp.nombre, '') AS CondicionPagoNombre,
+                    p.tipo_prof_ofi_id AS TipoProfesionId,
+                    ISNULL(prof.nombre, '') AS TipoProfesionNombre,
+                    p.tipo_venta_c_id AS TipoVentaClienteId,
+                    ISNULL(tv.nombre, '') AS TipoVentaClienteNombre,
+                    p.lead_source_id AS LeadSourceId,
+                    ISNULL(ls.nombre, '') AS LeadSourceNombre,
+                    p.es_prospecto AS EsProspecto,
                     p.estado AS Estado
                 FROM proveedor p
                 LEFT JOIN tipo_nat_juri nat ON p.tipo_nat_juri_id = nat.tipo_nat_juri_id
@@ -1788,6 +1796,9 @@ namespace AspNet10ArcoERP.Services
                 LEFT JOIN departamento dep ON pro.departamento_id = dep.departamento_id
                 LEFT JOIN tipo_prove tp ON p.tipo_prove_id = tp.tipo_prove_id
                 LEFT JOIN cond_pago cp ON p.cond_pago_id = cp.cond_pago_id
+                LEFT JOIN tipo_prof_ofi prof ON p.tipo_prof_ofi_id = prof.tipo_prof_ofi_id
+                LEFT JOIN tipo_venta_c tv ON p.tipo_venta_c_id = tv.tipo_venta_c_id
+                LEFT JOIN lead_source ls ON p.lead_source_id = ls.lead_source_id
                 WHERE p.empresa_id = @EmpresaId
                   AND (@Search IS NULL
                        OR p.razon_social LIKE '%' + @Search + '%' 
@@ -1799,6 +1810,7 @@ namespace AspNet10ArcoERP.Services
                   AND (@TipoProveedorId IS NULL OR p.tipo_prove_id = @TipoProveedorId OR p.tipo_prove_id = 3)
                   AND (@Estado IS NULL OR p.estado = @Estado)
                   AND (@TipoNaturalezaId IS NULL OR p.tipo_nat_juri_id = @TipoNaturalezaId)
+                  AND (@EsProspecto IS NULL OR p.es_prospecto = @EsProspecto)
                 ORDER BY {orderColumn} {orderDirection}";
 
             var rows = await conn.QueryAsync<ProveedorModel>(sql, new { 
@@ -1806,7 +1818,8 @@ namespace AspNet10ArcoERP.Services
                 EmpresaId = empresaId,
                 TipoProveedorId = tipoProveedorId > 0 ? tipoProveedorId : null,
                 Estado = string.IsNullOrWhiteSpace(estado) ? null : estado.Trim(),
-                TipoNaturalezaId = tipoNaturalezaId > 0 ? tipoNaturalezaId : null
+                TipoNaturalezaId = tipoNaturalezaId > 0 ? tipoNaturalezaId : null,
+                EsProspecto = esProspecto is "S" or "N" ? esProspecto : null
             });
             return rows.ToList();
         }
@@ -1866,6 +1879,13 @@ namespace AspNet10ArcoERP.Services
                     ISNULL(tp.nombre, '') AS TipoProveedorNombre,
                     p.cond_pago_id AS CondicionPagoId,
                     ISNULL(cp.nombre, '') AS CondicionPagoNombre,
+                    p.tipo_prof_ofi_id AS TipoProfesionId,
+                    ISNULL(prof.nombre, '') AS TipoProfesionNombre,
+                    p.tipo_venta_c_id AS TipoVentaClienteId,
+                    ISNULL(tv.nombre, '') AS TipoVentaClienteNombre,
+                    p.lead_source_id AS LeadSourceId,
+                    ISNULL(ls.nombre, '') AS LeadSourceNombre,
+                    p.es_prospecto AS EsProspecto,
                     p.estado AS Estado
                 FROM proveedor p
                 LEFT JOIN tipo_nat_juri nat ON p.tipo_nat_juri_id = nat.tipo_nat_juri_id
@@ -1877,6 +1897,9 @@ namespace AspNet10ArcoERP.Services
                 LEFT JOIN departamento dep ON pro.departamento_id = dep.departamento_id
                 LEFT JOIN tipo_prove tp ON p.tipo_prove_id = tp.tipo_prove_id
                 LEFT JOIN cond_pago cp ON p.cond_pago_id = cp.cond_pago_id
+                LEFT JOIN tipo_prof_ofi prof ON p.tipo_prof_ofi_id = prof.tipo_prof_ofi_id
+                LEFT JOIN tipo_venta_c tv ON p.tipo_venta_c_id = tv.tipo_venta_c_id
+                LEFT JOIN lead_source ls ON p.lead_source_id = ls.lead_source_id
                 WHERE p.proveedor_id = @Id AND p.empresa_id = @EmpresaId";
             return await conn.QueryFirstOrDefaultAsync<ProveedorModel>(sql, new { Id = id, EmpresaId = empresaId });
         }
@@ -1965,6 +1988,19 @@ namespace AspNet10ArcoERP.Services
 
             try
             {
+                if (model.EsProspecto == "S" && model.LeadSourceId > 0)
+                {
+                    var activeSource = await conn.ExecuteScalarAsync<int>(
+                        "SELECT COUNT(1) FROM dbo.lead_source WHERE lead_source_id = @Id AND estado = 'A'",
+                        new { Id = model.LeadSourceId },
+                        tx);
+                    if (activeSource == 0)
+                    {
+                        tx.Rollback();
+                        return (false, "El origen de prospecto no existe o está inactivo.", 0, "");
+                    }
+                }
+
                 if (model.Id == 0)
                 {
                     // Generación del Código Oficial Correlativo desde la tabla 'tabla' (tabla='0003' proveedor)
@@ -1994,7 +2030,7 @@ namespace AspNet10ArcoERP.Services
                             numero_cci, contacto, tipo_via_id, nombre_via, numero_via, dpto, interior, 
                             manzana, lote, kilometro, block, etapa, tipo_zona_id, nombre_zona, referencia, 
                             telefono, distrito_id, email, web, tipo_prove_id, cond_pago_id, origen_registro_id, 
-                            es_local, es_prospecto, num_doc_iden2, cargo, cod_externo, estado, 
+                            tipo_prof_ofi_id, tipo_venta_c_id, lead_source_id, es_local, es_prospecto, num_doc_iden2, cargo, cod_externo, estado,
                             usuario_creacion_id, fecha_creacion
                         )
                         VALUES (
@@ -2002,7 +2038,8 @@ namespace AspNet10ArcoERP.Services
                             @ApellidoPat, @ApellidoMat, @Nombres, @TipoDocId, @Doc, @Ruc, 
                             @NumeroCCI, @Contacto, @TipoViaId, @NombreVia, @NumeroVia, @Dpto, @Interior, 
                             @Manzana, @Lote, @Kilometro, @Block, @Etapa, @TipoZonaId, @NombreZona, @Referencia, 
-                            @Telefono, @DistritoId, @Email, @Web, @TipoProveedorId, @CondPagoId, 2, 
+                            @Telefono, @DistritoId, @Email, @Web, @TipoProveedorId, @CondPagoId, 2,
+                            @TipoProfesionId, @TipoVentaClienteId, @LeadSourceId,
                             @EsLocal, @EsProspecto, '', '', '', @Estado, 
                             @UserId, GETDATE()
                         );
@@ -2041,6 +2078,9 @@ namespace AspNet10ArcoERP.Services
                         Web = SafeTruncate(model.Web, 60),
                         TipoProveedorId = model.TipoProveedorId > 0 ? model.TipoProveedorId : 1,
                         CondPagoId = model.CondicionPagoId > 0 ? model.CondicionPagoId : 1,
+                        TipoProfesionId = model.TipoProfesionId > 0 ? model.TipoProfesionId : null,
+                        TipoVentaClienteId = model.TipoVentaClienteId > 0 ? model.TipoVentaClienteId : null,
+                        LeadSourceId = model.EsProspecto == "S" && model.LeadSourceId > 0 ? model.LeadSourceId : null,
                         EsLocal = string.IsNullOrWhiteSpace(model.EsLocal) ? "S" : SafeTruncate(model.EsLocal, 1),
                         EsProspecto = string.IsNullOrWhiteSpace(model.EsProspecto) ? "N" : SafeTruncate(model.EsProspecto, 1),
                         Estado = string.IsNullOrWhiteSpace(model.Estado) ? "A" : SafeTruncate(model.Estado, 1),
@@ -2084,6 +2124,9 @@ namespace AspNet10ArcoERP.Services
                             web = @Web,
                             tipo_prove_id = @TipoProveedorId,
                             cond_pago_id = @CondPagoId,
+                            tipo_prof_ofi_id = @TipoProfesionId,
+                            tipo_venta_c_id = @TipoVentaClienteId,
+                            lead_source_id = @LeadSourceId,
                             es_local = @EsLocal,
                             es_prospecto = @EsProspecto,
                             estado = @Estado,
@@ -2124,6 +2167,9 @@ namespace AspNet10ArcoERP.Services
                         Web = SafeTruncate(model.Web, 60),
                         TipoProveedorId = model.TipoProveedorId > 0 ? model.TipoProveedorId : 1,
                         CondPagoId = model.CondicionPagoId > 0 ? model.CondicionPagoId : 1,
+                        TipoProfesionId = model.TipoProfesionId > 0 ? model.TipoProfesionId : null,
+                        TipoVentaClienteId = model.TipoVentaClienteId > 0 ? model.TipoVentaClienteId : null,
+                        LeadSourceId = model.EsProspecto == "S" && model.LeadSourceId > 0 ? model.LeadSourceId : null,
                         EsLocal = string.IsNullOrWhiteSpace(model.EsLocal) ? "S" : SafeTruncate(model.EsLocal, 1),
                         EsProspecto = string.IsNullOrWhiteSpace(model.EsProspecto) ? "N" : SafeTruncate(model.EsProspecto, 1),
                         Estado = string.IsNullOrWhiteSpace(model.Estado) ? "A" : SafeTruncate(model.Estado, 1),
@@ -2202,6 +2248,22 @@ namespace AspNet10ArcoERP.Services
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = "SELECT tipo_prove_id AS Id, tipo_prove AS Codigo, nombre AS Nombre FROM tipo_prove ORDER BY tipo_prove_id";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql);
+            return rows.ToList();
+        }
+
+        public async Task<List<LookupItemModel>> GetTiposProfesionLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT tipo_prof_ofi_id AS Id, CAST(tipo_prof_ofi_id AS VARCHAR) AS Codigo, nombre AS Nombre FROM tipo_prof_ofi WHERE estado = 'A' ORDER BY nombre";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql);
+            return rows.ToList();
+        }
+
+        public async Task<List<LookupItemModel>> GetTiposVentaClienteLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT tipo_venta_c_id AS Id, CAST(tipo_venta_c_id AS VARCHAR) AS Codigo, nombre AS Nombre FROM tipo_venta_c WHERE estado = 'A' ORDER BY nombre";
             var rows = await conn.QueryAsync<LookupItemModel>(sql);
             return rows.ToList();
         }
@@ -3016,6 +3078,210 @@ namespace AspNet10ArcoERP.Services
             const string sql = "UPDATE tabla SET estado = @NuevoEstado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE tabla_id = @Id";
             await conn.ExecuteAsync(sql, new { Id = id, NuevoEstado = nuevoEstado, UserId = userId });
             return (true, $"Tabla {(nuevoEstado == "A" ? "activada" : "desactivada")} exitosamente.", nuevoEstado);
+        }
+
+        public async Task<List<CuentaBancoModel>> GetCuentasBancoAsync(
+            int empresaId,
+            string? search = null,
+            int? bancoId = null,
+            string? estado = null,
+            int top = 25)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT TOP (@Top)
+                    ec.empresa_cta_id AS Id,
+                    ec.empresa_id AS EmpresaId,
+                    ec.banco_id AS BancoId,
+                    b.nombre AS BancoNombre,
+                    ec.nombre AS Nombre,
+                    ec.moneda_id AS MonedaId,
+                    m.nombre AS MonedaNombre,
+                    ec.cuenta AS Cuenta,
+                    ec.cta_interbanca AS CuentaInterbancaria,
+                    ec.estado AS Estado
+                FROM empresa_cta ec
+                INNER JOIN banco b ON b.banco_id = ec.banco_id
+                INNER JOIN moneda m ON m.moneda_id = ec.moneda_id
+                WHERE ec.empresa_id = @EmpresaId
+                  AND (@BancoId IS NULL OR ec.banco_id = @BancoId)
+                  AND (@Estado IS NULL OR ec.estado = @Estado)
+                  AND (@Search IS NULL OR ec.nombre LIKE @SearchLike
+                       OR ec.cuenta LIKE @SearchLike OR b.nombre LIKE @SearchLike)
+                ORDER BY b.nombre, ec.nombre";
+            var rows = await conn.QueryAsync<CuentaBancoModel>(sql, new
+            {
+                Top = Math.Clamp(top, 1, 500),
+                EmpresaId = empresaId,
+                BancoId = bancoId,
+                Estado = string.IsNullOrWhiteSpace(estado) ? null : estado,
+                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+                SearchLike = $"%{search?.Trim()}%"
+            });
+            return rows.ToList();
+        }
+
+        public async Task<CuentaBancoModel?> GetCuentaBancoByIdAsync(int id, int empresaId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT ec.empresa_cta_id AS Id, ec.empresa_id AS EmpresaId,
+                       ec.banco_id AS BancoId, b.nombre AS BancoNombre,
+                       ec.nombre AS Nombre, ec.moneda_id AS MonedaId,
+                       m.nombre AS MonedaNombre, ec.cuenta AS Cuenta,
+                       ec.cta_interbanca AS CuentaInterbancaria, ec.estado AS Estado
+                FROM empresa_cta ec
+                INNER JOIN banco b ON b.banco_id = ec.banco_id
+                INNER JOIN moneda m ON m.moneda_id = ec.moneda_id
+                WHERE ec.empresa_cta_id = @Id AND ec.empresa_id = @EmpresaId";
+            return await conn.QueryFirstOrDefaultAsync<CuentaBancoModel>(
+                sql,
+                new { Id = id, EmpresaId = empresaId });
+        }
+
+        public async Task<int> GetCuentasBancoCountAsync(
+            int empresaId,
+            string? search = null,
+            int? bancoId = null,
+            string? estado = null)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT COUNT(*)
+                FROM empresa_cta ec
+                INNER JOIN banco b ON b.banco_id = ec.banco_id
+                WHERE ec.empresa_id = @EmpresaId
+                  AND (@BancoId IS NULL OR ec.banco_id = @BancoId)
+                  AND (@Estado IS NULL OR ec.estado = @Estado)
+                  AND (@Search IS NULL OR ec.nombre LIKE @SearchLike
+                       OR ec.cuenta LIKE @SearchLike OR b.nombre LIKE @SearchLike)";
+            return await conn.ExecuteScalarAsync<int>(sql, new
+            {
+                EmpresaId = empresaId,
+                BancoId = bancoId,
+                Estado = string.IsNullOrWhiteSpace(estado) ? null : estado,
+                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+                SearchLike = $"%{search?.Trim()}%"
+            });
+        }
+
+        public async Task<List<LookupItemModel>> GetBancosCuentaLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT banco_id AS Id, RTRIM(banco) AS Codigo, nombre AS Nombre
+                FROM banco
+                WHERE estado = 'A'
+                ORDER BY nombre";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql);
+            return rows.ToList();
+        }
+
+        public async Task<List<LookupItemModel>> GetMonedasCuentaLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT moneda_id AS Id, RTRIM(moneda) AS Codigo, nombre AS Nombre
+                FROM moneda
+                WHERE estado = 'A'
+                ORDER BY nombre";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql);
+            return rows.ToList();
+        }
+
+        public async Task<(bool success, string message, int id)> SaveCuentaBancoAsync(
+            CuentaBancoModel model,
+            int userId,
+            int empresaId)
+        {
+            if (string.IsNullOrWhiteSpace(model.Nombre))
+                return (false, "El nombre de la cuenta es obligatorio.", 0);
+            if (model.Nombre.Trim().Length > 100)
+                return (false, "El nombre de la cuenta no puede exceder 100 caracteres.", 0);
+            if (string.IsNullOrWhiteSpace(model.Cuenta))
+                return (false, "El número de cuenta es obligatorio.", 0);
+            if (model.Cuenta.Trim().Length > 50 ||
+                (!string.IsNullOrWhiteSpace(model.CuentaInterbancaria) && model.CuentaInterbancaria.Trim().Length > 50))
+                return (false, "Los números de cuenta no pueden exceder 50 caracteres.", 0);
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (model.Id == 0)
+            {
+                if (model.BancoId <= 0 || model.MonedaId <= 0)
+                    return (false, "Seleccione el banco y la moneda de la cuenta.", 0);
+
+                int referencesValid = await conn.ExecuteScalarAsync<int>(@"
+                    SELECT COUNT(*)
+                    FROM banco b
+                    CROSS JOIN moneda m
+                    WHERE b.banco_id = @BancoId AND b.estado = 'A'
+                      AND m.moneda_id = @MonedaId AND m.estado = 'A'",
+                    new { model.BancoId, model.MonedaId });
+                if (referencesValid != 1)
+                    return (false, "El banco o la moneda no está activo.", 0);
+
+                const string insertSql = @"
+                    DECLARE @newId INT = NEXT VALUE FOR empresa_cta_seq;
+                    INSERT INTO empresa_cta
+                        (empresa_cta_id, empresa_id, banco_id, nombre, moneda_id, cuenta, cta_interbanca,
+                         estado, usuario_creacion_id, fecha_creacion)
+                    VALUES
+                        (@newId, @EmpresaId, @BancoId, @Nombre, @MonedaId, @Cuenta, @CuentaInterbancaria,
+                         'A', @UserId, GETDATE());
+                    SELECT @newId;";
+                int newId = await conn.ExecuteScalarAsync<int>(insertSql, new
+                {
+                    EmpresaId = empresaId,
+                    model.BancoId,
+                    Nombre = model.Nombre.Trim(),
+                    model.MonedaId,
+                    Cuenta = model.Cuenta.Trim(),
+                    CuentaInterbancaria = model.CuentaInterbancaria?.Trim() ?? string.Empty,
+                    UserId = userId
+                });
+                return (true, "Cuenta bancaria registrada correctamente.", newId);
+            }
+
+            const string updateSql = @"
+                UPDATE empresa_cta
+                SET nombre = @Nombre, cuenta = @Cuenta, cta_interbanca = @CuentaInterbancaria,
+                    usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE empresa_cta_id = @Id AND empresa_id = @EmpresaId";
+            int updated = await conn.ExecuteAsync(updateSql, new
+            {
+                model.Id,
+                EmpresaId = empresaId,
+                Nombre = model.Nombre.Trim(),
+                Cuenta = model.Cuenta.Trim(),
+                CuentaInterbancaria = model.CuentaInterbancaria?.Trim() ?? string.Empty,
+                UserId = userId
+            });
+            return updated == 0
+                ? (false, "Cuenta bancaria no encontrada para la empresa activa.", 0)
+                : (true, "Cuenta bancaria actualizada correctamente.", model.Id);
+        }
+
+        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCuentaBancoAsync(
+            int id,
+            int userId,
+            int empresaId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            var estadoActual = await conn.QueryFirstOrDefaultAsync<string>(
+                "SELECT estado FROM empresa_cta WHERE empresa_cta_id = @Id AND empresa_id = @EmpresaId",
+                new { Id = id, EmpresaId = empresaId });
+            if (estadoActual == null)
+                return (false, "Cuenta bancaria no encontrada para la empresa activa.", string.Empty);
+
+            var nuevoEstado = estadoActual == "A" ? "I" : "A";
+            int updated = await conn.ExecuteAsync(@"
+                UPDATE empresa_cta
+                SET estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                WHERE empresa_cta_id = @Id AND empresa_id = @EmpresaId",
+                new { Id = id, EmpresaId = empresaId, Estado = nuevoEstado, UserId = userId });
+            return updated == 0
+                ? (false, "No se pudo actualizar el estado de la cuenta bancaria.", estadoActual)
+                : (true, $"Cuenta bancaria {(nuevoEstado == "A" ? "activada" : "desactivada")} correctamente.", nuevoEstado);
         }
 
         private static string SafeTruncate(string? val, int maxLen)

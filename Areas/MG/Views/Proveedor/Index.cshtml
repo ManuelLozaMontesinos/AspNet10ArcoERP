@@ -7,7 +7,13 @@
     var tiposZona = ViewBag.TiposZona as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var tiposProve = ViewBag.TiposProveedor as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var condsPago = ViewBag.CondicionesPago as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposProfesion = ViewBag.TiposProfesion as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var tiposVentaCliente = ViewBag.TiposVentaCliente as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var leadSources = ViewBag.LeadSources as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var oportunidadesVenta = ViewBag.OportunidadesVenta as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var departamentos = ViewBag.Departamentos as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var esVistaProspectos = (ViewBag.EsProspecto as string) == "S";
+    var esVistaMarketingCliente = ViewBag.EsMarketingCliente as bool? == true;
     
     int? tipoFiltro = ViewBag.Tipo as int?;
     string? estadoFiltro = ViewBag.Estado as string;
@@ -83,13 +89,13 @@
         <div class="row align-items-center">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
-                    <i class="bi bi-people-fill text-primary me-2" style="font-size: 1.6rem;"></i>Cliente / Proveedor
+                    <i class="bi @(esVistaProspectos ? "bi-person-lines-fill" : "bi-people-fill") text-primary me-2" style="font-size: 1.6rem;"></i>@(esVistaProspectos ? "Prospectos" : esVistaMarketingCliente ? "Clientes de Marketing" : "Cliente / Proveedor")
                 </h3>
-                <small class="text-muted">Maestro de clientes comerciales, proveedores, transportistas y acreedores</small>
+                <small class="text-muted">@(esVistaProspectos ? "Gestiona prospectos comerciales y su información de contacto." : esVistaMarketingCliente ? "Gestiona clientes comerciales y su clasificación de venta." : "Maestro de clientes comerciales, proveedores, transportistas y acreedores")</small>
             </div>
             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
-                    <i class="bi bi-plus-circle-fill me-1"></i>Nuevo Registro
+                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" data-action="crear-proveedor">
+                    <i class="bi bi-plus-circle-fill me-1"></i>@(esVistaProspectos ? "Nuevo Prospecto" : esVistaMarketingCliente ? "Nuevo Cliente" : "Nuevo Registro")
                 </button>
             </div>
         </div>
@@ -150,7 +156,7 @@
                                 <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                     <i class="bi bi-toggle-on text-primary"></i>
                                 </span>
-                                <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="this.form.submit();" title="Filtrar por Estado">
+                                <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" title="Filtrar por Estado">
                                     <option value="" selected="@(string.IsNullOrEmpty(estadoFiltro))">Todos los Estados</option>
                                     <option value="A" selected="@(estadoFiltro == "A")">Activos</option>
                                     <option value="I" selected="@(estadoFiltro == "I")">Inactivos</option>
@@ -162,7 +168,7 @@
                                 <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                     <i class="bi bi-person-badge text-primary"></i>
                                 </span>
-                                <select name="naturaleza" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Tipo de Persona">
+                                <select name="naturaleza" class="form-select form-select-sm border-start-0" style="min-width: 155px;" title="Filtrar por Tipo de Persona">
                                     <option value="" selected="@(!naturalezaFiltro.HasValue)">Todas las Personas</option>
                                     <option value="1" selected="@(naturalezaFiltro == 1)">Persona Natural</option>
                                     <option value="2" selected="@(naturalezaFiltro == 2)">Persona Jurídica</option>
@@ -346,10 +352,10 @@
                                     </td>
                                     <td class="text-center text-nowrap">
                                         <div class="d-inline-flex align-items-center justify-content-center gap-2">
-                                            <button class="btn btn-sm btn-outline-primary px-2 py-1 shadow-sm" title="Editar" onclick="abrirModalEditar(@item.Id);">
+                                            <button class="btn btn-sm btn-outline-primary px-2 py-1 shadow-sm" title="Editar" data-action="editar-proveedor" data-id="@item.Id">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") px-2 py-1 shadow-sm" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.NombreCompleto');">
+                                            <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") px-2 py-1 shadow-sm" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" data-action="cambiar-estado-proveedor" data-id="@item.Id" data-estado="@item.Estado" data-nombre="@item.NombreCompleto">
                                                 <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
                                             </button>
                                         </div>
@@ -386,9 +392,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             
-            <form id="form-proveedor" onsubmit="guardarProveedor(event);">
+            <form id="form-proveedor">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="prov-id" name="Id" value="0" />
+                <input type="hidden" id="prov-es-prospecto" name="EsProspecto" value="@(esVistaProspectos ? "S" : "N")" />
 
                 <div class="modal-body p-4">
                     <!-- NAVEGACIÓN POR PESTAÑAS -->
@@ -432,18 +439,18 @@
                                     <label class="form-label fw-bold">Tipo de Persona (Naturaleza Jurídica) <span class="text-danger">*</span></label>
                                     <div class="d-flex gap-3 align-items-center mt-1">
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="TipoNaturalezaJuridicaId" id="nat-juridica" value="2" checked onchange="onNaturalezaChange();">
+                                            <input class="form-check-input" type="radio" name="TipoNaturalezaJuridicaId" id="nat-juridica" value="2" checked>
                                             <label class="form-check-label fw-semibold" for="nat-juridica">Persona Jurídica (Empresa)</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="TipoNaturalezaJuridicaId" id="nat-natural" value="1" onchange="onNaturalezaChange();">
+                                            <input class="form-check-input" type="radio" name="TipoNaturalezaJuridicaId" id="nat-natural" value="1">
                                             <label class="form-check-label fw-semibold" for="nat-natural">Persona Natural</label>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <label for="prov-codigo" class="form-label fw-semibold text-muted">Código ERP</label>
-                                    <input type="text" class="form-control font-monospace bg-light text-uppercase fw-bold text-primary" id="prov-codigo" name="Codigo" placeholder="Auto (Correlativo)" maxlength="7" readonly />
+                                    <input type="text" class="form-control font-monospace bg-body-tertiary text-uppercase fw-bold text-primary" id="prov-codigo" name="Codigo" placeholder="Auto (Correlativo)" maxlength="7" readonly />
                                 </div>
                             </div>
 
@@ -451,7 +458,7 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-md-4">
                                     <label for="prov-tipo-doc" class="form-label fw-semibold">Tipo Documento <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="prov-tipo-doc" name="TipoDocumentoIdentidadId" onchange="onTipoDocChange();" required>
+                                    <select class="form-select" id="prov-tipo-doc" name="TipoDocumentoIdentidadId" required>
                                         @foreach (var td in tiposDoc)
                                         {
                                             <option value="@td.Id" data-cod="@td.Codigo" data-formato="@td.FormatoValidacion">@td.Nombre (@td.Abreviatura)</option>
@@ -461,8 +468,8 @@
                                 <div class="col-md-4">
                                     <label for="prov-num-doc" class="form-label fw-semibold">N° Documento <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <input type="text" class="form-control font-monospace fw-bold" id="prov-num-doc" name="NumeroDocumentoIdentidad" placeholder="Ej: 20100012345" maxlength="20" required onblur="consultarDocumentoAutomatico();" />
-                                        <button class="btn btn-outline-primary" type="button" id="btn-consultar-doc" onclick="consultarDocumento(true);" title="Consultar en base de datos o verificar formato">
+                                        <input type="text" class="form-control font-monospace fw-bold" id="prov-num-doc" name="NumeroDocumentoIdentidad" placeholder="Ej: 20100012345" maxlength="20" required />
+                                        <button class="btn btn-outline-primary" type="button" id="btn-consultar-doc" title="Consultar en base de datos o verificar formato">
                                             <i class="bi bi-search"></i>
                                         </button>
                                     </div>
@@ -476,7 +483,7 @@
                             </div>
 
                             <!-- BLOQUE JURÍDICO: Razón Social y Nombre Comercial -->
-                            <div id="bloque-juridico" class="border rounded-3 p-3 mb-3 bg-light-subtle">
+                            <div id="bloque-juridico" class="border rounded-3 p-3 mb-3 bg-body-tertiary">
                                 <h6 class="fw-bold text-primary mb-3"><i class="bi bi-building me-2"></i>Datos de Persona Jurídica</h6>
                                 <div class="row g-3">
                                     <div class="col-md-8">
@@ -491,20 +498,20 @@
                             </div>
 
                             <!-- BLOQUE NATURAL: Nombres y Apellidos -->
-                            <div id="bloque-natural" class="border rounded-3 p-3 mb-3 bg-light-subtle d-none">
+                            <div id="bloque-natural" class="border rounded-3 p-3 mb-3 bg-body-tertiary d-none">
                                 <h6 class="fw-bold text-success mb-3"><i class="bi bi-person me-2"></i>Datos de Persona Natural</h6>
                                 <div class="row g-3 mb-2">
                                     <div class="col-md-4">
                                         <label for="prov-nombres" class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="prov-nombres" name="Nombres" maxlength="50" onkeyup="calcularRazonSocialNatural();" />
+                                        <input type="text" class="form-control" id="prov-nombres" name="Nombres" maxlength="50" />
                                     </div>
                                     <div class="col-md-4">
                                         <label for="prov-ape-pat" class="form-label fw-semibold">Apellido Paterno <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="prov-ape-pat" name="ApellidoPat" maxlength="50" onkeyup="calcularRazonSocialNatural();" />
+                                        <input type="text" class="form-control" id="prov-ape-pat" name="ApellidoPat" maxlength="50" />
                                     </div>
                                     <div class="col-md-4">
                                         <label for="prov-ape-mat" class="form-label fw-semibold">Apellido Materno</label>
-                                        <input type="text" class="form-control" id="prov-ape-mat" name="ApellidoMat" maxlength="50" onkeyup="calcularRazonSocialNatural();" />
+                                        <input type="text" class="form-control" id="prov-ape-mat" name="ApellidoMat" maxlength="50" />
                                     </div>
                                 </div>
                                 <div class="row g-3">
@@ -529,7 +536,7 @@
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label for="prov-departamento" class="form-label fw-semibold">Departamento <span class="text-danger">*</span></label>
-                                            <select class="form-select" id="prov-departamento" name="DepartamentoId" onchange="onDepartamentoChange();" required>
+                                            <select class="form-select" id="prov-departamento" name="DepartamentoId" required>
                                                 <option value="">-- Seleccione Departamento --</option>
                                                 @foreach (var dep in departamentos)
                                                 {
@@ -539,7 +546,7 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label for="prov-provincia" class="form-label fw-semibold">Provincia <span class="text-danger">*</span></label>
-                                            <select class="form-select" id="prov-provincia" name="ProvinciaId" onchange="onProvinciaChange();" required disabled>
+                                            <select class="form-select" id="prov-provincia" name="ProvinciaId" required disabled>
                                                 <option value="">-- Seleccione Provincia --</option>
                                             </select>
                                         </div>
@@ -680,6 +687,70 @@
                                 </div>
                             </div>
 
+                            @if (esVistaProspectos)
+                            {
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="prov-lead-source" class="form-label fw-semibold">Origen del prospecto</label>
+                                        <select class="form-select" id="prov-lead-source" name="LeadSourceId">
+                                            <option value="">Sin especificar</option>
+                                            @foreach (var source in leadSources)
+                                            {
+                                                <option value="@source.Id">@source.Nombre</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="card border-0 bg-body-tertiary mb-3">
+                                    <div class="card-body">
+                                        <h6 class="fw-semibold mb-1"><i class="bi bi-bullseye me-2 text-primary"></i>Oportunidades asociadas</h6>
+                                        <p class="small text-muted mb-3">Selecciona las oportunidades que se están trabajando con este prospecto.</p>
+                                        @if (oportunidadesVenta.Count == 0)
+                                        {
+                                            <span class="small text-muted">No hay oportunidades activas disponibles.</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="row g-2" id="prov-oportunidades">
+                                                @foreach (var oportunidad in oportunidadesVenta)
+                                                {
+                                                    <div class="col-md-6 col-xl-4">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input js-prospect-opportunity" type="checkbox"
+                                                                   name="oportunidadIds" value="@oportunidad.Id" id="oportunidad-@oportunidad.Id" />
+                                                            <label class="form-check-label" for="oportunidad-@oportunidad.Id">@oportunidad.Nombre</label>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="prov-tipo-profesion" class="form-label fw-semibold">Profesión / Oficio</label>
+                                    <select class="form-select" id="prov-tipo-profesion" name="TipoProfesionId">
+                                        <option value="">Sin especificar</option>
+                                        @foreach (var tipo in tiposProfesion)
+                                        {
+                                            <option value="@tipo.Id">@tipo.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="prov-tipo-venta" class="form-label fw-semibold">Tipificación de Venta</label>
+                                    <select class="form-select" id="prov-tipo-venta" name="TipoVentaClienteId">
+                                        <option value="">Sin especificar</option>
+                                        @foreach (var tipo in tiposVentaCliente)
+                                        {
+                                            <option value="@tipo.Id">@tipo.Nombre</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="row g-3 mb-3">
                                 <div class="col-md-8">
                                     <label for="prov-cci" class="form-label fw-semibold">Código de Cuenta Interbancario (CCI)</label>
@@ -714,562 +785,24 @@
 </div>
 
 @section Scripts {
-<script>
-    // Variables de configuración de Lookups
-    var tiposDocData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(tiposDoc));
-
-    function onNaturalezaChange() {
-        var esNatural = $('#nat-natural').is(':checked');
-        
-        if (esNatural) {
-            $('#bloque-juridico').addClass('d-none');
-            $('#bloque-natural').removeClass('d-none');
-            $('#prov-razon-social').prop('required', false);
-            $('#prov-nombres').prop('required', true);
-            $('#prov-ape-pat').prop('required', true);
-            
-            // Filtrar Tipos de Documento para Persona Natural (DNI, CE, etc.)
-            filtrarTiposDoc(1);
-        } else {
-            $('#bloque-juridico').removeClass('d-none');
-            $('#bloque-natural').addClass('d-none');
-            $('#prov-razon-social').prop('required', true);
-            $('#prov-nombres').prop('required', false);
-            $('#prov-ape-pat').prop('required', false);
-            
-            // Filtrar Tipos de Documento para Persona Jurídica (Solo RUC)
-            filtrarTiposDoc(2);
-        }
-        actualizarEstadoBotonGuardar();
-    }
-
-    function filtrarTiposDoc(naturalezaId, docSeleccionado) {
-        var $select = $('#prov-tipo-doc');
-        $select.empty();
-
-        tiposDocData.forEach(function (td) {
-            var esRuc = (td.Codigo === '06' || td.Abreviatura === 'RUC');
-            if (naturalezaId === 2 && esRuc) {
-                $select.append(new Option(td.Nombre + ' (' + td.Abreviatura + ')', td.Id));
-            } else if (naturalezaId === 1 && !esRuc) {
-                $select.append(new Option(td.Nombre + ' (' + td.Abreviatura + ')', td.Id));
+    <script type="application/json" id="proveedor-page-config">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            TiposDoc = tiposDoc,
+            EsVistaProspectos = esVistaProspectos ? "S" : "N",
+            Tipo = Convert.ToString(ViewBag.Tipo) ?? string.Empty,
+            Urls = new
+            {
+                ListarProvincias = Url.Action("ListarProvincias", "Proveedor", new { area = "MG" }),
+                ListarDistritos = Url.Action("ListarDistritos", "Proveedor", new { area = "MG" }),
+                ConsultarDocumento = Url.Action("ConsultarDocumento", "Proveedor", new { area = "MG" }),
+                Obtener = Url.Action("Obtener", "Proveedor", new { area = "MG" }),
+                Guardar = Url.Action("Guardar", "Proveedor", new { area = "MG" }),
+                GuardarOportunidades = Url.Action("GuardarOportunidades", "Prospecto", new { area = "MK" }),
+                ObtenerOportunidades = Url.Action("ObtenerOportunidades", "Prospecto", new { area = "MK" }),
+                CambiarEstado = Url.Action("CambiarEstado", "Proveedor", new { area = "MG" })
             }
-        });
-
-        if (docSeleccionado) {
-            $select.val(docSeleccionado);
-        } else {
-            $select.val($select.find('option:first').val());
-        }
-        onTipoDocChange();
-    }
-
-    function onTipoDocChange() {
-        var $selected = $('#prov-tipo-doc option:selected');
-        var cod = $selected.text();
-        if (cod.indexOf('RUC') !== -1) {
-            $('#prov-num-doc').attr('maxlength', 11).attr('placeholder', 'RUC de 11 dígitos');
-        } else if (cod.indexOf('DNI') !== -1) {
-            $('#prov-num-doc').attr('maxlength', 8).attr('placeholder', 'DNI de 8 dígitos');
-        } else {
-            $('#prov-num-doc').attr('maxlength', 20).attr('placeholder', 'N° Documento');
-        }
-    }
-
-    function calcularRazonSocialNatural() {
-        var nom = $('#prov-nombres').val().trim();
-        var pat = $('#prov-ape-pat').val().trim();
-        var mat = $('#prov-ape-mat').val().trim();
-        var res = (pat + ' ' + (mat ? mat + ' ' : '') + nom).trim();
-        $('#prov-razon-social-preview').val(res);
-        $('#prov-razon-social').val(res);
-        actualizarEstadoBotonGuardar();
-    }
-
-    function onDepartamentoChange(provinciaSeleccionada, distritoSeleccionado, onComplete) {
-        var deptoId = $('#prov-departamento').val();
-        var $prov = $('#prov-provincia');
-        var $dis = $('#prov-distrito');
-
-        $prov.empty().append(new Option('-- Cargando Provincias... --', '')).prop('disabled', true);
-        $dis.empty().append(new Option('-- Seleccione Distrito --', '')).prop('disabled', true);
-
-        if (!deptoId) {
-            $prov.empty().append(new Option('-- Seleccione Provincia --', ''));
-            actualizarEstadoBotonGuardar();
-            if (typeof onComplete === 'function') onComplete();
-            return;
-        }
-
-        $.ajax({
-            url: '@Url.Action("ListarProvincias", "Proveedor", new { area = "MG" })',
-            type: 'GET',
-            data: { departamentoId: deptoId },
-            success: function (res) {
-                $prov.empty().append(new Option('-- Seleccione Provincia --', ''));
-                if (res && res.success && res.data) {
-                    res.data.forEach(function (p) {
-                        $prov.append(new Option(p.nombre || p.Nombre, p.id || p.Id));
-                    });
-                    $prov.prop('disabled', false);
-
-                    if (provinciaSeleccionada) {
-                        $prov.val(provinciaSeleccionada);
-                        onProvinciaChange(distritoSeleccionado, onComplete);
-                    } else {
-                        actualizarEstadoBotonGuardar();
-                        if (typeof onComplete === 'function') onComplete();
-                    }
-                } else {
-                    actualizarEstadoBotonGuardar();
-                    if (typeof onComplete === 'function') onComplete();
-                }
-            },
-            error: function () {
-                actualizarEstadoBotonGuardar();
-                if (typeof onComplete === 'function') onComplete();
-            }
-        });
-    }
-
-    function onProvinciaChange(distritoSeleccionado, onComplete) {
-        var provId = $('#prov-provincia').val();
-        var $dis = $('#prov-distrito');
-
-        $dis.empty().append(new Option('-- Cargando Distritos... --', '')).prop('disabled', true);
-
-        if (!provId) {
-            $dis.empty().append(new Option('-- Seleccione Distrito --', ''));
-            actualizarEstadoBotonGuardar();
-            if (typeof onComplete === 'function') onComplete();
-            return;
-        }
-
-        $.ajax({
-            url: '@Url.Action("ListarDistritos", "Proveedor", new { area = "MG" })',
-            type: 'GET',
-            data: { provinciaId: provId },
-            success: function (res) {
-                $dis.empty().append(new Option('-- Seleccione Distrito --', ''));
-                if (res && res.success && res.data) {
-                    res.data.forEach(function (d) {
-                        $dis.append(new Option(d.nombre || d.Nombre, d.id || d.Id));
-                    });
-                    $dis.prop('disabled', false);
-
-                    if (distritoSeleccionado) {
-                        $dis.val(distritoSeleccionado);
-                    }
-                }
-                actualizarEstadoBotonGuardar();
-                if (typeof onComplete === 'function') onComplete();
-            },
-            error: function () {
-                actualizarEstadoBotonGuardar();
-                if (typeof onComplete === 'function') onComplete();
-            }
-        });
-    }
-
-    function consultarDocumento(esClickManual) {
-        var doc = $('#prov-num-doc').val().trim();
-        if (!doc) {
-            if (esClickManual) Swal.fire({ icon: 'warning', title: 'Atención', text: 'Ingrese un número de documento para consultar.' });
-            return;
-        }
-
-        var $btn = $('#btn-consultar-doc');
-        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
-        $('#doc-status-msg').html('<span class="text-primary"><i class="bi bi-hourglass-split me-1"></i>Consultando...</span>');
-
-        $.ajax({
-            url: '@Url.Action("ConsultarDocumento", "Proveedor", new { area = "MG" })',
-            type: 'GET',
-            data: { doc: doc },
-            success: function (res) {
-                $btn.prop('disabled', false).html('<i class="bi bi-search"></i>');
-
-                if (res && res.success) {
-                    if (res.source === 'BD') {
-                        $('#doc-status-msg').html('<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Registrado en BD local.</span>');
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Registro Existente',
-                            text: 'El documento ya está registrado como "' + res.data.nombreCompleto + '". ¿Desea cargar sus datos para edición?',
-                            showCancelButton: true,
-                            confirmButtonText: 'Sí, cargar datos',
-                            cancelButtonText: 'No'
-                        }).then(function (result) {
-                            if (result.isConfirmed) {
-                                poblarFormulario(res.data);
-                            }
-                        });
-                    } else if (res.source === 'FORMATO') {
-                        $('#doc-status-msg').html('<span class="text-info"><i class="bi bi-lightbulb me-1"></i>' + res.message + '</span>');
-                        if (res.tipoNaturalezaJuridicaId === 1) {
-                            $('#nat-natural').prop('checked', true);
-                            onNaturalezaChange();
-                            $('#prov-tipo-doc').val(res.tipoDocumentoIdentidadId || 1);
-                        } else {
-                            $('#nat-juridica').prop('checked', true);
-                            onNaturalezaChange();
-                            $('#prov-tipo-doc').val(3);
-                            $('#prov-ruc').val(res.numeroRuc);
-                        }
-                    }
-                } else {
-                    $('#doc-status-msg').html('<span class="text-muted"><i class="bi bi-info-circle me-1"></i>' + (res.message || 'Sin coincidencias') + '</span>');
-                }
-            },
-            error: function () {
-                $btn.prop('disabled', false).html('<i class="bi bi-search"></i>');
-                $('#doc-status-msg').html('<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error de consulta.</span>');
-            }
-        });
-    }
-
-    function consultarDocumentoAutomatico() {
-        var doc = $('#prov-num-doc').val().trim();
-        var id = parseInt($('#prov-id').val()) || 0;
-        if (id === 0 && (doc.length === 8 || doc.length === 11)) {
-            consultarDocumento(false);
-        }
-    }
-
-    function abrirModalCrear() {
-        $('#modal-titulo').text('Nuevo Registro');
-        $('#prov-id').val(0);
-        $('#prov-codigo').val('');
-        $('#prov-num-doc').val('');
-        $('#prov-ruc').val('');
-        $('#prov-razon-social').val('');
-        $('#prov-abrev').val('');
-        $('#prov-nombres').val('');
-        $('#prov-ape-pat').val('');
-        $('#prov-ape-mat').val('');
-        $('#prov-razon-social-preview').val('');
-        $('#doc-status-msg').empty();
-        
-        // Vía y Dirección
-        $('#prov-tipo-via').val(12); // '-'
-        $('#prov-nombre-via').val('');
-        $('#prov-numero-via').val('');
-        $('#prov-interior').val('');
-        $('#prov-dpto').val('');
-        $('#prov-manzana').val('');
-        $('#prov-lote').val('');
-        $('#prov-kilometro').val('');
-        $('#prov-block').val('');
-        $('#prov-etapa').val('');
-        $('#prov-tipo-zona').val(12); // '-'
-        $('#prov-nombre-zona').val('');
-        $('#prov-referencia').val('');
-
-        // Contacto
-        $('#prov-telefono').val('');
-        $('#prov-email').val('');
-        $('#prov-web').val('');
-        $('#prov-contacto').val('');
-        $('#prov-cond-pago').val(1); // Contado
-        $('#prov-cci').val('');
-        $('#prov-estado').val('A');
-
-        // Rol según filtro activo o Cliente por defecto
-        var rolActivo = '@ViewBag.Tipo';
-        $('#prov-tipo-prove').val(rolActivo ? parseInt(rolActivo) : 1);
-
-        // Naturaleza: Jurídica por defecto
-        $('#nat-juridica').prop('checked', true);
-        onNaturalezaChange();
-
-        // Ubigeo: Lima / Lima / Lima Cercado por defecto
-        $('#prov-departamento').val(15);
-        onDepartamentoChange(128, 1281);
-
-        // Estado inicial vacío para modo creación y refresco de botón
-        formInitialState = "";
-        actualizarEstadoBotonGuardar();
-
-        // Mostrar pestaña 1
-        bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
-        
-        var modal = new bootstrap.Modal(document.getElementById('modal-crud-proveedor'));
-        modal.show();
-        setTimeout(function () { $('#prov-num-doc').focus(); }, 350);
-    }
-
-    function poblarFormulario(data, onFinished) {
-        $('#prov-id').val(data.id || data.Id);
-        $('#prov-codigo').val(data.codigo || data.Codigo || '');
-        $('#prov-tipo-prove').val(data.tipoProveedorId || data.TipoProveedorId || 1);
-
-        var esNat = (data.tipoNaturalezaJuridicaId || data.TipoNaturalezaJuridicaId) === 1;
-        if (esNat) {
-            $('#nat-natural').prop('checked', true);
-        } else {
-            $('#nat-juridica').prop('checked', true);
-        }
-        onNaturalezaChange();
-
-        var numDoc = data.numeroDocumentoIdentidad || data.NumeroDocumentoIdentidad || data.numeroRuc || data.NumeroRuc || data.documento || data.Documento || '';
-        $('#prov-num-doc').val(numDoc);
-        $('#prov-ruc').val(data.numeroRuc || data.NumeroRuc || '');
-        
-        var tipoDocId = data.tipoDocumentoIdentidadId || data.TipoDocumentoIdentidadId;
-        filtrarTiposDoc(esNat ? 1 : 2, tipoDocId);
-
-        if (esNat) {
-            $('#prov-nombres').val(data.nombres || data.Nombres || '');
-            $('#prov-ape-pat').val(data.apellidoPat || data.ApellidoPat || '');
-            $('#prov-ape-mat').val(data.apellidoMat || data.ApellidoMat || '');
-            calcularRazonSocialNatural();
-        } else {
-            var rz = (data.razonSocial || data.RazonSocial || '').trim();
-            $('#prov-razon-social').val(rz);
-            var ab = (data.abreviatura || data.Abreviatura || data.abrev || data.Abrev || '').trim();
-            $('#prov-abrev').val(ab);
-            $('#prov-nombres').val('');
-            $('#prov-ape-pat').val('');
-            $('#prov-ape-mat').val('');
-            $('#prov-razon-social-preview').val(rz);
-        }
-
-        // Domicilio y Vía
-        $('#prov-tipo-via').val(data.tipoViaId || data.TipoViaId || 12);
-        $('#prov-nombre-via').val(data.nombreVia || data.NombreVia || data.direccion || data.Direccion || '');
-        $('#prov-numero-via').val(data.numeroVia || data.NumeroVia || '');
-        $('#prov-interior').val(data.interior || data.Interior || '');
-        $('#prov-dpto').val(data.dpto || data.Dpto || '');
-        $('#prov-manzana').val(data.manzana || data.Manzana || '');
-        $('#prov-lote').val(data.lote || data.Lote || '');
-        $('#prov-kilometro').val(data.kilometro || data.Kilometro || '');
-        $('#prov-block').val(data.block || data.Block || '');
-        $('#prov-etapa').val(data.etapa || data.Etapa || '');
-        $('#prov-tipo-zona').val(data.tipoZonaId || data.TipoZonaId || 12);
-        $('#prov-nombre-zona').val(data.nombreZona || data.NombreZona || '');
-        $('#prov-referencia').val(data.referencia || data.Referencia || '');
-
-        // Ubigeo
-        var depId = data.departamentoId || data.DepartamentoId || 15;
-        var provId = data.provinciaId || data.ProvinciaId || 128;
-        var disId = data.distritoId || data.DistritoId || 1281;
-        $('#prov-departamento').val(depId);
-        onDepartamentoChange(provId, disId, onFinished);
-
-        // Contacto
-        $('#prov-telefono').val(data.telefono || data.Telefono || '');
-        $('#prov-email').val(data.email || data.Email || '');
-        $('#prov-web').val(data.web || data.Web || '');
-        $('#prov-contacto').val(data.contacto || data.Contacto || '');
-        $('#prov-cond-pago').val(data.condicionPagoId || data.CondicionPagoId || 1);
-        $('#prov-cci').val(data.numeroCCI || data.NumeroCCI || '');
-        $('#prov-estado').val(data.estado || data.Estado || 'A');
-    }
-
-    function abrirModalEditar(id) {
-        $.ajax({
-            url: '@Url.Action("Obtener", "Proveedor", new { area = "MG" })',
-            type: 'GET',
-            data: { id: id },
-            success: function (res) {
-                if (res && res.success && res.data) {
-                    $('#modal-titulo').text('Editar ' + (res.data.tipoProveedorNombre || 'Cliente / Proveedor') + ' #' + id);
-                    formInitialState = "";
-                    poblarFormulario(res.data, function () {
-                        formInitialState = $('#form-proveedor').serialize();
-                        actualizarEstadoBotonGuardar();
-                    });
-                    
-                    bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
-                    var modal = new bootstrap.Modal(document.getElementById('modal-crud-proveedor'));
-                    modal.show();
-
-                    // Fallback para registrar estado inicial exacto
-                    setTimeout(function () {
-                        if (!formInitialState) {
-                            formInitialState = $('#form-proveedor').serialize();
-                        }
-                        actualizarEstadoBotonGuardar();
-                    }, 500);
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cargar el registro.' });
-                }
-            },
-            error: function () {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
-            }
-        });
-    }
-
-    function guardarProveedor(e) {
-        e.preventDefault();
-
-        // Validaciones
-        var esNat = $('#nat-natural').is(':checked');
-        var doc = $('#prov-num-doc').val().trim();
-        var depto = $('#prov-departamento').val();
-        var prov = $('#prov-provincia').val();
-        var dis = $('#prov-distrito').val();
-        var nombreVia = $('#prov-nombre-via').val().trim();
-
-        if (!doc) {
-            bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
-            Swal.fire({ icon: 'warning', title: 'Campo Requerido', text: 'Por favor complete el número de documento.' });
-            $('#prov-num-doc').focus();
-            return;
-        }
-
-        if (esNat) {
-            var nom = $('#prov-nombres').val().trim();
-            var pat = $('#prov-ape-pat').val().trim();
-            if (!nom || !pat) {
-                bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
-                Swal.fire({ icon: 'warning', title: 'Campos Requeridos', text: 'Para personas naturales es obligatorio ingresar Nombres y Apellido Paterno.' });
-                $('#prov-nombres').focus();
-                return;
-            }
-        } else {
-            var rs = $('#prov-razon-social').val().trim();
-            if (!rs) {
-                bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-principales-btn')).show();
-                Swal.fire({ icon: 'warning', title: 'Campo Requerido', text: 'Para personas jurídicas es obligatoria la Razón Social.' });
-                $('#prov-razon-social').focus();
-                return;
-            }
-            $('#prov-ruc').val(doc);
-        }
-
-        if (!depto || !prov || !dis) {
-            bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-domicilio-btn')).show();
-            Swal.fire({ icon: 'warning', title: 'Ubigeo Incompleto', text: 'Por favor seleccione el Departamento, Provincia y Distrito.' });
-            return;
-        }
-
-        if (!nombreVia) {
-            bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-domicilio-btn')).show();
-            Swal.fire({ icon: 'warning', title: 'Dirección Requerida', text: 'Por favor ingrese el Nombre de Vía / Dirección.' });
-            $('#prov-nombre-via').focus();
-            return;
-        }
-
-        var $btn = $('#btn-guardar-prov');
-        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
-
-        var formData = $('#form-proveedor').serialize();
-        $.ajax({
-            url: '@Url.Action("Guardar", "Proveedor", new { area = "MG" })',
-            type: 'POST',
-            data: formData,
-            success: function (res) {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Registro');
-                if (res && res.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-proveedor')).hide();
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Operación Exitosa!',
-                        text: res.message || 'Registro guardado correctamente.',
-                        timer: 1600,
-                        showConfirmButton: false
-                    }).then(function () {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Error al Guardar', text: res.message || 'No se pudo guardar el registro.' });
-                }
-            },
-            error: function () {
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Registro');
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
-            }
-        });
-    }
-
-    function cambiarEstado(id, estadoActual, nombre) {
-        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
-        Swal.fire({
-            title: '¿Confirmar cambio de estado?',
-            text: '¿Desea ' + accion + ' el registro "' + nombre + '"?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, ' + accion,
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754'
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '@Url.Action("CambiarEstado", "Proveedor", new { area = "MG" })',
-                    type: 'POST',
-                    data: { id: id },
-                    success: function (res) {
-                        if (res && res.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Actualizado',
-                                text: res.message,
-                                timer: 1200,
-                                showConfirmButton: false
-                            }).then(function () {
-                                location.reload();
-                            });
-                        } else {
-                            Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo cambiar el estado.' });
-                        }
-                    },
-                    error: function () {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.' });
-                    }
-                });
-            }
-        });
-    }
-
-    // =========================================================================
-    // VALIDACIÓN DINÁMICA DE BOTÓN GUARDAR (NUEVO vs EDICIÓN)
-    // =========================================================================
-    var formInitialState = "";
-
-    function sonCamposRequeridosValidos() {
-        var esNat = $('#nat-natural').is(':checked');
-        var doc = ($('#prov-num-doc').val() || '').trim();
-        if (!doc) return false;
-
-        if (esNat) {
-            var nom = ($('#prov-nombres').val() || '').trim();
-            var pat = ($('#prov-ape-pat').val() || '').trim();
-            if (!nom || !pat) return false;
-        } else {
-            var rs = ($('#prov-razon-social').val() || '').trim();
-            if (!rs) return false;
-        }
-
-        var depto = $('#prov-departamento').val();
-        var prov = $('#prov-provincia').val();
-        var dis = $('#prov-distrito').val();
-        if (!depto || !prov || !dis) return false;
-
-        var nombreVia = ($('#prov-nombre-via').val() || '').trim();
-        if (!nombreVia) return false;
-
-        return true;
-    }
-
-    function actualizarEstadoBotonGuardar() {
-        var id = parseInt($('#prov-id').val()) || 0;
-        var valido = sonCamposRequeridosValidos();
-        var $btn = $('#btn-guardar-prov');
-
-        if (id === 0) {
-            // Nuevo Registro: Se habilita solo cuando se completan todos los campos obligatorios
-            $btn.prop('disabled', !valido);
-        } else {
-            // Edición: Se habilita solo cuando sea válido Y haya cambiado algún campo
-            var haCambiado = (formInitialState !== "" && $('#form-proveedor').serialize() !== formInitialState);
-            $btn.prop('disabled', !(valido && haCambiado));
-        }
-    }
-
-    $(document).on('input change keyup', '#form-proveedor input, #form-proveedor select, #form-proveedor textarea', function () {
-        actualizarEstadoBotonGuardar();
-    });
-</script>
+        }))
+    </script>
+    <script src="~/js/proveedor.js" asp-append-version="true"></script>
 }

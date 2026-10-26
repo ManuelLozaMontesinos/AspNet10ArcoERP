@@ -1,0 +1,489 @@
+@model List<AspNet10ArcoERP.Models.PlanillaProcesoModel>
+@{
+    ViewData["Title"] = "Horas de Planilla";
+    int? anio = ViewBag.Anio as int?;
+    int? mes = ViewBag.Mes as int?;
+    string busqueda = ViewBag.Search as string ?? string.Empty;
+    int top = ViewBag.Top is int selectedTop ? selectedTop : 25;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-1"><i class="bi bi-hourglass-split me-2 text-primary"></i>Horas de planilla</h3>
+                <small class="text-muted">Consulta y mantenimiento de horas remunerativas por proceso de planilla.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-header bg-body-tertiary py-3">
+                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
+                    <div style="min-width:320px;max-width:440px;flex:1 1 320px">
+                        <label for="search" class="form-label small fw-semibold">Buscar planilla</label>
+                        <input id="search" name="search" value="@busqueda" class="form-control" placeholder="Nombre de planilla..." />
+                    </div>
+                    <div>
+                        <label for="anio" class="form-label small fw-semibold">Año</label>
+                        <input id="anio" name="anio" value="@anio" type="number" class="form-control" style="width:120px" />
+                    </div>
+                    <div>
+                        <label for="mes" class="form-label small fw-semibold">Mes</label>
+                        <select id="mes" name="mes" class="form-select" style="width:150px">
+                            <option value="">Cualquier mes</option>
+                            @for (var i = 1; i <= 12; i++)
+                            {
+                                var nombres = new[] { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre" };
+                                <option value="@i" selected="@(mes == i)">@nombres[i - 1]</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="top" class="form-label small fw-semibold">Mostrando</label>
+                        <select id="top" name="top" class="form-select">
+                            @foreach (var size in new[] { 25, 50, 100, 500 })
+                            {
+                                <option value="@size" selected="@(top == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">@Model.Count proceso(s)</span>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
+                    <thead class="bg-body-tertiary">
+                        <tr>
+                            <th>Planilla</th>
+                            <th>Periodo</th>
+                            <th>Fechas</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-4">No se encontraron procesos de planilla.</td></tr>
+                        }
+                        @foreach (var proceso in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@proceso.PlanillaNombre</td>
+                                <td>@proceso.MesNombre @proceso.ProcAnual <span class="text-muted">(#@proceso.Id)</span></td>
+                                <td>@proceso.FechaDesde.ToString("d") - @proceso.FechaHasta.ToString("d")</td>
+                                <td>
+                                    @if (proceso.EstadoPlanProceId == 2)
+                                    {
+                                        <span class="badge bg-secondary-subtle text-body-secondary border px-2 py-1">Cerrado</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Abierto</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-open-hours" data-process-id="@proceso.Id">
+                                        <i class="bi bi-pencil-square me-1"></i>Gestionar horas
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-crud-planilla-hora" tabindex="-1" aria-labelledby="modalPlanillaHoraTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="formPlanillaHora" class="modal-content">
+            @Html.AntiForgeryToken()
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <div>
+                    <h5 class="modal-title fw-bold" id="modalPlanillaHoraTitle"><i class="bi bi-hourglass-split me-2"></i>Horas remunerativas</h5>
+                    <div class="small text-muted" id="planillaHoraSubtitle"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+                    <div class="flex-grow-1" style="min-width:320px;max-width:440px">
+                        <label for="employeeSearch" class="form-label small fw-semibold">Buscar personal</label>
+                        <input id="employeeSearch" class="form-control" placeholder="Código o nombre..." />
+                    </div>
+                    <div>
+                        <label for="employeeTop" class="form-label small fw-semibold">Mostrando</label>
+                        <select id="employeeTop" class="form-select">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2" id="employeeCount">0 encontrados</span>
+                    <a class="btn btn-outline-primary" id="downloadHoursTemplate" href="#">
+                        <i class="bi bi-download me-1"></i>Plantilla Excel
+                    </a>
+                    <div class="input-group" style="width:min(100%,360px)">
+                        <input type="file" class="form-control" id="hoursFile" accept=".xlsx">
+                        <button type="button" class="btn btn-outline-primary" id="importHoursButton">Importar</button>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary" id="findAvailableEmployees">
+                        <i class="bi bi-person-plus me-1"></i>Agregar personal marcado
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="syncHoursButton">
+                        <i class="bi bi-arrow-repeat me-1"></i>Actualizar desde marcaciones
+                    </button>
+                </div>
+                <div class="card bg-body-secondary border-0 mb-3 d-none" id="availableEmployeesPanel">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            <span class="small text-body-secondary">Personal con marcaciones remunerativas verificadas (máximo 500 resultados).</span>
+                            <button type="button" class="btn btn-sm btn-primary" id="addSelectedEmployees">Agregar seleccionados</button>
+                        </div>
+                        <div class="d-flex flex-wrap gap-3" id="availableEmployeesList"></div>
+                    </div>
+                </div>
+                <div class="table-responsive border rounded">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="bg-body-tertiary" id="hoursTableHead"></thead>
+                        <tbody id="hoursTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <small class="text-muted" id="employeePageInfo"></small>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Paginación del personal">
+                        <button type="button" class="btn btn-outline-secondary" id="previousEmployees"><i class="bi bi-chevron-left"></i></button>
+                        <button type="button" class="btn btn-outline-secondary" id="nextEmployees"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="saveHoursButton"><i class="bi bi-check2-circle me-1"></i>Guardar horas</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    #modal-crud-planilla-hora .modal-content {
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    #modal-crud-planilla-hora .modal-body {
+        max-height: calc(90vh - 135px) !important;
+        overflow-y: auto !important;
+        flex: 1 1 auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
+        scroll-behavior: smooth;
+    }
+
+    #modal-crud-planilla-hora .modal-body::-webkit-scrollbar {
+        width: 7px;
+    }
+
+    #modal-crud-planilla-hora .modal-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    #modal-crud-planilla-hora .modal-body::-webkit-scrollbar-thumb {
+        background: rgba(140, 150, 165, 0.45);
+        border-radius: 4px;
+    }
+
+    #modal-crud-planilla-hora .modal-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(140, 150, 165, 0.75);
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const modalElement = document.getElementById('modal-crud-planilla-hora');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const form = document.getElementById('formPlanillaHora');
+            const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+            const searchInput = document.getElementById('employeeSearch');
+            const topSelect = document.getElementById('employeeTop');
+            const body = document.getElementById('hoursTableBody');
+            const head = document.getElementById('hoursTableHead');
+            let currentProcessId = 0;
+            let hours = [];
+            let employees = [];
+            let availableEmployees = [];
+            let page = 0;
+            let readOnly = false;
+
+            const notify = (icon, title) => Swal.fire({ toast: true, position: 'top-end', icon, title, showConfirmButton: false, timer: 3000 });
+
+            function render() {
+                const query = searchInput.value.trim().toLocaleLowerCase();
+                const filtered = employees.filter(employee =>
+                    `${employee.codigo} ${employee.nombre}`.toLocaleLowerCase().includes(query));
+                const pageSize = Number(topSelect.value);
+                const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+                page = Math.min(page, pageCount - 1);
+                const firstIndex = page * pageSize;
+                const pageEmployees = filtered.slice(firstIndex, firstIndex + pageSize);
+
+                document.getElementById('employeeCount').textContent = `${filtered.length} encontrado(s)`;
+                document.getElementById('employeePageInfo').textContent = filtered.length
+                    ? `Mostrando ${firstIndex + 1}-${Math.min(firstIndex + pageSize, filtered.length)} de ${filtered.length}`
+                    : 'Sin registros';
+                document.getElementById('previousEmployees').disabled = page === 0;
+                document.getElementById('nextEmployees').disabled = page >= pageCount - 1;
+
+                head.replaceChildren();
+                const headerRow = document.createElement('tr');
+                for (const label of ['Código', 'Personal']) {
+                    const th = document.createElement('th');
+                    th.textContent = label;
+                    headerRow.append(th);
+                }
+                for (const hour of hours) {
+                    const th = document.createElement('th');
+                    th.className = 'text-end';
+                    th.title = hour.nombre;
+                    th.textContent = hour.codigo || hour.nombre;
+                    headerRow.append(th);
+                }
+                const stateHeader = document.createElement('th');
+                stateHeader.textContent = 'Estado';
+                headerRow.append(stateHeader);
+                head.append(headerRow);
+
+                body.replaceChildren();
+                for (const employee of pageEmployees) {
+                    const row = document.createElement('tr');
+                    const codeCell = document.createElement('td');
+                    codeCell.innerHTML = `<span class="badge bg-secondary-subtle text-body-secondary border font-monospace">${escapeHtml(employee.codigo)}</span>`;
+                    row.append(codeCell);
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = employee.nombre;
+                    row.append(nameCell);
+                    for (const hour of hours) {
+                        const cell = document.createElement('td');
+                        cell.className = 'text-end';
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.min = '0';
+                        input.step = '0.01';
+                        input.className = 'form-control form-control-sm text-end js-hour-quantity';
+                        input.style.minWidth = '90px';
+                        input.value = employee.cantidades.find(value => value.horaRemId === hour.id)?.cantidad ?? 0;
+                        input.disabled = readOnly || employee.estado === 'I';
+                        input.dataset.personalId = employee.personalId;
+                        input.dataset.hourId = hour.id;
+                        cell.append(input);
+                        row.append(cell);
+                    }
+                    const stateCell = document.createElement('td');
+                    const stateSelect = document.createElement('select');
+                    stateSelect.className = 'form-select form-select-sm js-employee-state';
+                    stateSelect.disabled = readOnly;
+                    for (const [value, label] of [['A', 'Activo'], ['I', 'Inactivo']]) {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = label;
+                        stateSelect.append(option);
+                    }
+                    stateSelect.value = employee.estado;
+                    stateSelect.dataset.personalId = employee.personalId;
+                    stateCell.append(stateSelect);
+                    row.append(stateCell);
+                    body.append(row);
+                }
+            }
+
+            function escapeHtml(value) {
+                return String(value).replace(/[&<>"']/g, character => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                })[character]);
+            }
+
+            async function openProcess(id) {
+                const response = await fetch(`/RH/PlanillaHora/ObtenerHoras?id=${id}`);
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    notify('error', result.message || 'No se pudo cargar el proceso.');
+                    return;
+                }
+                currentProcessId = id;
+                hours = result.data.horas;
+                employees = result.data.empleados;
+                page = 0;
+                searchInput.value = '';
+                readOnly = result.data.proceso.estadoPlanProceId === 2;
+                document.getElementById('planillaHoraSubtitle').textContent =
+                    `${result.data.proceso.planillaNombre} · ${result.data.proceso.mesNombre} ${result.data.proceso.procAnual} · ${readOnly ? 'CERRADO' : 'ABIERTO'}`;
+                document.getElementById('saveHoursButton').disabled = readOnly;
+                document.getElementById('syncHoursButton').disabled = readOnly;
+                document.getElementById('importHoursButton').disabled = readOnly;
+                document.getElementById('hoursFile').value = '';
+                document.getElementById('downloadHoursTemplate').href = `/RH/PlanillaHora/DescargarFormato?id=${id}`;
+                document.getElementById('availableEmployeesPanel').classList.add('d-none');
+                document.getElementById('findAvailableEmployees').disabled = readOnly;
+                render();
+                modal.show();
+            }
+
+            document.querySelectorAll('.js-open-hours').forEach(button =>
+                button.addEventListener('click', () => openProcess(Number(button.dataset.processId))));
+            searchInput.addEventListener('input', () => { page = 0; render(); });
+            topSelect.addEventListener('change', () => { page = 0; render(); });
+            document.getElementById('previousEmployees').addEventListener('click', () => { page--; render(); });
+            document.getElementById('nextEmployees').addEventListener('click', () => { page++; render(); });
+
+            document.getElementById('findAvailableEmployees').addEventListener('click', async () => {
+                const search = searchInput.value.trim();
+                const response = await fetch(`/RH/PlanillaHora/PersonalDisponible?id=${currentProcessId}&search=${encodeURIComponent(search)}`);
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    notify('error', result.message || 'No se pudo consultar el personal disponible.');
+                    return;
+                }
+                availableEmployees = result.data;
+                const list = document.getElementById('availableEmployeesList');
+                list.replaceChildren();
+                for (const employee of availableEmployees) {
+                    const label = document.createElement('label');
+                    label.className = 'form-check d-flex align-items-center gap-2';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'form-check-input mt-0';
+                    checkbox.value = employee.personalId;
+                    checkbox.disabled = employees.some(current => current.personalId === employee.personalId);
+                    const text = document.createElement('span');
+                    text.className = 'small';
+                    text.textContent = `${employee.codigo} · ${employee.nombre}`;
+                    label.append(checkbox, text);
+                    list.append(label);
+                }
+                if (availableEmployees.length === 0) {
+                    const message = document.createElement('span');
+                    message.className = 'small text-muted';
+                    message.textContent = 'No hay personal disponible con esos criterios.';
+                    list.append(message);
+                }
+                document.getElementById('availableEmployeesPanel').classList.remove('d-none');
+            });
+
+            document.getElementById('addSelectedEmployees').addEventListener('click', () => {
+                const selectedIds = new Set(
+                    [...document.querySelectorAll('#availableEmployeesList input:checked')]
+                        .map(input => Number(input.value)));
+                const selected = availableEmployees.filter(employee => selectedIds.has(employee.personalId));
+                if (selected.length === 0) {
+                    notify('warning', 'Seleccione al menos una persona.');
+                    return;
+                }
+                for (const employee of selected) {
+                    if (!employees.some(current => current.personalId === employee.personalId))
+                        employees.push(employee);
+                }
+                document.getElementById('availableEmployeesPanel').classList.add('d-none');
+                page = 0;
+                render();
+                notify('success', `${selected.length} persona(s) agregada(s) al proceso.`);
+            });
+
+            body.addEventListener('input', event => {
+                if (!event.target.matches('.js-hour-quantity')) return;
+                const personalId = Number(event.target.dataset.personalId);
+                const hourId = Number(event.target.dataset.hourId);
+                const employee = employees.find(item => item.personalId === personalId);
+                const quantity = employee.cantidades.find(item => item.horaRemId === hourId);
+                quantity.cantidad = Number(event.target.value) || 0;
+            });
+            body.addEventListener('change', event => {
+                if (!event.target.matches('.js-employee-state')) return;
+                const employee = employees.find(item => item.personalId === Number(event.target.dataset.personalId));
+                employee.estado = event.target.value;
+                render();
+            });
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                const result = await Swal.fire({
+                    title: '¿Guardar las horas?',
+                    text: 'Se guardarán los datos de personal y conceptos mostrados en el proceso.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Guardar',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (!result.isConfirmed) return;
+
+                const response = await fetch('/RH/PlanillaHora/Guardar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ procesoId: currentProcessId, empleados })
+                });
+                const saved = await response.json();
+                notify(saved.success ? 'success' : 'error', saved.message);
+                if (saved.success) modal.hide();
+            });
+
+            document.getElementById('syncHoursButton').addEventListener('click', async () => {
+                const result = await Swal.fire({
+                    title: 'Actualizar desde marcaciones',
+                    text: 'Esta operación reemplazará las cantidades actuales por las marcaciones verificadas del periodo.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Actualizar',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (!result.isConfirmed) return;
+                const response = await fetch(`/RH/PlanillaHora/ActualizarDesdeMarcaciones?id=${currentProcessId}`, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token }
+                });
+                const synced = await response.json();
+                notify(synced.success ? 'success' : 'error', synced.message);
+                if (synced.success) await openProcess(currentProcessId);
+            });
+
+            document.getElementById('importHoursButton').addEventListener('click', async () => {
+                const file = document.getElementById('hoursFile').files[0];
+                if (!file) {
+                    notify('warning', 'Seleccione la plantilla Excel que desea importar.');
+                    return;
+                }
+                const result = await Swal.fire({
+                    title: 'Importar horas',
+                    text: 'Las cantidades indicadas en el archivo reemplazarán esos conceptos para el personal incluido.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Importar',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (!result.isConfirmed) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('id', currentProcessId);
+                const response = await fetch('/RH/PlanillaHora/Importar', {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    body: formData
+                });
+                const imported = await response.json();
+                notify(imported.success ? 'success' : 'error', imported.message);
+                if (imported.success) await openProcess(currentProcessId);
+            });
+        })();
+    </script>
+}

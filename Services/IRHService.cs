@@ -57,6 +57,7 @@ namespace AspNet10ArcoERP.Services
         Task<List<LookupItemModel>> GetSexosLookupAsync();
         Task<List<LookupItemModel>> GetEstadosCivilesLookupAsync();
         Task<List<LookupItemModel>> GetPaisesLookupAsync();
+        Task<List<LookupItemModel>> GetPaisesEmisoresLookupAsync();
         Task<List<LookupItemModel>> GetDepartamentosLookupAsync();
         Task<List<LookupItemModel>> GetProvinciasLookupAsync(int? departamentoId = null);
         Task<List<LookupItemModel>> GetDistritosLookupAsync(int? provinciaId = null);
@@ -204,6 +205,29 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message)> ProcesarCalculoPlanillaAsync(int planProceId, int userId);
 
         // =========================================================================
+        // 20. HORAS REMUNERATIVAS POR PROCESO (plan_p_hora)
+        // =========================================================================
+        Task<PlanillaHorasModel?> GetPlanillaHorasAsync(int planProceId, int empresaId);
+        Task<List<PlanillaHorasEmpleadoModel>> GetPersonalDisponiblePlanillaHorasAsync(int planProceId, int empresaId, string? search = null);
+        Task<(bool success, string message)> SavePlanillaHorasAsync(PlanillaHorasGuardarModel model, int empresaId, int userId);
+        Task<(bool success, string message)> ImportarHorasDesdeMarcacionesAsync(int planProceId, int empresaId, int userId);
+
+        // =========================================================================
+        // 21. REGULARIZACIONES DE PLANILLA (plan_p_regu)
+        // =========================================================================
+        Task<PlanillaRegularizacionPageModel?> GetPlanillaRegularizacionesAsync(int planProceId, int empresaId, int page = 1, int pageSize = 25);
+        Task<List<LookupItemModel>?> GetPersonalDisponibleRegularizacionAsync(int planProceId, int empresaId, string? search = null, int top = 25);
+        Task<List<LookupItemModel>?> GetConceptosDisponiblesRegularizacionAsync(int planProceId, int empresaId, string? search = null, int top = 25);
+        Task<(bool success, string message)> SavePlanillaRegularizacionAsync(PlanillaRegularizacionGuardarModel model, int empresaId, int userId);
+        Task<(bool success, string message)> AnularPlanillaRegularizacionAsync(int id, int planProceId, int empresaId, int userId);
+
+        // =========================================================================
+        // 22. SOLICITUDES DE ACCESO EXTENDIDO (perso_sol_acc)
+        // =========================================================================
+        Task<SolicitudAccesoPageModel> GetSolicitudesAccesoAsync(int empresaId, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? estadoAprobacionId = null, int page = 1, int pageSize = 25);
+        Task<(bool success, string message)> ResolverSolicitudAccesoAsync(int id, string? horaAutorizada, bool aprobar, int empresaId, int userId);
+
+        // =========================================================================
         // 20. BOLETAS DE PAGO (ReporteBoleta)
         // =========================================================================
         Task<List<LookupItemModel>> GetPlanillasProcesadasLookupAsync(int empresaId);
@@ -212,4 +236,3 @@ namespace AspNet10ArcoERP.Services
         Task<List<BoletaPagoModel>> GetBoletasPorPlanillaAsync(int planProceId);
     }
 }
-

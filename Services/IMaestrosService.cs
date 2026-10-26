@@ -118,7 +118,8 @@ namespace AspNet10ArcoERP.Services
             string? sort = null, 
             string? dir = null, 
             int top = 25,
-            int empresaId = 1);
+            int empresaId = 1,
+            string? esProspecto = null);
         Task<ProveedorModel?> GetProveedorByIdAsync(int id, int empresaId = 1);
         Task<ProveedorModel?> BuscarProveedorPorDocumentoAsync(string doc, int empresaId = 1);
         Task<(bool success, string message, int id, string codigo)> SaveProveedorAsync(ProveedorModel model, int userId, int empresaId = 1);
@@ -129,6 +130,8 @@ namespace AspNet10ArcoERP.Services
         Task<List<LookupItemModel>> GetTiposZonaLookupAsync();
         Task<List<LookupItemModel>> GetTiposProveedorLookupAsync();
         Task<List<LookupItemModel>> GetCondicionesPagoLookupAsync(int empresaId = 1);
+        Task<List<LookupItemModel>> GetTiposProfesionLookupAsync();
+        Task<List<LookupItemModel>> GetTiposVentaClienteLookupAsync();
         Task<List<LookupItemModel>> GetDepartamentosLookupAsync();
         Task<List<UbigeoLookupModel>> GetProvinciasLookupAsync(int departamentoId);
         Task<List<UbigeoLookupModel>> GetDistritosLookupAsync(int provinciaId);
@@ -165,6 +168,15 @@ namespace AspNet10ArcoERP.Services
         Task<List<LookupItemModel>> GetGruposCombosLookupAsync();
         Task<List<LookupItemModel>> GetClasesCombosLookupAsync(int? grupoId = null);
         Task<List<LookupItemModel>> GetFamiliasCombosLookupAsync(int? grupoId = null, int? claseId = null);
+
+        // 10.2 Cuentas bancarias de empresa
+        Task<List<CuentaBancoModel>> GetCuentasBancoAsync(int empresaId, string? search = null, int? bancoId = null, string? estado = null, int top = 25);
+        Task<int> GetCuentasBancoCountAsync(int empresaId, string? search = null, int? bancoId = null, string? estado = null);
+        Task<CuentaBancoModel?> GetCuentaBancoByIdAsync(int id, int empresaId);
+        Task<List<LookupItemModel>> GetBancosCuentaLookupAsync();
+        Task<List<LookupItemModel>> GetMonedasCuentaLookupAsync();
+        Task<(bool success, string message, int id)> SaveCuentaBancoAsync(CuentaBancoModel model, int userId, int empresaId);
+        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoCuentaBancoAsync(int id, int userId, int empresaId);
 
         // 11. Tabla General
         Task<List<TablaGeneralModel>> GetTablasGeneralesAsync();

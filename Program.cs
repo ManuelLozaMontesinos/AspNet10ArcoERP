@@ -12,7 +12,9 @@ builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IAdministracionService, AdministracionService>();
 builder.Services.AddScoped<IMaestrosService, MaestrosService>();
+builder.Services.AddScoped<IMKService, MKService>();
 builder.Services.AddScoped<IRHService, RHService>();
 
 // Authentication & Cookies

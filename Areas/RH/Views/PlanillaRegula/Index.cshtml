@@ -1,0 +1,544 @@
+@model List<AspNet10ArcoERP.Models.PlanillaProcesoModel>
+@{
+    ViewData["Title"] = "Regularizaciones de planilla";
+    int? anio = ViewBag.Anio as int?;
+    int? mes = ViewBag.Mes as int?;
+    string busqueda = ViewBag.Search as string ?? string.Empty;
+    int top = ViewBag.Top is int selectedTop ? selectedTop : 25;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-1"><i class="bi bi-clipboard2-plus me-2 text-primary"></i>Regularizaciones de planilla</h3>
+                <small class="text-muted">Administra conceptos y montos adicionales por trabajador en procesos abiertos.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-header bg-body-tertiary py-3">
+                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
+                    <div style="min-width:320px;max-width:440px;flex:1 1 320px">
+                        <label for="search" class="form-label small fw-semibold">Buscar planilla</label>
+                        <input id="search" name="search" value="@busqueda" class="form-control" placeholder="Nombre de planilla..." />
+                    </div>
+                    <div>
+                        <label for="anio" class="form-label small fw-semibold">Año</label>
+                        <input id="anio" name="anio" value="@anio" type="number" class="form-control" style="width:120px" />
+                    </div>
+                    <div>
+                        <label for="mes" class="form-label small fw-semibold">Mes</label>
+                        <select id="mes" name="mes" class="form-select" style="width:150px">
+                            <option value="">Cualquier mes</option>
+                            @{
+                                var nombresMes = new[] { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre" };
+                            }
+                            @for (var index = 1; index <= 12; index++)
+                            {
+                                <option value="@index" selected="@(mes == index)">@nombresMes[index - 1]</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="top" class="form-label small fw-semibold">Mostrando</label>
+                        <select id="top" name="top" class="form-select">
+                            @foreach (var size in new[] { 25, 50, 100, 500 })
+                            {
+                                <option value="@size" selected="@(top == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">@Model.Count proceso(s)</span>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
+                    <thead class="bg-body-tertiary">
+                        <tr>
+                            <th>Planilla</th>
+                            <th>Periodo</th>
+                            <th>Fechas</th>
+                            <th>Estado del proceso</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-4">No se encontraron procesos de planilla.</td></tr>
+                        }
+                        @foreach (var proceso in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@proceso.PlanillaNombre</td>
+                                <td>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1">
+                                        @proceso.MesNombre @proceso.ProcAnual
+                                    </span>
+                                    <span class="small text-muted">(#@proceso.Id)</span>
+                                </td>
+                                <td>@proceso.FechaDesde.ToString("d") - @proceso.FechaHasta.ToString("d")</td>
+                                <td>
+                                    @if (proceso.EstadoPlanProceId == 2)
+                                    {
+                                        <span class="badge bg-secondary-subtle text-body-secondary border px-2 py-1">Cerrado</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Abierto</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-open-regularizations" data-process-id="@proceso.Id">
+                                        <i class="bi bi-list-check me-1"></i>Gestionar regularizaciones
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-crud-planilla-regula" tabindex="-1" aria-labelledby="regularizacionModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="formRegularizacion" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="regularizacionId" value="0" />
+            <input type="hidden" id="regularizacionProcessId" value="0" />
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <div>
+                    <h5 class="modal-title fw-bold" id="regularizacionModalTitle"><i class="bi bi-clipboard2-plus me-2"></i>Regularizaciones de planilla</h5>
+                    <div class="small text-muted" id="regularizacionSubtitle"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="small text-muted" id="regularizacionState"></div>
+                    <button type="button" class="btn btn-primary btn-sm" id="newRegularizacionButton">
+                        <i class="bi bi-plus-circle me-1"></i>Nueva regularización
+                    </button>
+                </div>
+                <div class="d-flex flex-wrap align-items-end gap-2 mb-2">
+                    <div>
+                        <label for="regularizacionTop" class="form-label small fw-semibold mb-1">Mostrando</label>
+                        <select id="regularizacionTop" class="form-select form-select-sm">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2" id="regularizacionCount">0 registros</span>
+                    <div class="ms-auto btn-group btn-group-sm" role="group" aria-label="Paginación de regularizaciones">
+                        <button type="button" class="btn btn-outline-secondary" id="regularizacionPrevious" aria-label="Página anterior">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <span class="btn btn-outline-secondary disabled" id="regularizacionPageLabel">Página 1 de 1</span>
+                        <button type="button" class="btn btn-outline-secondary" id="regularizacionNext" aria-label="Página siguiente">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive mb-4">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="bg-body-tertiary">
+                            <tr>
+                                <th>Trabajador</th>
+                                <th>Concepto</th>
+                                <th class="text-end">Monto</th>
+                                <th>Observación</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="regularizacionesRows">
+                            <tr><td colspan="6" class="text-center text-muted py-4">Seleccione un proceso de planilla.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card border-0 bg-body-tertiary" id="regularizacionEditor">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3" id="regularizacionEditorTitle">Nueva regularización</h6>
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label for="personalSearch" class="form-label small fw-semibold">Buscar trabajador</label>
+                                <input id="personalSearch" class="form-control mb-2" autocomplete="off" placeholder="Código, nombre o documento..." />
+                                <select id="regularizacionPersonalId" class="form-select" required>
+                                    <option value="">Seleccione un trabajador</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="conceptoSearch" class="form-label small fw-semibold">Buscar concepto remunerativo</label>
+                                <input id="conceptoSearch" class="form-control mb-2" autocomplete="off" placeholder="Código o concepto..." />
+                                <select id="regularizacionConceptoId" class="form-select" required>
+                                    <option value="">Seleccione un concepto</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="regularizacionMonto" class="form-label small fw-semibold">Monto</label>
+                                <input id="regularizacionMonto" type="number" class="form-control" min="0" step="0.01" required />
+                            </div>
+                            <div class="col-md-8">
+                                <label for="regularizacionObservacion" class="form-label small fw-semibold">Observación</label>
+                                <input id="regularizacionObservacion" class="form-control" maxlength="200" required />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="saveRegularizacionButton">
+                    <i class="bi bi-check2-circle me-1"></i>Guardar regularización
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        #modal-crud-planilla-regula .modal-content {
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #modal-crud-planilla-regula .modal-body {
+            max-height: calc(90vh - 135px) !important;
+            overflow-y: auto !important;
+            flex: 1 1 auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
+            scroll-behavior: smooth;
+        }
+
+        #modal-crud-planilla-regula .modal-body::-webkit-scrollbar {
+            width: 7px;
+        }
+
+        #modal-crud-planilla-regula .modal-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #modal-crud-planilla-regula .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(140, 150, 165, 0.45);
+            border-radius: 4px;
+        }
+
+        #modal-crud-planilla-regula .modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(140, 150, 165, 0.75);
+        }
+    </style>
+    <script>
+        (() => {
+            const modalElement = document.getElementById('modal-crud-planilla-regula');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const form = document.getElementById('formRegularizacion');
+            const rows = document.getElementById('regularizacionesRows');
+            const personalSelect = document.getElementById('regularizacionPersonalId');
+            const conceptoSelect = document.getElementById('regularizacionConceptoId');
+            const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+            const urls = {
+                obtener: '@Url.Action("Obtener", "PlanillaRegula", new { area = "RH" })',
+                personal: '@Url.Action("PersonalDisponible", "PlanillaRegula", new { area = "RH" })',
+                conceptos: '@Url.Action("ConceptosDisponibles", "PlanillaRegula", new { area = "RH" })',
+                guardar: '@Url.Action("Guardar", "PlanillaRegula", new { area = "RH" })',
+                anular: '@Url.Action("Anular", "PlanillaRegula", new { area = "RH" })'
+            };
+            let currentProcess = null;
+            let currentRows = [];
+            let currentPage = 1;
+            let totalRows = 0;
+            let locked = false;
+            let personalTimer;
+            let conceptoTimer;
+
+            async function request(url, options = {}) {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        ...(options.headers || {}),
+                        ...(options.method === 'POST' ? { 'RequestVerificationToken': token } : {})
+                    }
+                });
+                const payload = await response.json();
+                if (!response.ok || payload.success === false)
+                    throw new Error(payload.message || 'No se pudo completar la operación.');
+                return payload;
+            }
+
+            function showToast(icon, title) {
+                Swal.fire({ toast: true, position: 'top-end', icon, title, showConfirmButton: false, timer: 2800 });
+            }
+
+            function renderRows() {
+                rows.replaceChildren();
+                if (!currentRows.length) {
+                    const empty = document.createElement('tr');
+                    empty.innerHTML = '<td colspan="6" class="text-center text-muted py-4">No hay regularizaciones para este proceso.</td>';
+                    rows.append(empty);
+                } else {
+                    for (const item of currentRows) {
+                        const row = document.createElement('tr');
+                        const employee = document.createElement('td');
+                        employee.textContent = `${item.personalCodigo} - ${item.personalNombre}`;
+                        const concept = document.createElement('td');
+                        concept.textContent = `${item.concepRemuCodigo} - ${item.concepRemuNombre}`;
+                        const amount = document.createElement('td');
+                        amount.className = 'text-end font-monospace';
+                        amount.textContent = Number(item.monto).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        const note = document.createElement('td');
+                        note.textContent = item.observacion;
+                        const status = document.createElement('td');
+                        status.innerHTML = item.estado === 'A'
+                            ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activa</span>'
+                            : '<span class="badge bg-secondary-subtle text-body-secondary border px-2 py-1">Anulada</span>';
+                        const actions = document.createElement('td');
+                        actions.className = 'text-end text-nowrap';
+
+                        if (item.estado === 'A' && !locked) {
+                            const edit = document.createElement('button');
+                            edit.type = 'button';
+                            edit.className = 'btn btn-sm btn-outline-primary me-1';
+                            edit.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Editar';
+                            edit.addEventListener('click', async () => {
+                                try {
+                                    await editItem(item);
+                                } catch (error) {
+                                    Swal.fire({ icon: 'error', title: 'No se pudo abrir la regularización', text: error.message });
+                                }
+                            });
+                            actions.append(edit);
+
+                            const cancel = document.createElement('button');
+                            cancel.type = 'button';
+                            cancel.className = 'btn btn-sm btn-outline-danger';
+                            cancel.innerHTML = '<i class="bi bi-x-circle me-1"></i>Anular';
+                            cancel.addEventListener('click', () => cancelItem(item));
+                            actions.append(cancel);
+                        } else {
+                            actions.textContent = '—';
+                        }
+
+                        row.append(employee, concept, amount, note, status, actions);
+                        rows.append(row);
+                    }
+                }
+                const pageSize = Number(document.getElementById('regularizacionTop').value);
+                const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
+                document.getElementById('regularizacionCount').textContent = `${totalRows} registro(s)`;
+                document.getElementById('regularizacionPageLabel').textContent = `Página ${currentPage} de ${pageCount}`;
+                document.getElementById('regularizacionPrevious').disabled = currentPage <= 1;
+                document.getElementById('regularizacionNext').disabled = currentPage >= pageCount;
+            }
+
+            function resetEditor() {
+                form.reset();
+                document.getElementById('regularizacionId').value = '0';
+                document.getElementById('regularizacionProcessId').value = currentProcess.id;
+                document.getElementById('regularizacionEditorTitle').textContent = 'Nueva regularización';
+                personalSelect.disabled = locked;
+                conceptoSelect.disabled = locked;
+                document.getElementById('personalSearch').disabled = locked;
+                document.getElementById('conceptoSearch').disabled = locked;
+                document.getElementById('regularizacionMonto').disabled = locked;
+                document.getElementById('regularizacionObservacion').disabled = locked;
+                document.getElementById('saveRegularizacionButton').disabled = locked;
+                personalSelect.replaceChildren(new Option('Seleccione un trabajador', ''));
+                conceptoSelect.replaceChildren(new Option('Seleccione un concepto', ''));
+            }
+
+            async function loadOptions(kind, search = '') {
+                if (locked || !currentProcess)
+                    return;
+                const select = kind === 'personal' ? personalSelect : conceptoSelect;
+                const endpoint = kind === 'personal' ? urls.personal : urls.conceptos;
+                const url = new URL(endpoint, window.location.origin);
+                url.searchParams.set('id', currentProcess.id);
+                url.searchParams.set('search', search);
+                url.searchParams.set('top', '25');
+                const payload = await request(url);
+                const currentValue = select.value;
+                select.replaceChildren(new Option(kind === 'personal' ? 'Seleccione un trabajador' : 'Seleccione un concepto', ''));
+                for (const option of payload.data) {
+                    select.add(new Option(option.nombre, option.id));
+                }
+                if (currentValue && [...select.options].some(option => option.value === currentValue))
+                    select.value = currentValue;
+            }
+
+            async function editItem(item) {
+                resetEditor();
+                document.getElementById('regularizacionEditorTitle').textContent = 'Editar regularización';
+                document.getElementById('regularizacionId').value = item.id;
+                await Promise.all([loadOptions('personal'), loadOptions('conceptos')]);
+                const personalLabel = `${item.personalCodigo} - ${item.personalNombre}`;
+                const conceptoLabel = `${item.concepRemuCodigo} - ${item.concepRemuNombre}`;
+                if (![...personalSelect.options].some(option => Number(option.value) === item.personalId))
+                    personalSelect.add(new Option(personalLabel, item.personalId));
+                if (![...conceptoSelect.options].some(option => Number(option.value) === item.concepRemuId))
+                    conceptoSelect.add(new Option(conceptoLabel, item.concepRemuId));
+                personalSelect.value = item.personalId;
+                conceptoSelect.value = item.concepRemuId;
+                personalSelect.disabled = true;
+                conceptoSelect.disabled = true;
+                document.getElementById('personalSearch').disabled = true;
+                document.getElementById('conceptoSearch').disabled = true;
+                document.getElementById('regularizacionMonto').value = item.monto;
+                document.getElementById('regularizacionObservacion').value = item.observacion;
+                document.getElementById('regularizacionEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            async function reloadPage(page) {
+                if (!currentProcess)
+                    return;
+                try {
+                    await loadProcess(currentProcess.id, page);
+                } catch (error) {
+                    Swal.fire({ icon: 'error', title: 'No se pudo actualizar la bandeja', text: error.message });
+                }
+            }
+
+            async function cancelItem(item) {
+                const confirmation = await Swal.fire({
+                    title: '¿Anular regularización?',
+                    text: 'El registro quedará inactivo y no se eliminará del historial.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, anular',
+                    cancelButtonText: 'Cancelar'
+                });
+                if (!confirmation.isConfirmed)
+                    return;
+                try {
+                    const body = new URLSearchParams({ id: item.id, planProceId: currentProcess.id });
+                    const result = await request(urls.anular, { method: 'POST', body });
+                    showToast('success', result.message);
+                    await loadProcess(currentProcess.id, currentPage);
+                } catch (error) {
+                    Swal.fire({ icon: 'error', title: 'No se pudo anular', text: error.message });
+                }
+            }
+
+            async function loadProcess(id, page = 1) {
+                const url = new URL(urls.obtener, window.location.origin);
+                url.searchParams.set('id', id);
+                url.searchParams.set('page', page);
+                url.searchParams.set('top', document.getElementById('regularizacionTop').value);
+                const result = await request(url);
+                currentProcess = result.proceso;
+                currentRows = result.regularizaciones.items;
+                currentPage = result.regularizaciones.page;
+                totalRows = result.regularizaciones.total;
+                locked = currentProcess.estadoPlanProceId === 2;
+                document.getElementById('regularizacionProcessId').value = currentProcess.id;
+                document.getElementById('regularizacionSubtitle').textContent =
+                    `${currentProcess.planillaNombre} — ${currentProcess.mesNombre} ${currentProcess.procAnual} (#${currentProcess.id})`;
+                document.getElementById('regularizacionState').textContent = locked
+                    ? 'El proceso está cerrado; las regularizaciones solo se pueden consultar.'
+                    : 'Agrega conceptos remunerativos autorizados para trabajadores de la empresa.';
+                document.getElementById('newRegularizacionButton').hidden = locked;
+                document.getElementById('regularizacionEditor').hidden = locked;
+                renderRows();
+                if (!locked) {
+                    resetEditor();
+                    await Promise.all([loadOptions('personal'), loadOptions('conceptos')]);
+                }
+            }
+
+            document.querySelectorAll('.js-open-regularizations').forEach(button => {
+                button.addEventListener('click', async () => {
+                    try {
+                        await loadProcess(button.dataset.processId);
+                        modal.show();
+                    } catch (error) {
+                        Swal.fire({ icon: 'error', title: 'No se pudo cargar el proceso', text: error.message });
+                    }
+                });
+            });
+
+            document.getElementById('newRegularizacionButton').addEventListener('click', async () => {
+                try {
+                    resetEditor();
+                    await Promise.all([loadOptions('personal'), loadOptions('conceptos')]);
+                    document.getElementById('regularizacionEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (error) {
+                    Swal.fire({ icon: 'error', title: 'No se pudieron cargar las opciones', text: error.message });
+                }
+            });
+
+            document.getElementById('regularizacionTop').addEventListener('change', async () => {
+                await reloadPage(1);
+            });
+            document.getElementById('regularizacionPrevious').addEventListener('click', async () => {
+                if (currentProcess && currentPage > 1)
+                    await reloadPage(currentPage - 1);
+            });
+            document.getElementById('regularizacionNext').addEventListener('click', async () => {
+                const pageCount = Math.max(1, Math.ceil(totalRows / Number(document.getElementById('regularizacionTop').value)));
+                if (currentProcess && currentPage < pageCount)
+                    await reloadPage(currentPage + 1);
+            });
+
+            document.getElementById('personalSearch').addEventListener('input', () => {
+                clearTimeout(personalTimer);
+                personalTimer = setTimeout(async () => {
+                    try {
+                        await loadOptions('personal', document.getElementById('personalSearch').value);
+                    } catch (error) {
+                        Swal.fire({ icon: 'error', title: 'No se pudo buscar personal', text: error.message });
+                    }
+                }, 250);
+            });
+            document.getElementById('conceptoSearch').addEventListener('input', () => {
+                clearTimeout(conceptoTimer);
+                conceptoTimer = setTimeout(async () => {
+                    try {
+                        await loadOptions('conceptos', document.getElementById('conceptoSearch').value);
+                    } catch (error) {
+                        Swal.fire({ icon: 'error', title: 'No se pudo buscar conceptos', text: error.message });
+                    }
+                }, 250);
+            });
+
+            form.addEventListener('submit', async event => {
+                event.preventDefault();
+                if (!form.reportValidity())
+                    return;
+
+                const payload = {
+                    id: Number(document.getElementById('regularizacionId').value),
+                    planProceId: currentProcess.id,
+                    personalId: Number(personalSelect.value),
+                    concepRemuId: Number(conceptoSelect.value),
+                    monto: Number(document.getElementById('regularizacionMonto').value),
+                    observacion: document.getElementById('regularizacionObservacion').value.trim()
+                };
+                try {
+                    const result = await request(urls.guardar, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    showToast('success', result.message);
+                    await loadProcess(currentProcess.id, currentPage);
+                } catch (error) {
+                    Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: error.message });
+                }
+            });
+        })();
+    </script>
+}

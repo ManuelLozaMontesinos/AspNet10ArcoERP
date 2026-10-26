@@ -188,6 +188,8 @@ namespace AspNet10ArcoERP.Models
         public int TipoDocIdentidadId { get; set; } = 1;
         public string TipoDocIdentidadNombre { get; set; } = "DNI";
         public string NumDocIdentidad { get; set; } = string.Empty;
+        public int? PaisEmisorId { get; set; }
+        public string PaisEmisorNombre { get; set; } = string.Empty;
         public DateTime FechaNacimiento { get; set; } = DateTime.Today;
         public int SexoId { get; set; } = 1;
         public string SexoNombre { get; set; } = "M";
@@ -518,6 +520,83 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
     }
 
+    public class PlanillaRegularizacionModel
+    {
+        public int Id { get; set; }
+        public int PlanProceId { get; set; }
+        public int PersonalId { get; set; }
+        public string PersonalCodigo { get; set; } = string.Empty;
+        public string PersonalNombre { get; set; } = string.Empty;
+        public int ConcepRemuId { get; set; }
+        public string ConcepRemuCodigo { get; set; } = string.Empty;
+        public string ConcepRemuNombre { get; set; } = string.Empty;
+        public decimal CantidadHora { get; set; }
+        public decimal Monto { get; set; }
+        public string Observacion { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+    }
+
+    public class PlanillaRegularizacionPageModel
+    {
+        public List<PlanillaRegularizacionModel> Items { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+    }
+
+    public class PlanillaRegularizacionGuardarModel
+    {
+        public int Id { get; set; }
+        public int PlanProceId { get; set; }
+        public int PersonalId { get; set; }
+        public int ConcepRemuId { get; set; }
+        public decimal Monto { get; set; }
+        public string Observacion { get; set; } = string.Empty;
+    }
+
+    public class EstadoAprobacionModel
+    {
+        public int Id { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+    }
+
+    public class SolicitudAccesoModel
+    {
+        public int Id { get; set; }
+        public int PersonalId { get; set; }
+        public string PersonalCodigo { get; set; } = string.Empty;
+        public string PersonalNombre { get; set; } = string.Empty;
+        public DateTime Fecha { get; set; }
+        public DateTime FechaRegistro { get; set; }
+        public string HoraSolicitada { get; set; } = string.Empty;
+        public int? PersonalAutorizaId { get; set; }
+        public string PersonalAutorizaNombre { get; set; } = string.Empty;
+        public string HoraAutorizada { get; set; } = string.Empty;
+        public DateTime? FechaAutoriza { get; set; }
+        public int EstadoAprobacionId { get; set; }
+        public string EstadoAprobacionCodigo { get; set; } = string.Empty;
+        public string EstadoAprobacionNombre { get; set; } = string.Empty;
+    }
+
+    public class SolicitudAccesoPageModel
+    {
+        public List<SolicitudAccesoModel> Items { get; set; } = new();
+        public List<EstadoAprobacionModel> Estados { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int? EstadoSeleccionadoId { get; set; }
+        public DateTime? FechaDesde { get; set; }
+        public DateTime? FechaHasta { get; set; }
+    }
+
+    public class ResolverSolicitudAccesoModel
+    {
+        public int Id { get; set; }
+        public string HoraAutorizada { get; set; } = string.Empty;
+    }
+
     public class PlanillaProcesoCrearModel
     {
         public int Id { get; set; }
@@ -530,6 +609,41 @@ namespace AspNet10ArcoERP.Models
         public DateTime FechaDesde { get; set; }
         public DateTime FechaHasta { get; set; }
         public string Estado { get; set; } = "A";
+    }
+
+    public class PlanillaHorasPageModel
+    {
+        public List<PlanillaProcesoModel> Procesos { get; set; } = new();
+        public PlanillaHorasModel? Detalle { get; set; }
+        public int? ProcesoSeleccionadoId { get; set; }
+    }
+
+    public class PlanillaHorasModel
+    {
+        public PlanillaProcesoModel Proceso { get; set; } = new();
+        public List<LookupItemModel> Horas { get; set; } = new();
+        public List<PlanillaHorasEmpleadoModel> Empleados { get; set; } = new();
+    }
+
+    public class PlanillaHorasEmpleadoModel
+    {
+        public int PersonalId { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+        public List<PlanillaHoraCantidadModel> Cantidades { get; set; } = new();
+    }
+
+    public class PlanillaHoraCantidadModel
+    {
+        public int HoraRemId { get; set; }
+        public decimal Cantidad { get; set; }
+    }
+
+    public class PlanillaHorasGuardarModel
+    {
+        public int ProcesoId { get; set; }
+        public List<PlanillaHorasEmpleadoModel> Empleados { get; set; } = new();
     }
 
     // =========================================================================
@@ -572,5 +686,3 @@ namespace AspNet10ArcoERP.Models
         public decimal Monto { get; set; }
     }
 }
-
-

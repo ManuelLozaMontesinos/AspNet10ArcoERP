@@ -6,6 +6,7 @@
     var sexosLookup = ViewBag.SexosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var estadosCivilesLookup = ViewBag.EstadosCivilesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var paisesLookup = ViewBag.PaisesLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    var paisesEmisoresLookup = ViewBag.PaisesEmisoresLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var departamentosLookup = ViewBag.DepartamentosLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var tiposViaLookup = ViewBag.TiposViaLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
     var tiposZonaLookup = ViewBag.TiposZonaLookup as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
@@ -533,6 +534,19 @@
                                 <div class="col-md-3">
                                     <label class="form-label small fw-semibold">Fecha Nacimiento <span class="text-danger">*</span></label>
                                     <input type="date" class="form-control form-control-sm" id="pers-fecha-nac" name="FechaNacimiento" required />
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">País emisor del documento</label>
+                                    <select class="form-select form-select-sm" id="pers-pais-emisor-id" name="PaisEmisorId">
+                                        <option value="">Seleccione un país</option>
+                                        @foreach (var pais in paisesEmisoresLookup)
+                                        {
+                                            <option value="@pais.Id">@pais.Nombre (@pais.Codigo)</option>
+                                        }
+                                    </select>
                                 </div>
                             </div>
 
@@ -1091,8 +1105,9 @@
                 <h6 class="modal-title fw-bold mb-0">Agregar Derechohabiente</h6>
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
-            <form onsubmit="guardarDependienteRapido(event);">
+            <form id="form-dependiente" onsubmit="guardarDependienteRapido(event);">
                 <div class="modal-body p-3">
+                    <input type="hidden" id="modal-dep-id" value="0" />
                     <div class="row g-2 mb-2">
                         <div class="col-6">
                             <label class="form-label small fw-semibold">Tipo Documento</label>
@@ -1107,6 +1122,16 @@
                             <label class="form-label small fw-semibold"># Documento</label>
                             <input type="text" class="form-control form-control-sm" id="modal-dep-num-doc" required maxlength="15" />
                         </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">País emisor del documento</label>
+                        <select class="form-select form-select-sm" id="modal-dep-pais-emisor-id">
+                            <option value="">Seleccione un país</option>
+                            @foreach (var pais in paisesEmisoresLookup)
+                            {
+                                <option value="@pais.Id">@pais.Nombre (@pais.Codigo)</option>
+                            }
+                        </select>
                     </div>
                     <div class="row g-2 mb-2">
                         <div class="col-6">
@@ -1298,6 +1323,7 @@
                     $('#pers-sexo-id').val(d.sexoId);
                     $('#pers-estado-civil').val(d.estadoCivilId);
                     $('#pers-pais-id').val(d.paisId || 1);
+                    $('#pers-pais-emisor-id').val(d.paisEmisorId || '');
                     $('#pers-telefono').val(d.telefono);
                     $('#pers-email').val(d.email);
 
@@ -1580,11 +1606,14 @@
     // ========================================================
     // GESTIÓN DE DERECHOHABIENTES (PESTAÑA 6)
     // ========================================================
+    var dependientesActuales = [];
+
     function cargarDependientes(personalId) {
         $.get('@Url.Action("Dependientes", "Personal", new { area = "RH" })', { personalId: personalId }, function (res) {
             var $tbody = $('#tbody-dependientes');
             $tbody.empty();
             if (res && res.success && res.data && res.data.length > 0) {
+                dependientesActuales = res.data;
                 $.each(res.data, function (i, d) {
                     $tbody.append(
                         '<tr>' +
@@ -1593,20 +1622,47 @@
                             '<td><span class="badge bg-info-subtle text-info border">' + d.vinculoFamiliarNombre + '</span></td>' +
                             '<td class="text-center">' + (d.fechaNacimiento ? d.fechaNacimiento.substring(0, 10) : '-') + '</td>' +
                             '<td class="text-end pe-2">' +
+                                '<button type="button" class="btn btn-outline-primary btn-xs py-0 px-1 me-1" onclick="editarDependiente(' + d.id + ');"><i class="bi bi-pencil-square"></i></button>' +
                                 '<button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" onclick="eliminarDependiente(' + d.id + ', ' + personalId + ');"><i class="bi bi-trash"></i></button>' +
                             '</td>' +
                         '</tr>'
                     );
                 });
             } else {
+                dependientesActuales = [];
                 $tbody.append('<tr><td colspan="5" class="text-center text-muted py-2">Sin familiares registrados.</td></tr>');
             }
         });
     }
 
     function abrirModalNuevoDep() {
+        $('#form-dependiente')[0].reset();
+        $('#modal-dep-id').val(0);
+        $('#modal-nuevo-dep .modal-title').text('Agregar Derechohabiente');
+        $('#form-dependiente button[type="submit"]').text('Guardar Familiar');
         var modal = new bootstrap.Modal(document.getElementById('modal-nuevo-dep'));
         modal.show();
+    }
+
+    function editarDependiente(id) {
+        var dependiente = dependientesActuales.find(function (item) { return item.id === id; });
+        if (!dependiente) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se encontró el derechohabiente seleccionado.' });
+            return;
+        }
+
+        $('#modal-dep-id').val(dependiente.id);
+        $('#modal-dep-tipo-doc').val(dependiente.tipoDocIdentidadId);
+        $('#modal-dep-num-doc').val(dependiente.numDocIdentidad);
+        $('#modal-dep-pais-emisor-id').val(dependiente.paisEmisorId || '');
+        $('#modal-dep-ape-pat').val(dependiente.apellidoPaterno);
+        $('#modal-dep-ape-mat').val(dependiente.apellidoMaterno);
+        $('#modal-dep-nombres').val(dependiente.nombres);
+        $('#modal-dep-vinculo-id').val(dependiente.vinculoFamiliarId);
+        $('#modal-dep-fecha-nac').val(dependiente.fechaNacimiento ? dependiente.fechaNacimiento.substring(0, 10) : '');
+        $('#modal-nuevo-dep .modal-title').text('Editar Derechohabiente');
+        $('#form-dependiente button[type="submit"]').text('Guardar cambios');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-nuevo-dep')).show();
     }
 
     function guardarDependienteRapido(e) {
@@ -1621,9 +1677,11 @@
         var fechaNac = $('#modal-dep-fecha-nac').val();
 
         $.post('@Url.Action("GuardarDependiente", "Personal", new { area = "RH" })', {
+            Id: $('#modal-dep-id').val(),
             PersonalId: personalId,
             TipoDocIdentidadId: tipoDoc,
             NumDocIdentidad: numDoc,
+            PaisEmisorId: $('#modal-dep-pais-emisor-id').val(),
             ApellidoPaterno: apePat,
             ApellidoMaterno: apeMat,
             Nombres: nombres,

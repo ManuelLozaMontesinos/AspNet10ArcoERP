@@ -50,6 +50,7 @@ namespace AspNet10ArcoERP.Areas.RH.Controllers
             ViewBag.SexosLookup = await _rhService.GetSexosLookupAsync();
             ViewBag.EstadosCivilesLookup = await _rhService.GetEstadosCivilesLookupAsync();
             ViewBag.PaisesLookup = await _rhService.GetPaisesLookupAsync();
+            ViewBag.PaisesEmisoresLookup = await _rhService.GetPaisesEmisoresLookupAsync();
             ViewBag.DepartamentosLookup = await _rhService.GetDepartamentosLookupAsync();
             ViewBag.TiposViaLookup = await _rhService.GetTiposViaLookupAsync();
             ViewBag.TiposZonaLookup = await _rhService.GetTiposZonaLookupAsync();

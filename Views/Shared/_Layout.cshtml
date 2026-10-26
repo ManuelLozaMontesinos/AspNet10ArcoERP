@@ -186,6 +186,26 @@
 
                         <li class="nav-header text-uppercase text-muted fw-bold small px-3 mt-3 mb-1">MÓDULOS DEL SISTEMA</li>
 
+                        <!-- Administración del sistema -->
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "AS" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "AS" ? "active" : "")">
+                                <i class="nav-icon bi bi-sliders2-vertical text-info"></i>
+                                <p>
+                                    Administración
+                                    <i class="nav-arrow bi bi-chevron-right"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview ps-2">
+                                <li class="nav-item">
+                                    <a asp-area="AS" asp-controller="Periodo" asp-action="Index"
+                                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Periodo" ? "active" : "")">
+                                        <i class="nav-icon bi bi-calendar3"></i>
+                                        <p>Períodos contables</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
                         <!-- MENÚ MAESTROS (Mantenimientos Generales) -->
                         <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "MG" ? "menu-open" : "")">
                             <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "MG" ? "active" : "")">
@@ -300,6 +320,78 @@
                             </ul>
                         </li>
 
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "TS" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "TS" ? "active" : "")">
+                                <i class="nav-icon bi bi-bank text-success"></i>
+                                <p>
+                                    Tesorería
+                                    <i class="nav-arrow bi bi-chevron-right"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview ps-2">
+                                <li class="nav-item">
+                                    <a asp-area="TS" asp-controller="CuentaBanco" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CuentaBanco" ? "active" : "")">
+                                        <i class="nav-icon bi bi-credit-card-2-front"></i>
+                                        <p>Cuentas bancarias</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "MK" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "MK" ? "active" : "")">
+                                <i class="nav-icon bi bi-megaphone-fill text-warning"></i>
+                                <p>
+                                    Marketing
+                                    <i class="nav-arrow bi bi-chevron-right"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview ps-2">
+                                <li class="nav-item">
+                                    <a asp-area="MK" asp-controller="LeadSource" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "LeadSource" ? "active" : "")">
+                                        <i class="nav-icon bi bi-diagram-3"></i>
+                                        <p>Origen de prospectos</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a asp-area="MK" asp-controller="TipoProfesion" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "TipoProfesion" ? "active" : "")">
+                                        <i class="nav-icon bi bi-person-workspace"></i>
+                                        <p>Tipos de profesión</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a asp-area="MK" asp-controller="Oportunidad" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Oportunidad" ? "active" : "")">
+                                        <i class="nav-icon bi bi-bullseye"></i>
+                                        <p>Oportunidades de venta</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a asp-area="MK" asp-controller="TipoVentaCliente" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "TipoVentaCliente" ? "active" : "")">
+                                        <i class="nav-icon bi bi-tags"></i>
+                                        <p>Tipos de venta</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a asp-area="MK" asp-controller="Prospecto" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Prospecto" ? "active" : "")">
+                                        <i class="nav-icon bi bi-person-lines-fill"></i>
+                                        <p>Prospectos</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a asp-area="MK" asp-controller="Cliente" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Cliente" ? "active" : "")">
+                                        <i class="nav-icon bi bi-person-check-fill"></i>
+                                        <p>Clientes</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a asp-area="MK" asp-controller="Merchandising" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Merchandising" ? "active" : "")">
+                                        <i class="nav-icon bi bi-box-seam"></i>
+                                        <p>Merchandising</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
                         <!-- MENÚ CAPITAL HUMANO (Recursos Humanos) -->
                         <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" ? "menu-open" : "")">
                             <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" ? "active" : "")">
@@ -384,7 +476,7 @@
                                 </li>
 
                                 <!-- Submenú 2: Procesos -->
-                                <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" && new[] { "Marcacion", "PlanillaProceso", "Prestamo", "RegVacacion", "AccesoExt" }.Contains(ViewContext.RouteData.Values["controller"]?.ToString()) ? "menu-open" : "")">
+                                <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "RH" && new[] { "Marcacion", "PlanillaProceso", "PlanillaHora", "PlanillaRegula", "Prestamo", "RegVacacion", "AccesoExt" }.Contains(ViewContext.RouteData.Values["controller"]?.ToString()) ? "menu-open" : "")">
                                     <a href="#" class="nav-link">
                                         <i class="nav-icon bi bi-gear-fill text-success"></i>
                                         <p>
@@ -415,6 +507,24 @@
                                             <a asp-area="RH" asp-controller="PlanillaProceso" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "PlanillaProceso" ? "active" : "")">
                                                 <i class="nav-icon bi bi-cpu"></i>
                                                 <p>Proceso de Planilla</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="PlanillaHora" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "PlanillaHora" ? "active" : "")">
+                                                <i class="nav-icon bi bi-hourglass-split"></i>
+                                                <p>Horas de Planilla</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="PlanillaRegula" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "PlanillaRegula" ? "active" : "")">
+                                                <i class="nav-icon bi bi-clipboard2-plus"></i>
+                                                <p>Regularizaciones de Planilla</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="AccesoExt" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AccesoExt" ? "active" : "")">
+                                                <i class="nav-icon bi bi-person-check"></i>
+                                                <p>Aprobación de Accesos</p>
                                             </a>
                                         </li>
                                     </ul>

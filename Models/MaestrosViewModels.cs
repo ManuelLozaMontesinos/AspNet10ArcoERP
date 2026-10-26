@@ -10,6 +10,20 @@ namespace AspNet10ArcoERP.Models
         public string Nombre { get; set; } = string.Empty;
     }
 
+    public class CuentaBancoModel
+    {
+        public int Id { get; set; }
+        public int EmpresaId { get; set; }
+        public int BancoId { get; set; }
+        public string BancoNombre { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public int MonedaId { get; set; }
+        public string MonedaNombre { get; set; } = string.Empty;
+        public string Cuenta { get; set; } = string.Empty;
+        public string CuentaInterbancaria { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+    }
+
     public class UbigeoLookupModel
     {
         public int Id { get; set; }
@@ -90,6 +104,12 @@ namespace AspNet10ArcoERP.Models
         public string TipoProveedorNombre { get; set; } = string.Empty;
         public int? CondicionPagoId { get; set; } = 1; // 1 = Contado
         public string CondicionPagoNombre { get; set; } = string.Empty;
+        public int? TipoProfesionId { get; set; }
+        public string TipoProfesionNombre { get; set; } = string.Empty;
+        public int? TipoVentaClienteId { get; set; }
+        public string TipoVentaClienteNombre { get; set; } = string.Empty;
+        public int? LeadSourceId { get; set; }
+        public string LeadSourceNombre { get; set; } = string.Empty;
 
         public string EsLocal { get; set; } = "S";
         public string EsProspecto { get; set; } = "N";

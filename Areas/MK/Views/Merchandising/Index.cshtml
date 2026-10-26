@@ -1,0 +1,285 @@
+@model AspNet10ArcoERP.Models.MerchandisingMovementPageModel
+@{
+    ViewData["Title"] = "Merchandising";
+    var pageCount = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-1"><i class="bi bi-box-seam me-2 text-primary"></i>Merchandising</h3>
+                <small class="text-muted">Consulta movimientos y productos del almacén de Marketing.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4">
+    <div class="container-fluid">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-warning" role="alert">@ViewData.ModelState[string.Empty]?.Errors.FirstOrDefault()?.ErrorMessage</div>
+        }
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-header bg-body-tertiary py-3">
+                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
+                    <div style="min-width:320px;max-width:440px;flex:1 1 320px">
+                        <label for="search" class="form-label small fw-semibold">Buscar movimiento</label>
+                        <input id="search" name="search" value="@Model.Search" class="form-control"
+                               placeholder="Código, razón social o RUC..." />
+                    </div>
+                    <div>
+                        <label for="transaccionId" class="form-label small fw-semibold">Transacción</label>
+                        <select id="transaccionId" name="transaccionId" class="form-select">
+                            <option value="">Todas</option>
+                            @foreach (var item in Model.Transacciones)
+                            {
+                                <option value="@item.Id" selected="@(Model.TransaccionId == item.Id)">@item.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="desde" class="form-label small fw-semibold">Desde</label>
+                        <input id="desde" name="desde" type="date" value="@Model.Desde?.ToString("yyyy-MM-dd")" class="form-control" />
+                    </div>
+                    <div>
+                        <label for="hasta" class="form-label small fw-semibold">Hasta</label>
+                        <input id="hasta" name="hasta" type="date" value="@Model.Hasta?.ToString("yyyy-MM-dd")" class="form-control" />
+                    </div>
+                    <div>
+                        <label for="top" class="form-label small fw-semibold">Mostrando</label>
+                        <select id="top" name="top" class="form-select">
+                            @foreach (var size in new[] { 25, 50, 100, 500 })
+                            {
+                                <option value="@size" selected="@(Model.PageSize == size)">@size</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
+                    <a asp-area="MK" asp-controller="Merchandising" asp-action="Index"
+                       class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                        @Model.Total movimiento(s)
+                    </span>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
+                    <thead class="bg-body-tertiary">
+                        <tr>
+                            <th style="width:150px">Operación</th>
+                            <th style="width:120px">Fecha</th>
+                            <th>Transacción</th>
+                            <th>Origen</th>
+                            <th>Tercero</th>
+                            <th>Observación</th>
+                            <th style="width:150px">Estado</th>
+                            <th class="text-end" style="width:90px">Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-muted py-4">No se encontraron movimientos de Merchandising.</td></tr>
+                        }
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr class="@(item.Estado == "I" ? "text-body-secondary" : "")">
+                                <td><span class="badge bg-secondary-subtle text-body border font-monospace">@item.Codigo</span></td>
+                                <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <div class="fw-semibold">@item.Transaccion</div>
+                                    <small class="text-muted">@item.TipoMovimiento</small>
+                                </td>
+                                <td>@item.Origen</td>
+                                <td>
+                                    <div>@item.Tercero</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.Ruc))
+                                    {
+                                        <small class="text-muted">RUC: @item.Ruc</small>
+                                    }
+                                </td>
+                                <td class="text-truncate" style="max-width:240px" title="@item.Observacion">@item.Observacion</td>
+                                <td>
+                                    <span class="badge @(item.Estado == "A" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-body-secondary border")">
+                                        @item.EstadoMovimiento
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-detail" data-id="@item.Id"
+                                            title="Ver productos"><i class="bi bi-list-ul"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span class="small text-muted">Página @Model.Page de @pageCount · @Model.Total movimiento(s)</span>
+                <div class="btn-group btn-group-sm">
+                    @if (Model.Page > 1)
+                    {
+                        <a class="btn btn-outline-secondary" asp-area="MK" asp-controller="Merchandising" asp-action="Index"
+                           asp-route-search="@Model.Search" asp-route-transaccionId="@Model.TransaccionId"
+                           asp-route-desde="@Model.Desde?.ToString("yyyy-MM-dd")" asp-route-hasta="@Model.Hasta?.ToString("yyyy-MM-dd")"
+                           asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page - 1)">
+                            <i class="bi bi-chevron-left me-1"></i>Anterior
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary" disabled><i class="bi bi-chevron-left me-1"></i>Anterior</button>
+                    }
+                    @if (Model.Page < pageCount)
+                    {
+                        <a class="btn btn-outline-secondary" asp-area="MK" asp-controller="Merchandising" asp-action="Index"
+                           asp-route-search="@Model.Search" asp-route-transaccionId="@Model.TransaccionId"
+                           asp-route-desde="@Model.Desde?.ToString("yyyy-MM-dd")" asp-route-hasta="@Model.Hasta?.ToString("yyyy-MM-dd")"
+                           asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page + 1)">
+                            Siguiente<i class="bi bi-chevron-right ms-1"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary" disabled>Siguiente<i class="bi bi-chevron-right ms-1"></i></button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-crud-merchandising" tabindex="-1" aria-labelledby="merchandisingModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <div>
+                    <h5 class="modal-title" id="merchandisingModalTitle">Detalle del movimiento</h5>
+                    <small class="text-muted" id="merchandisingModalSubtitle"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="merchandisingHeader" class="row g-3 mb-4"></div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="mb-0 fw-semibold">Productos</h6>
+                    <span id="merchandisingLineCount" class="badge bg-secondary-subtle text-body border"></span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="bg-body-tertiary">
+                            <tr><th>Código</th><th>Producto</th><th>U.M.</th><th class="text-end">Cantidad</th><th class="text-end">Valor unitario</th><th class="text-end">Total</th></tr>
+                        </thead>
+                        <tbody id="merchandisingLines"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #modal-crud-merchandising .modal-content {
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    #modal-crud-merchandising .modal-body {
+        max-height: calc(90vh - 135px) !important;
+        overflow-y: auto !important;
+        flex: 1 1 auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
+        scroll-behavior: smooth;
+    }
+    #modal-crud-merchandising .modal-body::-webkit-scrollbar { width: 7px; }
+    #modal-crud-merchandising .modal-body::-webkit-scrollbar-track { background: transparent; }
+    #modal-crud-merchandising .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
+    #modal-crud-merchandising .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
+</style>
+
+@section Scripts {
+    <script>
+        const merchandisingModal = new bootstrap.Modal(document.getElementById('modal-crud-merchandising'));
+        const detailUrl = '@Url.Action("Detalle", "Merchandising", new { area = "MK" })';
+        const moneyFormat = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
+
+        function addInfo(label, value) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'col-md-4';
+            const card = document.createElement('div');
+            card.className = 'border rounded-3 p-3 h-100';
+            const title = document.createElement('div');
+            title.className = 'small text-muted mb-1';
+            title.textContent = label;
+            const content = document.createElement('div');
+            content.className = 'fw-semibold text-break';
+            content.textContent = value || '—';
+            card.append(title, content);
+            wrapper.append(card);
+            document.getElementById('merchandisingHeader').append(wrapper);
+        }
+
+        document.querySelectorAll('.js-detail').forEach(button => {
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                try {
+                    const response = await fetch(`${detailUrl}?id=${encodeURIComponent(button.dataset.id)}`);
+                    const result = await response.json();
+                    if (!response.ok || !result.success)
+                        throw new Error(result.message || 'No fue posible consultar el movimiento.');
+
+                    const movement = result.data.movimiento;
+                    const lines = result.data.detalle || [];
+                    document.getElementById('merchandisingModalTitle').textContent = `Movimiento ${movement.codigo}`;
+                    document.getElementById('merchandisingModalSubtitle').textContent =
+                        `${new Date(movement.fecha).toLocaleDateString('es-PE')} · ${movement.transaccion}`;
+                    const header = document.getElementById('merchandisingHeader');
+                    const lineBody = document.getElementById('merchandisingLines');
+                    header.replaceChildren();
+                    lineBody.replaceChildren();
+                    addInfo('Tipo', movement.tipoMovimiento);
+                    addInfo('Almacén de origen', movement.origen);
+                    addInfo('Cliente / proveedor', movement.tercero);
+                    addInfo('RUC', movement.ruc);
+                    addInfo('Estado', movement.estadoMovimiento);
+                    addInfo('Usuario', movement.usuario);
+                    addInfo('Observación', movement.observacion);
+                    document.getElementById('merchandisingLineCount').textContent = `${lines.length} producto(s)`;
+
+                    if (lines.length === 0) {
+                        const row = document.createElement('tr');
+                        const cell = document.createElement('td');
+                        cell.colSpan = 6;
+                        cell.className = 'text-center text-muted py-4';
+                        cell.textContent = 'El movimiento no tiene productos activos.';
+                        row.append(cell);
+                        lineBody.append(row);
+                    } else {
+                        lines.forEach(line => {
+                            const row = document.createElement('tr');
+                            [line.codigoProducto, line.producto, line.unidadMedida, Number(line.cantidad).toLocaleString('es-PE'), moneyFormat.format(line.valorUnitario), moneyFormat.format(line.total)]
+                                .forEach((value, index) => {
+                                    const cell = document.createElement('td');
+                                    cell.textContent = value ?? '';
+                                    if (index > 2) cell.className = 'text-end';
+                                    row.append(cell);
+                                });
+                            lineBody.append(row);
+                        });
+                    }
+                    merchandisingModal.show();
+                } catch (error) {
+                    await Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+    </script>
+}

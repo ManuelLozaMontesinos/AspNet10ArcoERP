@@ -40,6 +40,7 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
         {
             var list = await _maestrosService.GetProveedoresAsync(search, tipo, estado, naturaleza, sort, dir, top, CurrentEmpresaId);
 
+            ViewBag.EsProspecto = "N";
             ViewBag.Search = search;
             ViewBag.Tipo = tipo;
             ViewBag.Estado = estado;
@@ -53,6 +54,8 @@ namespace AspNet10ArcoERP.Areas.MG.Controllers
             ViewBag.TiposZona = await _maestrosService.GetTiposZonaLookupAsync();
             ViewBag.TiposProveedor = await _maestrosService.GetTiposProveedorLookupAsync();
             ViewBag.CondicionesPago = await _maestrosService.GetCondicionesPagoLookupAsync(CurrentEmpresaId);
+            ViewBag.TiposProfesion = await _maestrosService.GetTiposProfesionLookupAsync();
+            ViewBag.TiposVentaCliente = await _maestrosService.GetTiposVentaClienteLookupAsync();
             ViewBag.Departamentos = await _maestrosService.GetDepartamentosLookupAsync();
 
             return View(list);

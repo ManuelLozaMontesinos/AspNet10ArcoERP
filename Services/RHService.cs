@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AspNet10ArcoERP.Models;
@@ -11,6 +12,22 @@ namespace AspNet10ArcoERP.Services
     public class RHService : IRHService
     {
         private readonly IDbConnectionFactory _dbConnectionFactory;
+
+        private sealed class PlanillaHorasEmpleadoRow
+        {
+            public int PersonalId { get; set; }
+            public string Codigo { get; set; } = string.Empty;
+            public string Nombre { get; set; } = string.Empty;
+            public string Estado { get; set; } = "A";
+        }
+
+        private sealed class PlanillaHorasValorRow
+        {
+            public int PersonalId { get; set; }
+            public int HoraRemId { get; set; }
+            public decimal Cantidad { get; set; }
+            public string Estado { get; set; } = "A";
+        }
 
         public RHService(IDbConnectionFactory dbConnectionFactory)
         {
@@ -861,6 +878,8 @@ namespace AspNet10ArcoERP.Services
                     pd.tipo_doc_iden_id AS TipoDocIdentidadId,
                     ISNULL(tdi.abrev, 'DNI') AS TipoDocIdentidadNombre,
                     ISNULL(pd.num_doc_iden, '') AS NumDocIdentidad,
+                    pd.pais_emisor_id AS PaisEmisorId,
+                    ISNULL(pe.nombre, '') AS PaisEmisorNombre,
                     pd.fecha_nac AS FechaNacimiento,
                     pd.sexo_id AS SexoId,
                     ISNULL(s.nombre, 'M') AS SexoNombre,
@@ -871,6 +890,7 @@ namespace AspNet10ArcoERP.Services
                     pd.estado AS Estado
                 FROM personal_depen pd
                 LEFT JOIN tipo_doc_iden tdi ON tdi.tipo_doc_iden_id = pd.tipo_doc_iden_id
+                LEFT JOIN pais_emisor pe ON pe.pais_emisor_id = pd.pais_emisor_id
                 LEFT JOIN sexo s ON s.sexo_id = pd.sexo_id
                 LEFT JOIN vincu_fami vf ON vf.vincu_fami_id = pd.vincu_fami_id
                 WHERE pd.personal_id = @PersonalId AND pd.estado = 'A'
@@ -889,7 +909,7 @@ namespace AspNet10ArcoERP.Services
                 p.Add("@personalId", model.PersonalId);
                 p.Add("@tipoDocumentoIdentidadId", model.TipoDocIdentidadId > 0 ? model.TipoDocIdentidadId : 1);
                 p.Add("@numeroDocumentoIdentidad", (model.NumDocIdentidad ?? "").Trim());
-                p.Add("@paisEmisorId", null);
+                p.Add("@paisEmisorId", model.PaisEmisorId);
                 p.Add("@apellidoPaterno", (model.ApellidoPaterno ?? "").Trim().ToUpper());
                 p.Add("@apellidoMaterno", (model.ApellidoMaterno ?? "").Trim().ToUpper());
                 p.Add("@nombres", (model.Nombres ?? "").Trim().ToUpper());
@@ -927,6 +947,7 @@ namespace AspNet10ArcoERP.Services
                     UPDATE personal_depen
                     SET tipo_doc_iden_id = @TipoDocId,
                         num_doc_iden = @NumDoc,
+                        pais_emisor_id = @PaisEmisorId,
                         apellido_pat = @ApePat,
                         apellido_mat = @ApeMat,
                         nombres = @Nombres,
@@ -940,6 +961,7 @@ namespace AspNet10ArcoERP.Services
                     Id = model.Id,
                     TipoDocId = model.TipoDocIdentidadId > 0 ? model.TipoDocIdentidadId : 1,
                     NumDoc = (model.NumDocIdentidad ?? "").Trim(),
+                    PaisEmisorId = model.PaisEmisorId,
                     ApePat = (model.ApellidoPaterno ?? "").Trim().ToUpper(),
                     ApeMat = (model.ApellidoMaterno ?? "").Trim().ToUpper(),
                     Nombres = (model.Nombres ?? "").Trim().ToUpper(),
@@ -1041,6 +1063,14 @@ namespace AspNet10ArcoERP.Services
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             const string sql = "SELECT pais_id AS Id, '' AS Codigo, nombre AS Nombre FROM pais WHERE estado = 'A' ORDER BY nombre ASC";
+            var rows = await conn.QueryAsync<LookupItemModel>(sql);
+            return rows.ToList();
+        }
+
+        public async Task<List<LookupItemModel>> GetPaisesEmisoresLookupAsync()
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = "SELECT pais_emisor_id AS Id, RTRIM(pais_emisor) AS Codigo, nombre AS Nombre FROM pais_emisor WHERE estado = 'A' ORDER BY nombre ASC";
             var rows = await conn.QueryAsync<LookupItemModel>(sql);
             return rows.ToList();
         }
@@ -3546,6 +3576,915 @@ namespace AspNet10ArcoERP.Services
             }
         }
 
+        public async Task<PlanillaHorasModel?> GetPlanillaHorasAsync(int planProceId, int empresaId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string processSql = @"
+                SELECT pp.plan_proce_id AS Id,
+                       pp.periodo_emp_sede_id AS PeriodoEmpSedeId,
+                       pp.planilla_id AS PlanillaId,
+                       pla.nombre AS PlanillaNombre,
+                       pp.proc_anual AS ProcAnual,
+                       pp.mes_id AS MesId,
+                       CASE pp.mes_id
+                           WHEN 1 THEN 'ENERO' WHEN 2 THEN 'FEBRERO' WHEN 3 THEN 'MARZO' WHEN 4 THEN 'ABRIL'
+                           WHEN 5 THEN 'MAYO' WHEN 6 THEN 'JUNIO' WHEN 7 THEN 'JULIO' WHEN 8 THEN 'AGOSTO'
+                           WHEN 9 THEN 'SETIEMBRE' WHEN 10 THEN 'OCTUBRE' WHEN 11 THEN 'NOVIEMBRE' WHEN 12 THEN 'DICIEMBRE'
+                           ELSE '' END AS MesNombre,
+                       pp.moneda_id AS MonedaId, ISNULL(m.nombre, '') AS MonedaNombre,
+                       pp.monto_tc AS MontoTipoCambio, pp.peri_remu_id AS PeriRemuId,
+                       pp.fecha_desde AS FechaDesde, pp.fecha_hasta AS FechaHasta,
+                       pp.estado_plan_pro_id AS EstadoPlanProceId,
+                       CASE WHEN pp.estado_plan_pro_id = 2 THEN 'CERRADO' ELSE 'ABIERTO' END AS EstadoPlanProceNombre,
+                       pp.estado AS Estado
+                FROM plan_proce pp
+                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                LEFT JOIN moneda m ON m.moneda_id = pp.moneda_id
+                WHERE pp.plan_proce_id = @PlanProceId AND pla.empresa_id = @EmpresaId";
+            var proceso = await conn.QueryFirstOrDefaultAsync<PlanillaProcesoModel>(
+                processSql,
+                new { PlanProceId = planProceId, EmpresaId = empresaId });
+            if (proceso == null)
+                return null;
+
+            const string horasSql = @"
+                SELECT hr.hora_rem_id AS Id,
+                       ISNULL(NULLIF(RTRIM(vc.var_calc), ''), RTRIM(hr.hora_rem)) AS Codigo,
+                       hr.nombre AS Nombre
+                FROM hora_rem hr
+                LEFT JOIN var_calc vc ON vc.var_calc_id = hr.var_calc_id
+                WHERE hr.empresa_id = @EmpresaId
+                  AND (hr.estado = 'A' OR EXISTS
+                       (SELECT 1 FROM plan_p_hora ph
+                        WHERE ph.plan_proce_id = @PlanProceId AND ph.hora_rem_id = hr.hora_rem_id))
+                ORDER BY hr.hora_rem_id";
+            var horas = (await conn.QueryAsync<LookupItemModel>(
+                horasSql,
+                new { EmpresaId = empresaId, PlanProceId = planProceId })).ToList();
+
+            const string personalSql = @"
+                WITH personal_proceso AS
+                (
+                    SELECT pplan.personal_id AS PersonalId, 1 AS Asignado
+                    FROM plan_proce pp
+                    INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                    INNER JOIN perso_plan pplan ON pplan.planilla_id = pp.planilla_id AND pplan.estado = 'A'
+                    INNER JOIN personal pe ON pe.personal_id = pplan.personal_id AND pe.estado = 'A'
+                    INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pe.empresa_sede_id AND sede.empresa_id = @EmpresaId
+                    WHERE pp.plan_proce_id = @PlanProceId
+                      AND pla.empresa_id = @EmpresaId
+                      AND (pe.fecha_ing IS NULL OR pe.fecha_ing <= pp.fecha_hasta)
+                      AND (pe.fecha_cese IS NULL OR pe.fecha_cese >= pp.fecha_desde)
+
+                    UNION
+
+                    SELECT h.personal_id, 0
+                    FROM plan_p_hora h
+                    INNER JOIN plan_proce pp ON pp.plan_proce_id = h.plan_proce_id
+                    INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                    INNER JOIN personal pe ON pe.personal_id = h.personal_id
+                    INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pe.empresa_sede_id AND sede.empresa_id = @EmpresaId
+                    WHERE h.plan_proce_id = @PlanProceId AND pla.empresa_id = @EmpresaId
+                )
+                SELECT pe.personal_id AS PersonalId, RTRIM(pe.personal) AS Codigo,
+                       ISNULL(prv.razon_social, '') AS Nombre,
+                       CASE WHEN MAX(personal_proceso.Asignado) = 1 THEN 'A' ELSE 'I' END AS Estado
+                FROM personal_proceso
+                INNER JOIN personal pe ON pe.personal_id = personal_proceso.PersonalId
+                INNER JOIN proveedor prv ON prv.proveedor_id = pe.proveedor_id
+                GROUP BY pe.personal_id, pe.personal, prv.razon_social
+                ORDER BY Nombre";
+            var empleados = (await conn.QueryAsync<PlanillaHorasEmpleadoRow>(
+                personalSql,
+                new { PlanProceId = planProceId, EmpresaId = empresaId })).ToList();
+
+            const string valoresSql = @"
+                SELECT h.personal_id AS PersonalId, h.hora_rem_id AS HoraRemId,
+                       SUM(CASE WHEN h.estado = 'A' THEN h.cantidad ELSE 0 END) AS Cantidad,
+                       CASE WHEN MAX(CASE WHEN h.estado = 'A' THEN 1 ELSE 0 END) = 1 THEN 'A' ELSE 'I' END AS Estado
+                FROM plan_p_hora h
+                INNER JOIN plan_proce pp ON pp.plan_proce_id = h.plan_proce_id
+                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                INNER JOIN personal pe ON pe.personal_id = h.personal_id
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pe.empresa_sede_id
+                WHERE h.plan_proce_id = @PlanProceId AND pla.empresa_id = @EmpresaId
+                  AND sede.empresa_id = @EmpresaId AND h.hora_rem_id IN
+                      (SELECT hora_rem_id FROM hora_rem WHERE empresa_id = @EmpresaId)
+                GROUP BY h.personal_id, h.hora_rem_id";
+            var valores = (await conn.QueryAsync<PlanillaHorasValorRow>(
+                valoresSql,
+                new { PlanProceId = planProceId, EmpresaId = empresaId }))
+                .ToDictionary(x => (x.PersonalId, x.HoraRemId));
+
+            var detalle = new PlanillaHorasModel
+            {
+                Proceso = proceso,
+                Horas = horas,
+                Empleados = empleados.Select(empleado => new PlanillaHorasEmpleadoModel
+                {
+                    PersonalId = empleado.PersonalId,
+                    Codigo = empleado.Codigo,
+                    Nombre = empleado.Nombre,
+                    Estado = empleado.Estado,
+                    Cantidades = horas.Select(hora => new PlanillaHoraCantidadModel
+                    {
+                        HoraRemId = hora.Id,
+                        Cantidad = valores.TryGetValue((empleado.PersonalId, hora.Id), out var valor) && valor.Estado == "A"
+                            ? valor.Cantidad
+                            : 0
+                    }).ToList()
+                }).ToList()
+            };
+            return detalle;
+        }
+
+        public async Task<List<PlanillaHorasEmpleadoModel>> GetPersonalDisponiblePlanillaHorasAsync(
+            int planProceId,
+            int empresaId,
+            string? search = null)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT DISTINCT TOP (500) pe.personal_id AS PersonalId, RTRIM(pe.personal) AS Codigo,
+                       ISNULL(prv.razon_social, '') AS Nombre, 'A' AS Estado
+                FROM plan_proce pp
+                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                INNER JOIN perso_marca pm ON pm.fecha >= pp.fecha_desde
+                    AND pm.fecha < DATEADD(day, 1, pp.fecha_hasta)
+                    AND pm.estado = 'A' AND pm.es_remunera = 'S' AND pm.verificado = 'S'
+                INNER JOIN personal pe ON pe.personal_id = pm.personal_id AND pe.estado = 'A'
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pe.empresa_sede_id AND sede.empresa_id = @EmpresaId
+                INNER JOIN proveedor prv ON prv.proveedor_id = pe.proveedor_id
+                WHERE pp.plan_proce_id = @PlanProceId AND pla.empresa_id = @EmpresaId
+                  AND EXISTS
+                      (SELECT 1 FROM perso_m_hora pmh
+                       WHERE pmh.perso_marca_id = pm.perso_marca_id AND pmh.estado = 'A')
+                  AND NOT EXISTS
+                      (SELECT 1 FROM perso_plan pplan
+                       WHERE pplan.planilla_id = pp.planilla_id
+                         AND pplan.personal_id = pe.personal_id AND pplan.estado = 'A')
+                  AND NOT EXISTS
+                      (SELECT 1 FROM plan_p_hora ph
+                       WHERE ph.plan_proce_id = pp.plan_proce_id AND ph.personal_id = pe.personal_id)
+                  AND (@Search IS NULL OR prv.razon_social LIKE @SearchLike OR pe.personal LIKE @SearchLike)
+                ORDER BY Nombre";
+            var rows = await conn.QueryAsync<PlanillaHorasEmpleadoModel>(
+                sql,
+                new
+                {
+                    PlanProceId = planProceId,
+                    EmpresaId = empresaId,
+                    Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+                    SearchLike = $"%{search?.Trim()}%"
+                });
+            return rows.ToList();
+        }
+
+        public async Task<(bool success, string message)> SavePlanillaHorasAsync(
+            PlanillaHorasGuardarModel model,
+            int empresaId,
+            int userId)
+        {
+            if (model.ProcesoId <= 0)
+                return (false, "Seleccione un proceso de planilla.");
+            if (model.Empleados == null || model.Empleados.Count == 0 || model.Empleados.Any(empleado => empleado == null))
+                return (false, "No se recibieron los datos de horas.");
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (conn.State != ConnectionState.Open)
+                conn.Open();
+            using var transaction = conn.BeginTransaction();
+            try
+            {
+                const string processSql = @"
+                    SELECT pp.planilla_id AS PlanillaId, pp.estado_plan_pro_id AS EstadoId
+                    FROM plan_proce pp WITH (UPDLOCK, HOLDLOCK)
+                    INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                    WHERE pp.plan_proce_id = @ProcesoId AND pla.empresa_id = @EmpresaId";
+                var proceso = await conn.QueryFirstOrDefaultAsync<(int PlanillaId, int EstadoId)>(
+                    processSql,
+                    new { model.ProcesoId, EmpresaId = empresaId },
+                    transaction);
+                if (proceso.PlanillaId == 0)
+                    return (false, "Proceso de planilla no encontrado para la empresa activa.");
+                if (proceso.EstadoId == 2)
+                    return (false, "El proceso está cerrado y no admite cambios en sus horas.");
+
+                var personalIds = model.Empleados.Select(x => x.PersonalId).Distinct().ToArray();
+                if (personalIds.Length != model.Empleados.Count)
+                    return (false, "La lista contiene personal duplicado.");
+                var assignedIds = (await conn.QueryAsync<int>(@"
+                    SELECT DISTINCT pe.personal_id
+                    FROM personal pe
+                    INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pe.empresa_sede_id
+                    WHERE sede.empresa_id = @EmpresaId
+                      AND (EXISTS (SELECT 1 FROM perso_plan pp WHERE pp.personal_id = pe.personal_id AND pp.planilla_id = @PlanillaId AND pp.estado = 'A')
+                           OR EXISTS (SELECT 1 FROM plan_p_hora ph WHERE ph.personal_id = pe.personal_id AND ph.plan_proce_id = @ProcesoId)
+                           OR EXISTS
+                              (SELECT 1 FROM plan_proce pproc
+                               INNER JOIN perso_marca pm ON pm.fecha >= pproc.fecha_desde
+                                   AND pm.fecha < DATEADD(day, 1, pproc.fecha_hasta)
+                                   AND pm.estado = 'A' AND pm.es_remunera = 'S' AND pm.verificado = 'S'
+                               WHERE pproc.plan_proce_id = @ProcesoId AND pm.personal_id = pe.personal_id
+                                 AND EXISTS
+                                     (SELECT 1 FROM perso_m_hora pmh
+                                      WHERE pmh.perso_marca_id = pm.perso_marca_id AND pmh.estado = 'A')))",
+                    new { EmpresaId = empresaId, PlanillaId = proceso.PlanillaId, model.ProcesoId },
+                    transaction)).ToHashSet();
+                if (personalIds.Any(id => id <= 0 || !assignedIds.Contains(id)))
+                    return (false, "La lista contiene personal que no pertenece o no está habilitado para este proceso.");
+
+                var horaIds = model.Empleados.SelectMany(x => x.Cantidades ?? new List<PlanillaHoraCantidadModel>())
+                    .Select(x => x.HoraRemId).Distinct().ToArray();
+                var allowedHoraIds = (await conn.QueryAsync<int>(@"
+                    SELECT hora_rem_id FROM hora_rem
+                    WHERE empresa_id = @EmpresaId AND
+                          (estado = 'A' OR EXISTS
+                              (SELECT 1 FROM plan_p_hora ph
+                               WHERE ph.plan_proce_id = @ProcesoId AND ph.hora_rem_id = hora_rem.hora_rem_id))",
+                    new { EmpresaId = empresaId, model.ProcesoId },
+                    transaction)).ToHashSet();
+                if (horaIds.Any(id => id <= 0 || !allowedHoraIds.Contains(id)) ||
+                    horaIds.Length != allowedHoraIds.Count)
+                    return (false, "La lista contiene conceptos de horas que no están activos para la empresa.");
+
+                if (model.Empleados.Any(x => x.Cantidades == null ||
+                    x.Cantidades.Any(c => c.Cantidad < 0) ||
+                    x.Cantidades.Select(c => c.HoraRemId).Distinct().Count() != x.Cantidades.Count ||
+                    x.Cantidades.Count != allowedHoraIds.Count ||
+                    x.Cantidades.Any(c => !allowedHoraIds.Contains(c.HoraRemId))))
+                    return (false, "Las cantidades deben ser no negativas y cada concepto debe aparecer una sola vez por persona.");
+
+                await conn.ExecuteAsync(@"
+                    UPDATE plan_p_hora
+                    SET estado = 'I', usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                    WHERE plan_proce_id = @ProcesoId AND estado = 'A' AND personal_id IN @PersonalIds",
+                    new { model.ProcesoId, UserId = userId, PersonalIds = personalIds },
+                    transaction);
+
+                foreach (var empleado in model.Empleados)
+                {
+                    string estado = empleado.Estado == "I" ? "I" : "A";
+                    foreach (var cantidad in empleado.Cantidades)
+                    {
+                        int updated = await conn.ExecuteAsync(@"
+                            UPDATE plan_p_hora
+                            SET cantidad = @Cantidad, estado = @Estado,
+                                usuario_modifica_id = @UserId, fecha_modifica = GETDATE()
+                            WHERE plan_proce_id = @ProcesoId
+                              AND personal_id = @PersonalId AND hora_rem_id = @HoraRemId",
+                            new
+                            {
+                                model.ProcesoId,
+                                empleado.PersonalId,
+                                cantidad.HoraRemId,
+                                cantidad.Cantidad,
+                                Estado = estado,
+                                UserId = userId
+                            },
+                            transaction);
+
+                        if (updated == 0)
+                        {
+                            await conn.ExecuteAsync(@"
+                                DECLARE @newId INT = NEXT VALUE FOR plan_p_hora_seq;
+                                INSERT INTO plan_p_hora
+                                    (plan_p_hora_id, plan_proce_id, hora_rem_id, personal_id, cantidad, estado, usuario_creacion_id, fecha_creacion)
+                                VALUES
+                                    (@newId, @ProcesoId, @HoraRemId, @PersonalId, @Cantidad, @Estado, @UserId, GETDATE())",
+                                new
+                                {
+                                    model.ProcesoId,
+                                    empleado.PersonalId,
+                                    cantidad.HoraRemId,
+                                    cantidad.Cantidad,
+                                    Estado = estado,
+                                    UserId = userId
+                                },
+                                transaction);
+                        }
+                    }
+                }
+
+                transaction.Commit();
+                return (true, "Horas de planilla guardadas correctamente.");
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public async Task<(bool success, string message)> ImportarHorasDesdeMarcacionesAsync(
+            int planProceId,
+            int empresaId,
+            int userId)
+        {
+            var detalle = await GetPlanillaHorasAsync(planProceId, empresaId);
+            if (detalle == null)
+                return (false, "Proceso de planilla no encontrado para la empresa activa.");
+            if (detalle.Proceso.EstadoPlanProceId == 2)
+                return (false, "El proceso está cerrado y no admite cambios en sus horas.");
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            const string sql = @"
+                SELECT pm.personal_id AS PersonalId, pmh.hora_rem_id AS HoraRemId,
+                       SUM(pmh.cantidad) AS Cantidad
+                FROM plan_proce pp
+                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                INNER JOIN personal pe ON pe.estado = 'A'
+                    AND (EXISTS
+                         (SELECT 1 FROM perso_plan pplan
+                          WHERE pplan.planilla_id = pp.planilla_id
+                            AND pplan.personal_id = pe.personal_id AND pplan.estado = 'A')
+                         OR EXISTS
+                         (SELECT 1 FROM plan_p_hora ph
+                          WHERE ph.plan_proce_id = pp.plan_proce_id AND ph.personal_id = pe.personal_id))
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pe.empresa_sede_id AND sede.empresa_id = @EmpresaId
+                INNER JOIN perso_marca pm ON pm.personal_id = pe.personal_id
+                    AND pm.fecha >= pp.fecha_desde AND pm.fecha < DATEADD(day, 1, pp.fecha_hasta)
+                    AND pm.estado = 'A' AND pm.es_remunera = 'S' AND pm.verificado = 'S'
+                INNER JOIN perso_m_hora pmh ON pmh.perso_marca_id = pm.perso_marca_id AND pmh.estado = 'A'
+                INNER JOIN hora_rem hr ON hr.hora_rem_id = pmh.hora_rem_id AND hr.empresa_id = @EmpresaId AND hr.estado = 'A'
+                WHERE pp.plan_proce_id = @PlanProceId AND pla.empresa_id = @EmpresaId
+                GROUP BY pm.personal_id, pmh.hora_rem_id";
+            var marcaciones = (await conn.QueryAsync<(int PersonalId, int HoraRemId, decimal Cantidad)>(
+                sql,
+                new { PlanProceId = planProceId, EmpresaId = empresaId }))
+                .ToDictionary(x => (x.PersonalId, x.HoraRemId), x => x.Cantidad);
+
+            foreach (var empleado in detalle.Empleados)
+            {
+                foreach (var cantidad in empleado.Cantidades)
+                {
+                    cantidad.Cantidad = marcaciones.TryGetValue((empleado.PersonalId, cantidad.HoraRemId), out var total)
+                        ? total
+                        : 0;
+                }
+            }
+
+            var result = await SavePlanillaHorasAsync(
+                new PlanillaHorasGuardarModel { ProcesoId = planProceId, Empleados = detalle.Empleados },
+                empresaId,
+                userId);
+            return result.success
+                ? (true, "Horas importadas desde las marcaciones verificadas.")
+                : result;
+        }
+
+        public async Task<PlanillaRegularizacionPageModel?> GetPlanillaRegularizacionesAsync(
+            int planProceId,
+            int empresaId,
+            int page = 1,
+            int pageSize = 25)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (!await PlanillaProcesoPerteneceEmpresaAsync(conn, planProceId, empresaId))
+                return null;
+
+            var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
+            var safePage = Math.Max(page, 1);
+            const string countSql = @"
+                SELECT COUNT(*)
+                FROM plan_p_regu reg
+                WHERE reg.plan_proce_id = @PlanProceId";
+            var total = await conn.QuerySingleAsync<int>(
+                countSql,
+                new { PlanProceId = planProceId });
+            var lastPage = Math.Max(1, (int)Math.Ceiling(total / (double)safePageSize));
+            safePage = Math.Min(safePage, lastPage);
+
+            const string sql = @"
+                SELECT reg.plan_p_regu_id AS Id,
+                       reg.plan_proce_id AS PlanProceId,
+                       reg.personal_id AS PersonalId,
+                       RTRIM(per.personal) AS PersonalCodigo,
+                       ISNULL(prov.razon_social, '') AS PersonalNombre,
+                       reg.concep_remu_id AS ConcepRemuId,
+                       RTRIM(con.concep_remu) AS ConcepRemuCodigo,
+                       con.nombre AS ConcepRemuNombre,
+                       reg.cant_hora AS CantidadHora,
+                       reg.monto AS Monto,
+                       reg.observa AS Observacion,
+                       reg.estado AS Estado
+                FROM plan_p_regu reg
+                INNER JOIN plan_proce pp ON pp.plan_proce_id = reg.plan_proce_id
+                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                INNER JOIN personal per ON per.personal_id = reg.personal_id
+                INNER JOIN proveedor prov ON prov.proveedor_id = per.proveedor_id
+                INNER JOIN concep_remu con ON con.concep_remu_id = reg.concep_remu_id
+                WHERE reg.plan_proce_id = @PlanProceId
+                  AND pla.empresa_id = @EmpresaId
+                ORDER BY CASE WHEN reg.estado = 'A' THEN 0 ELSE 1 END,
+                         prov.razon_social, con.nombre, reg.plan_p_regu_id
+                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+            var rows = await conn.QueryAsync<PlanillaRegularizacionModel>(
+                sql,
+                new
+                {
+                    PlanProceId = planProceId,
+                    EmpresaId = empresaId,
+                    Offset = (safePage - 1) * safePageSize,
+                    PageSize = safePageSize
+                });
+
+            return new PlanillaRegularizacionPageModel
+            {
+                Items = rows.ToList(),
+                Total = total,
+                Page = safePage,
+                PageSize = safePageSize
+            };
+        }
+
+        public async Task<List<LookupItemModel>?> GetPersonalDisponibleRegularizacionAsync(
+            int planProceId,
+            int empresaId,
+            string? search = null,
+            int top = 25)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (!await PlanillaProcesoPerteneceEmpresaAsync(conn, planProceId, empresaId))
+                return null;
+
+            const string sql = @"
+                SELECT TOP (@Top)
+                       per.personal_id AS Id,
+                       RTRIM(per.personal) + ' - ' + prov.razon_social AS Nombre
+                FROM personal per
+                INNER JOIN proveedor prov ON prov.proveedor_id = per.proveedor_id
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = per.empresa_sede_id
+                WHERE sede.empresa_id = @EmpresaId
+                  AND per.estado = 'A'
+                  AND (@Search IS NULL OR per.personal LIKE '%' + @Search + '%'
+                       OR prov.razon_social LIKE '%' + @Search + '%'
+                       OR prov.num_doc_iden LIKE '%' + @Search + '%')
+                ORDER BY prov.razon_social, per.personal";
+            var rows = await conn.QueryAsync<LookupItemModel>(
+                sql,
+                new
+                {
+                    Top = top is 25 or 50 or 100 or 500 ? top : 25,
+                    EmpresaId = empresaId,
+                    Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()
+                });
+            return rows.ToList();
+        }
+
+        public async Task<List<LookupItemModel>?> GetConceptosDisponiblesRegularizacionAsync(
+            int planProceId,
+            int empresaId,
+            string? search = null,
+            int top = 25)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            if (!await PlanillaProcesoPerteneceEmpresaAsync(conn, planProceId, empresaId))
+                return null;
+
+            const string sql = @"
+                SELECT TOP (@Top)
+                       con.concep_remu_id AS Id,
+                       RTRIM(con.concep_remu) + ' - ' + con.nombre AS Nombre
+                FROM concep_remu con
+                WHERE con.empresa_id = @EmpresaId
+                  AND con.es_regula = 'S'
+                  AND con.estado = 'A'
+                  AND (@Search IS NULL OR con.concep_remu LIKE '%' + @Search + '%'
+                       OR con.nombre LIKE '%' + @Search + '%')
+                ORDER BY con.nombre, con.concep_remu";
+            var rows = await conn.QueryAsync<LookupItemModel>(
+                sql,
+                new
+                {
+                    Top = top is 25 or 50 or 100 or 500 ? top : 25,
+                    EmpresaId = empresaId,
+                    Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()
+                });
+            return rows.ToList();
+        }
+
+        public async Task<(bool success, string message)> SavePlanillaRegularizacionAsync(
+            PlanillaRegularizacionGuardarModel model,
+            int empresaId,
+            int userId)
+        {
+            if (model.PlanProceId <= 0 ||
+                model.Monto < 0 ||
+                string.IsNullOrWhiteSpace(model.Observacion) ||
+                model.Observacion.Length > 200)
+                return (false, "Revise el proceso, el monto y la observación de la regularización.");
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var transaction = conn.BeginTransaction();
+            try
+            {
+                const string processSql = @"
+                    SELECT pp.estado_plan_pro_id
+                    FROM plan_proce pp WITH (UPDLOCK, HOLDLOCK)
+                    INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                    WHERE pp.plan_proce_id = @PlanProceId
+                      AND pla.empresa_id = @EmpresaId";
+                var processState = await conn.QueryFirstOrDefaultAsync<int?>(
+                    processSql,
+                    new { model.PlanProceId, EmpresaId = empresaId },
+                    transaction);
+                if (processState == null)
+                {
+                    transaction.Rollback();
+                    return (false, "Proceso de planilla no encontrado para la empresa activa.");
+                }
+                if (processState == 2)
+                {
+                    transaction.Rollback();
+                    return (false, "El proceso está cerrado y no admite cambios.");
+                }
+
+                if (model.Id == 0)
+                {
+                    const string candidateSql = @"
+                        SELECT
+                            CASE WHEN EXISTS (
+                                SELECT 1
+                                FROM personal per
+                                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = per.empresa_sede_id
+                                WHERE per.personal_id = @PersonalId
+                                  AND per.estado = 'A'
+                                  AND sede.empresa_id = @EmpresaId
+                            ) THEN 1 ELSE 0 END
+                            * CASE WHEN EXISTS (
+                                SELECT 1
+                                FROM concep_remu con
+                                WHERE con.concep_remu_id = @ConcepRemuId
+                                  AND con.empresa_id = @EmpresaId
+                                  AND con.es_regula = 'S'
+                                  AND con.estado = 'A'
+                            ) THEN 1 ELSE 0 END";
+                    var candidateIsValid = await conn.QuerySingleAsync<int>(
+                        candidateSql,
+                        new
+                        {
+                            model.PersonalId,
+                            model.ConcepRemuId,
+                            EmpresaId = empresaId
+                        },
+                        transaction);
+                    if (candidateIsValid == 0)
+                    {
+                        transaction.Rollback();
+                        return (false, "Seleccione personal activo y un concepto de regularización vigente de la empresa.");
+                    }
+
+                    var nextId = await conn.QuerySingleAsync<int>(
+                        "SELECT NEXT VALUE FOR dbo.plan_p_regu_seq",
+                        transaction: transaction);
+                    const string insertSql = @"
+                        INSERT INTO plan_p_regu
+                            (plan_p_regu_id, plan_proce_id, personal_id, concep_remu_id, cant_hora,
+                             monto, observa, estado, usuario_creacion_id, fecha_creacion)
+                        VALUES
+                            (@Id, @PlanProceId, @PersonalId, @ConcepRemuId, 0,
+                             @Monto, @Observacion, 'A', @UserId, GETDATE())";
+                    await conn.ExecuteAsync(
+                        insertSql,
+                        new
+                        {
+                            Id = nextId,
+                            model.PlanProceId,
+                            model.PersonalId,
+                            model.ConcepRemuId,
+                            model.Monto,
+                            Observacion = model.Observacion.Trim(),
+                            UserId = userId
+                        },
+                        transaction);
+                }
+                else
+                {
+                    const string updateSql = @"
+                        UPDATE plan_p_regu
+                        SET monto = @Monto,
+                            observa = @Observacion,
+                            usuario_modifica_id = @UserId,
+                            fecha_modifica = GETDATE()
+                        WHERE plan_p_regu_id = @Id
+                          AND plan_proce_id = @PlanProceId
+                          AND estado = 'A'";
+                    var changed = await conn.ExecuteAsync(
+                        updateSql,
+                        new
+                        {
+                            model.Id,
+                            model.PlanProceId,
+                            model.Monto,
+                            Observacion = model.Observacion.Trim(),
+                            UserId = userId
+                        },
+                        transaction);
+                    if (changed == 0)
+                    {
+                        transaction.Rollback();
+                        return (false, "La regularización no existe o ya fue anulada.");
+                    }
+                }
+
+                transaction.Commit();
+                return (true, model.Id == 0 ? "Regularización registrada correctamente." : "Regularización actualizada correctamente.");
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public async Task<(bool success, string message)> AnularPlanillaRegularizacionAsync(
+            int id,
+            int planProceId,
+            int empresaId,
+            int userId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var transaction = conn.BeginTransaction();
+            try
+            {
+                const string processSql = @"
+                    SELECT pp.estado_plan_pro_id
+                    FROM plan_proce pp WITH (UPDLOCK, HOLDLOCK)
+                    INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                    WHERE pp.plan_proce_id = @PlanProceId
+                      AND pla.empresa_id = @EmpresaId";
+                var processState = await conn.QueryFirstOrDefaultAsync<int?>(
+                    processSql,
+                    new { PlanProceId = planProceId, EmpresaId = empresaId },
+                    transaction);
+                if (processState == null)
+                {
+                    transaction.Rollback();
+                    return (false, "Proceso de planilla no encontrado para la empresa activa.");
+                }
+                if (processState == 2)
+                {
+                    transaction.Rollback();
+                    return (false, "El proceso está cerrado y no admite cambios.");
+                }
+
+                const string sql = @"
+                    UPDATE plan_p_regu
+                    SET estado = 'I',
+                        usuario_modifica_id = @UserId,
+                        fecha_modifica = GETDATE()
+                    WHERE plan_p_regu_id = @Id
+                      AND plan_proce_id = @PlanProceId
+                      AND estado = 'A'";
+                var changed = await conn.ExecuteAsync(
+                    sql,
+                    new { Id = id, PlanProceId = planProceId, UserId = userId },
+                    transaction);
+                if (changed == 0)
+                {
+                    transaction.Rollback();
+                    return (false, "La regularización no existe o ya fue anulada.");
+                }
+
+                transaction.Commit();
+                return (true, "Regularización anulada correctamente.");
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        private static async Task<bool> PlanillaProcesoPerteneceEmpresaAsync(
+            IDbConnection conn,
+            int planProceId,
+            int empresaId)
+        {
+            const string sql = @"
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM plan_proce pp
+                    INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                    WHERE pp.plan_proce_id = @PlanProceId
+                      AND pla.empresa_id = @EmpresaId
+                ) THEN 1 ELSE 0 END";
+            return await conn.QuerySingleAsync<int>(
+                sql,
+                new { PlanProceId = planProceId, EmpresaId = empresaId }) == 1;
+        }
+
+        public async Task<SolicitudAccesoPageModel> GetSolicitudesAccesoAsync(
+            int empresaId,
+            DateTime? fechaDesde = null,
+            DateTime? fechaHasta = null,
+            int? estadoAprobacionId = null,
+            int page = 1,
+            int pageSize = 25)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
+            var safePage = Math.Max(page, 1);
+            var estados = (await conn.QueryAsync<EstadoAprobacionModel>(
+                @"SELECT estado_aproba_id AS Id,
+                         estado_aproba AS Codigo,
+                         nombre AS Nombre
+                  FROM estado_aproba
+                  WHERE estado = 'A'
+                  ORDER BY estado_aproba_id")).ToList();
+
+            var selectedStateId = estadoAprobacionId;
+            if (!selectedStateId.HasValue)
+                selectedStateId = estados.FirstOrDefault(estado => estado.Codigo == "P")?.Id;
+
+            var parameters = new
+            {
+                EmpresaId = empresaId,
+                FechaDesde = fechaDesde?.Date,
+                FechaHasta = fechaHasta?.Date,
+                EstadoAprobacionId = selectedStateId
+            };
+            const string fromAndFilter = @"
+                FROM perso_sol_acc solicitud
+                INNER JOIN personal personalSolicita ON personalSolicita.personal_id = solicitud.personal_id
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = personalSolicita.empresa_sede_id
+                INNER JOIN proveedor proveedorSolicita ON proveedorSolicita.proveedor_id = personalSolicita.proveedor_id
+                INNER JOIN estado_aproba estado ON estado.estado_aproba_id = solicitud.estado_aproba_id
+                LEFT JOIN personal personalAutoriza ON personalAutoriza.personal_id = solicitud.perso_auto_id
+                LEFT JOIN proveedor proveedorAutoriza ON proveedorAutoriza.proveedor_id = personalAutoriza.proveedor_id
+                WHERE sede.empresa_id = @EmpresaId
+                  AND solicitud.estado = 'A'
+                  AND (@FechaDesde IS NULL OR solicitud.fecha >= @FechaDesde)
+                  AND (@FechaHasta IS NULL OR solicitud.fecha < DATEADD(DAY, 1, @FechaHasta))
+                  AND (@EstadoAprobacionId IS NULL OR solicitud.estado_aproba_id = @EstadoAprobacionId)";
+            var total = await conn.QuerySingleAsync<int>(
+                $"SELECT COUNT(*) {fromAndFilter}",
+                parameters);
+            var lastPage = Math.Max(1, (int)Math.Ceiling(total / (double)safePageSize));
+            safePage = Math.Min(safePage, lastPage);
+
+            var items = await conn.QueryAsync<SolicitudAccesoModel>(
+                $@"
+                SELECT solicitud.perso_sol_acc_id AS Id,
+                       solicitud.personal_id AS PersonalId,
+                       RTRIM(personalSolicita.personal) AS PersonalCodigo,
+                       ISNULL(proveedorSolicita.razon_social, '') AS PersonalNombre,
+                       solicitud.fecha AS Fecha,
+                       solicitud.fecha_registro AS FechaRegistro,
+                       solicitud.hora_sol AS HoraSolicitada,
+                       solicitud.perso_auto_id AS PersonalAutorizaId,
+                       ISNULL(proveedorAutoriza.razon_social, '') AS PersonalAutorizaNombre,
+                       solicitud.hora_auto AS HoraAutorizada,
+                       solicitud.fecha_auto AS FechaAutoriza,
+                       estado.estado_aproba_id AS EstadoAprobacionId,
+                       estado.estado_aproba AS EstadoAprobacionCodigo,
+                       estado.nombre AS EstadoAprobacionNombre
+                {fromAndFilter}
+                ORDER BY solicitud.fecha DESC, solicitud.fecha_registro DESC, solicitud.perso_sol_acc_id DESC
+                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
+                new
+                {
+                    parameters.EmpresaId,
+                    parameters.FechaDesde,
+                    parameters.FechaHasta,
+                    parameters.EstadoAprobacionId,
+                    Offset = (safePage - 1) * safePageSize,
+                    PageSize = safePageSize
+                });
+
+            return new SolicitudAccesoPageModel
+            {
+                Items = items.ToList(),
+                Estados = estados,
+                Total = total,
+                Page = safePage,
+                PageSize = safePageSize,
+                EstadoSeleccionadoId = selectedStateId,
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta
+            };
+        }
+
+        public async Task<(bool success, string message)> ResolverSolicitudAccesoAsync(
+            int id,
+            string? horaAutorizada,
+            bool aprobar,
+            int empresaId,
+            int userId)
+        {
+            if (id <= 0)
+                return (false, "Seleccione una solicitud válida.");
+            if (aprobar &&
+                (string.IsNullOrWhiteSpace(horaAutorizada) ||
+                 !TimeOnly.TryParseExact(
+                     horaAutorizada.Trim(),
+                     "HH:mm",
+                     CultureInfo.InvariantCulture,
+                     DateTimeStyles.None,
+                     out _)))
+                return (false, "Ingrese una hora autorizada válida en formato HH:mm.");
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var transaction = conn.BeginTransaction();
+            try
+            {
+                const string authorizerSql = @"
+                    SELECT TOP (1) personal.personal_id
+                    FROM personal
+                    INNER JOIN proveedor ON proveedor.proveedor_id = personal.proveedor_id
+                    INNER JOIN empresa_sede ON empresa_sede.empresa_sede_id = personal.empresa_sede_id
+                    WHERE proveedor.usuario_id = @UserId
+                      AND empresa_sede.empresa_id = @EmpresaId
+                      AND personal.estado = 'A'
+                      AND proveedor.estado = 'A'
+                    ORDER BY personal.personal_id";
+                var authorizerId = await conn.QueryFirstOrDefaultAsync<int?>(
+                    authorizerSql,
+                    new { UserId = userId, EmpresaId = empresaId },
+                    transaction);
+                if (!authorizerId.HasValue)
+                {
+                    transaction.Rollback();
+                    return (false, "El usuario actual no está vinculado a un trabajador activo de la empresa.");
+                }
+
+                const string pendingSql = @"
+                    SELECT solicitud.estado_aproba_id
+                    FROM perso_sol_acc solicitud WITH (UPDLOCK, HOLDLOCK)
+                    INNER JOIN personal solicitante ON solicitante.personal_id = solicitud.personal_id
+                    INNER JOIN empresa_sede sede ON sede.empresa_sede_id = solicitante.empresa_sede_id
+                    INNER JOIN estado_aproba estado ON estado.estado_aproba_id = solicitud.estado_aproba_id
+                    WHERE solicitud.perso_sol_acc_id = @Id
+                      AND solicitud.estado = 'A'
+                      AND sede.empresa_id = @EmpresaId
+                      AND estado.estado_aproba = 'P'
+                      AND estado.estado = 'A'";
+                var pendingStateId = await conn.QueryFirstOrDefaultAsync<int?>(
+                    pendingSql,
+                    new { Id = id, EmpresaId = empresaId },
+                    transaction);
+                if (!pendingStateId.HasValue)
+                {
+                    transaction.Rollback();
+                    return (false, "La solicitud no existe, no pertenece a la empresa o ya fue resuelta.");
+                }
+
+                var targetCode = aprobar ? "A" : "D";
+                var targetStateId = await conn.QueryFirstOrDefaultAsync<int?>(
+                    @"SELECT estado_aproba_id
+                      FROM estado_aproba
+                      WHERE estado_aproba = @Codigo AND estado = 'A'",
+                    new { Codigo = targetCode },
+                    transaction);
+                if (!targetStateId.HasValue)
+                {
+                    transaction.Rollback();
+                    return (false, $"No se encontró el estado activo '{targetCode}' para resolver solicitudes.");
+                }
+
+                const string updateSql = @"
+                    UPDATE perso_sol_acc
+                    SET perso_auto_id = @AuthorizerId,
+                        hora_auto = CASE WHEN @Approve = 1 THEN @HoraAutorizada ELSE hora_auto END,
+                        fecha_auto = GETDATE(),
+                        estado_aproba_id = @TargetStateId,
+                        usuario_modifica_id = @UserId,
+                        fecha_modifica = GETDATE()
+                    WHERE perso_sol_acc_id = @Id
+                      AND estado_aproba_id = @PendingStateId
+                      AND estado = 'A'";
+                var changed = await conn.ExecuteAsync(
+                    updateSql,
+                    new
+                    {
+                        AuthorizerId = authorizerId.Value,
+                        Approve = aprobar,
+                        HoraAutorizada = aprobar ? horaAutorizada!.Trim() : string.Empty,
+                        TargetStateId = targetStateId.Value,
+                        UserId = userId,
+                        Id = id,
+                        PendingStateId = pendingStateId.Value
+                    },
+                    transaction);
+                if (changed == 0)
+                {
+                    transaction.Rollback();
+                    return (false, "La solicitud ya fue resuelta por otro usuario.");
+                }
+
+                transaction.Commit();
+                return (true, aprobar
+                    ? "Solicitud de acceso aprobada correctamente."
+                    : "Solicitud de acceso desaprobada correctamente.");
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
         // =========================================================================
         // 20. BOLETAS DE PAGO (ReporteBoleta)
         // =========================================================================
@@ -3754,4 +4693,3 @@ namespace AspNet10ArcoERP.Services
         }
     }
 }
-
