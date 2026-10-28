@@ -80,7 +80,7 @@
                                 <td class="fw-semibold">@proceso.PlanillaNombre</td>
                                 <td>
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1">
-                                        @proceso.MesNombre @proceso.ProcAnual
+                                        @proceso.MesNombre @proceso.PeriodoAnio · Proceso @proceso.ProcAnual
                                     </span>
                                     <span class="small text-muted">(#@proceso.Id)</span>
                                 </td>
@@ -446,7 +446,7 @@
                 locked = currentProcess.estadoPlanProceId === 2;
                 document.getElementById('regularizacionProcessId').value = currentProcess.id;
                 document.getElementById('regularizacionSubtitle').textContent =
-                    `${currentProcess.planillaNombre} — ${currentProcess.mesNombre} ${currentProcess.procAnual} (#${currentProcess.id})`;
+                    `${currentProcess.planillaNombre} — ${currentProcess.mesNombre} ${currentProcess.periodoAnio} · Proceso ${currentProcess.procAnual} (#${currentProcess.id})`;
                 document.getElementById('regularizacionState').textContent = locked
                     ? 'El proceso está cerrado; las regularizaciones solo se pueden consultar.'
                     : 'Agrega conceptos remunerativos autorizados para trabajadores de la empresa.';

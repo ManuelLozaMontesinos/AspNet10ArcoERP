@@ -3297,283 +3297,308 @@ namespace AspNet10ArcoERP.Services
         // =========================================================================
         // 19. PROCESO DE PLANILLA (plan_proce & plan_calculo)
         // =========================================================================
-        public async Task<List<PlanillaProcesoModel>> GetPlanillasProcesoListAsync(int empresaId, int? anio = null, int? mes = null, string? search = null, int top = 50)
+        // Shared projection: proc_anual is the process number, not the accounting year.
+        private const string PlanillaProcesoSelect = @"
+            SELECT pp.plan_proce_id AS Id, pp.periodo_emp_sede_id AS PeriodoEmpSedeId,
+                   per.periodo AS PeriodoAnio, pp.planilla_id AS PlanillaId, pla.nombre AS PlanillaNombre,
+                   pp.proc_anual AS ProcAnual, pp.mes_id AS MesId, mes.nombre AS MesNombre,
+                   pp.moneda_id AS MonedaId, m.nombre AS MonedaNombre, pp.monto_tc AS MontoTipoCambio,
+                   pp.peri_remu_id AS PeriRemuId, pr.nombre AS PeriRemuNombre,
+                   pp.fecha_desde AS FechaDesde, pp.fecha_hasta AS FechaHasta, pp.fecha_proceso AS FechaProceso,
+                   pp.estado_plan_pro_id AS EstadoPlanProceId, RTRIM(ep.estado_plan_pro) AS EstadoPlanProceCodigo,
+                   ep.nombre AS EstadoPlanProceNombre, pp.estado AS Estado,
+                   ISNULL(calc.TotalTrabajadores,0) AS TotalTrabajadores,
+                   ISNULL(calc.TotalIngresos,0) AS TotalIngresos,
+                   ISNULL(calc.TotalDescuentos,0) AS TotalDescuentos
+            FROM plan_proce pp
+            INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+            INNER JOIN periodo_emp_sede pes ON pes.periodo_emp_sede_id = pp.periodo_emp_sede_id
+            INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
+            INNER JOIN periodo per ON per.periodo_id = pes.periodo_id
+            INNER JOIN mes ON mes.mes_id = pp.mes_id
+            INNER JOIN moneda m ON m.moneda_id = pp.moneda_id
+            INNER JOIN peri_remu pr ON pr.peri_remu_id = pp.peri_remu_id
+            INNER JOIN estado_plan_pro ep ON ep.estado_plan_pro_id = pp.estado_plan_pro_id
+            OUTER APPLY (
+                SELECT COUNT(DISTINCT pc.personal_id) AS TotalTrabajadores,
+                       SUM(CASE WHEN tcr.tipo_con_remu = '01' THEN pc.monto ELSE 0 END) AS TotalIngresos,
+                       SUM(CASE WHEN tcr.tipo_con_remu = '03' THEN pc.monto ELSE 0 END) AS TotalDescuentos
+                FROM plan_calculo pc
+                INNER JOIN concep_remu cr ON cr.concep_remu_id = pc.concep_remu_id
+                INNER JOIN tipo_con_remu tcr ON tcr.tipo_con_remu_id = cr.tipo_con_remu_id
+                WHERE pc.plan_proce_id = pp.plan_proce_id AND pc.estado = 'A'
+            ) calc ";
+
+        public async Task<int> GetPermisoPlanillaProcesoAsync(int userId, int empresaId)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            string sql = $@"
-                SELECT TOP (@Top)
-                    pp.plan_proce_id AS Id,
-                    pp.periodo_emp_sede_id AS PeriodoEmpSedeId,
-                    pp.planilla_id AS PlanillaId,
-                    ISNULL(pla.nombre, '') AS PlanillaNombre,
-                    pp.proc_anual AS ProcAnual,
-                    pp.mes_id AS MesId,
-                    CASE pp.mes_id 
-                        WHEN 1 THEN 'ENERO' WHEN 2 THEN 'FEBRERO' WHEN 3 THEN 'MARZO' WHEN 4 THEN 'ABRIL'
-                        WHEN 5 THEN 'MAYO' WHEN 6 THEN 'JUNIO' WHEN 7 THEN 'JULIO' WHEN 8 THEN 'AGOSTO'
-                        WHEN 9 THEN 'SETIEMBRE' WHEN 10 THEN 'OCTUBRE' WHEN 11 THEN 'NOVIEMBRE' WHEN 12 THEN 'DICIEMBRE'
-                        ELSE '' END AS MesNombre,
-                    pp.moneda_id AS MonedaId,
-                    ISNULL(m.nombre, 'SOLES') AS MonedaNombre,
-                    pp.monto_tc AS MontoTipoCambio,
-                    pp.peri_remu_id AS PeriRemuId,
-                    ISNULL(pr.nombre, 'MENSUAL') AS PeriRemuNombre,
-                    pp.fecha_desde AS FechaDesde,
-                    pp.fecha_hasta AS FechaHasta,
-                    pp.fecha_proceso AS FechaProceso,
-                    pp.estado_plan_pro_id AS EstadoPlanProceId,
-                    CASE pp.estado_plan_pro_id 
-                        WHEN 1 THEN 'PENDIENTE' 
-                        WHEN 2 THEN 'PROCESADO' 
-                        WHEN 3 THEN 'CERRADO' 
-                        ELSE 'PENDIENTE' END AS EstadoPlanProceNombre,
-                    pp.estado AS Estado,
-                    ISNULL(calc.total_trabajadores, 0) AS TotalTrabajadores,
-                    ISNULL(calc.total_ingresos, 0) AS TotalIngresos,
-                    ISNULL(calc.total_descuentos, 0) AS TotalDescuentos
-                FROM plan_proce pp
-                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
-                LEFT JOIN moneda m ON m.moneda_id = pp.moneda_id
-                LEFT JOIN peri_remu pr ON pr.peri_remu_id = pp.peri_remu_id
-                LEFT JOIN (
-                    SELECT 
-                        pc.plan_proce_id,
-                        COUNT(DISTINCT pc.personal_id) AS total_trabajadores,
-                        SUM(CASE WHEN cr.tipo_con_remu_id = 1 THEN pc.monto ELSE 0 END) AS total_ingresos,
-                        SUM(CASE WHEN cr.tipo_con_remu_id = 3 THEN pc.monto ELSE 0 END) AS total_descuentos
-                    FROM plan_calculo pc
-                    INNER JOIN concep_remu cr ON cr.concep_remu_id = pc.concep_remu_id
-                    WHERE pc.estado = 'A'
-                    GROUP BY pc.plan_proce_id
-                ) calc ON calc.plan_proce_id = pp.plan_proce_id
-                WHERE pla.empresa_id = @EmpresaId
-                  { (anio.HasValue ? "AND pp.proc_anual = @Anio" : "") }
-                  { (mes.HasValue ? "AND pp.mes_id = @Mes" : "") }
-                  { (!string.IsNullOrWhiteSpace(search) ? "AND (pla.nombre LIKE @SearchLike)" : "") }
-                ORDER BY pp.plan_proce_id DESC";
+            // Legacy administrator role codes; never trust the session's default IsAdmin flag.
+            return await conn.ExecuteScalarAsync<int>(@"
+                SELECT ISNULL(MAX(CASE
+                    WHEN r.rol IN ('S0001','S0002','00020') THEN 3
+                    WHEN m.area = 'rh' AND m.url = 'planillaProceso/index' AND m.estado = 'A'
+                         AND rm.lectura = 'S' THEN CASE WHEN rm.escritura = 'S' THEN 3 ELSE 1 END
+                    ELSE 0 END),0)
+                FROM usuario u
+                INNER JOIN rol_usuario ru ON ru.usuario_id = u.usuario_id
+                INNER JOIN rol r ON r.rol_id = ru.rol_id AND r.estado = 'A'
+                LEFT JOIN rol_menu rm ON rm.rol_id = r.rol_id
+                LEFT JOIN menu m ON m.menu_id = rm.menu_id
+                WHERE u.usuario_id = @UserId AND u.estado = 'A'
+                  AND (u.empresa_id IS NULL OR u.empresa_id = @EmpresaId)
+                  AND (r.empresa_id IS NULL OR r.empresa_id = @EmpresaId)",
+                new { UserId = userId, EmpresaId = empresaId });
+        }
 
-            var rows = await conn.QueryAsync<PlanillaProcesoModel>(sql, new {
-                Top = top,
-                EmpresaId = empresaId,
-                Anio = anio,
-                Mes = mes,
-                SearchLike = $"%{search}%"
-            });
+        public async Task<int?> GetPeriodoEmpresaSedePlanillaAsync(int empresaId, int empresaSedeId, int periodoId)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            return await conn.QuerySingleOrDefaultAsync<int?>(@"
+                SELECT pes.periodo_emp_sede_id
+                FROM periodo_emp_sede pes
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
+                INNER JOIN periodo per ON per.periodo_id = pes.periodo_id
+                WHERE sede.empresa_id = @EmpresaId AND sede.empresa_sede_id = @EmpresaSedeId
+                  AND per.periodo_id = @PeriodoId
+                  AND pes.estado = 'A' AND sede.estado = 'A' AND per.estado = 'A'",
+                new { EmpresaId = empresaId, EmpresaSedeId = empresaSedeId, PeriodoId = periodoId });
+        }
 
+        public async Task<List<PlanillaProcesoModel>> GetPlanillasProcesoListAsync(
+            int empresaId, int? anio = null, int? mes = null, string? search = null, int top = 50)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            var rows = await conn.QueryAsync<PlanillaProcesoModel>(
+                PlanillaProcesoSelect + @"
+                WHERE pla.empresa_id = @EmpresaId AND sede.empresa_id = @EmpresaId
+                  AND (@Anio IS NULL OR per.periodo = @Anio)
+                  AND (@Mes IS NULL OR pp.mes_id = @Mes)
+                  AND (@Search IS NULL OR pla.nombre LIKE @Search)
+                ORDER BY pp.plan_proce_id DESC OFFSET 0 ROWS FETCH NEXT @Top ROWS ONLY",
+                new { EmpresaId = empresaId, Anio = anio, Mes = mes,
+                    Search = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%",
+                    Top = top is 25 or 50 or 100 or 500 ? top : 25 });
             return rows.ToList();
+        }
+
+        public async Task<PlanillaProcesoPageModel> GetPlanillasProcesoPageAsync(
+            int empresaId, int periodoEmpSedeId, int? anio = null, int? mes = null,
+            string? search = null, int page = 1, int pageSize = 25)
+        {
+            using var conn = _dbConnectionFactory.CreateConnection();
+            pageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
+            var args = new DynamicParameters(new {
+                EmpresaId = empresaId, PeriodoEmpSedeId = periodoEmpSedeId, Anio = anio, Mes = mes,
+                Search = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%" });
+            const string filter = @"
+                WHERE pla.empresa_id = @EmpresaId AND sede.empresa_id = @EmpresaId
+                  AND pp.periodo_emp_sede_id = @PeriodoEmpSedeId
+                  AND (@Anio IS NULL OR per.periodo = @Anio)
+                  AND (@Mes IS NULL OR pp.mes_id = @Mes)
+                  AND (@Search IS NULL OR pla.nombre LIKE @Search)";
+            int total = await conn.ExecuteScalarAsync<int>(@"
+                SELECT COUNT(*) FROM plan_proce pp
+                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                INNER JOIN periodo_emp_sede pes ON pes.periodo_emp_sede_id = pp.periodo_emp_sede_id
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
+                INNER JOIN periodo per ON per.periodo_id = pes.periodo_id " + filter, args);
+            page = Math.Clamp(page, 1, Math.Max(1, (int)Math.Ceiling(total / (double)pageSize)));
+            args.Add("Offset", (page - 1) * pageSize);
+            args.Add("PageSize", pageSize);
+            var model = new PlanillaProcesoPageModel {
+                Total = total, Page = page, PageSize = pageSize,
+                Items = (await conn.QueryAsync<PlanillaProcesoModel>(
+                    PlanillaProcesoSelect + filter + @"
+                    ORDER BY pp.plan_proce_id DESC OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", args)).ToList()
+            };
+            model.PeriodoAnio = await conn.QuerySingleAsync<int>(@"
+                SELECT per.periodo FROM periodo_emp_sede pes
+                INNER JOIN periodo per ON per.periodo_id = pes.periodo_id
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
+                WHERE pes.periodo_emp_sede_id = @PeriodoEmpSedeId AND sede.empresa_id = @EmpresaId", args);
+            model.Planillas = (await conn.QueryAsync<LookupItemModel>(@"
+                SELECT planilla_id AS Id, nombre AS Nombre FROM planilla
+                WHERE empresa_id = @EmpresaId ORDER BY nombre", args)).ToList();
+            model.Monedas = (await conn.QueryAsync<LookupItemModel>(
+                "SELECT moneda_id AS Id, RTRIM(moneda) AS Codigo, nombre AS Nombre FROM moneda ORDER BY nombre")).ToList();
+            model.MonedaLocalId = await conn.QuerySingleOrDefaultAsync<int?>(
+                "SELECT moneda_id FROM moneda WHERE es_local = 'S' AND estado = 'A'");
+            model.Periodicidades = (await conn.QueryAsync<LookupItemModel>(
+                "SELECT peri_remu_id AS Id, RTRIM(peri_remu) AS Codigo, nombre AS Nombre FROM peri_remu ORDER BY peri_remu_id")).ToList();
+            model.Meses = (await conn.QueryAsync<LookupItemModel>(
+                "SELECT mes_id AS Id, RTRIM(mes) AS Codigo, nombre AS Nombre FROM mes ORDER BY mes")).ToList();
+            return model;
         }
 
         public async Task<PlanillaProcesoModel?> GetPlanillaProcesoByIdAsync(int id)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            const string sql = @"
-                SELECT 
-                    pp.plan_proce_id AS Id,
-                    pp.periodo_emp_sede_id AS PeriodoEmpSedeId,
-                    pp.planilla_id AS PlanillaId,
-                    ISNULL(pla.nombre, '') AS PlanillaNombre,
-                    pp.proc_anual AS ProcAnual,
-                    pp.mes_id AS MesId,
-                    CASE pp.mes_id 
-                        WHEN 1 THEN 'ENERO' WHEN 2 THEN 'FEBRERO' WHEN 3 THEN 'MARZO' WHEN 4 THEN 'ABRIL'
-                        WHEN 5 THEN 'MAYO' WHEN 6 THEN 'JUNIO' WHEN 7 THEN 'JULIO' WHEN 8 THEN 'AGOSTO'
-                        WHEN 9 THEN 'SETIEMBRE' WHEN 10 THEN 'OCTUBRE' WHEN 11 THEN 'NOVIEMBRE' WHEN 12 THEN 'DICIEMBRE'
-                        ELSE '' END AS MesNombre,
-                    pp.moneda_id AS MonedaId,
-                    ISNULL(m.nombre, 'SOLES') AS MonedaNombre,
-                    pp.monto_tc AS MontoTipoCambio,
-                    pp.peri_remu_id AS PeriRemuId,
-                    ISNULL(pr.nombre, 'MENSUAL') AS PeriRemuNombre,
-                    pp.fecha_desde AS FechaDesde,
-                    pp.fecha_hasta AS FechaHasta,
-                    pp.fecha_proceso AS FechaProceso,
-                    pp.estado_plan_pro_id AS EstadoPlanProceId,
-                    CASE pp.estado_plan_pro_id 
-                        WHEN 1 THEN 'PENDIENTE' 
-                        WHEN 2 THEN 'PROCESADO' 
-                        WHEN 3 THEN 'CERRADO' 
-                        ELSE 'PENDIENTE' END AS EstadoPlanProceNombre,
-                    pp.estado AS Estado,
-                    ISNULL(calc.total_trabajadores, 0) AS TotalTrabajadores,
-                    ISNULL(calc.total_ingresos, 0) AS TotalIngresos,
-                    ISNULL(calc.total_descuentos, 0) AS TotalDescuentos
-                FROM plan_proce pp
-                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
-                LEFT JOIN moneda m ON m.moneda_id = pp.moneda_id
-                LEFT JOIN peri_remu pr ON pr.peri_remu_id = pp.peri_remu_id
-                LEFT JOIN (
-                    SELECT 
-                        pc.plan_proce_id,
-                        COUNT(DISTINCT pc.personal_id) AS total_trabajadores,
-                        SUM(CASE WHEN cr.tipo_con_remu_id = 1 THEN pc.monto ELSE 0 END) AS total_ingresos,
-                        SUM(CASE WHEN cr.tipo_con_remu_id = 3 THEN pc.monto ELSE 0 END) AS total_descuentos
-                    FROM plan_calculo pc
-                    INNER JOIN concep_remu cr ON cr.concep_remu_id = pc.concep_remu_id
-                    WHERE pc.estado = 'A'
-                    GROUP BY pc.plan_proce_id
-                ) calc ON calc.plan_proce_id = pp.plan_proce_id
-                WHERE pp.plan_proce_id = @Id";
-
-            return await conn.QueryFirstOrDefaultAsync<PlanillaProcesoModel>(sql, new { Id = id });
+            return await conn.QuerySingleOrDefaultAsync<PlanillaProcesoModel>(
+                PlanillaProcesoSelect + " WHERE pp.plan_proce_id = @Id", new { Id = id });
         }
 
-        public async Task<List<PlanillaCalculoDetalleModel>> GetPlanillaCalculoDetalleAsync(int planProceId, int? personalId = null)
+        public async Task<PlanillaProcesoModel?> GetPlanillaProcesoByIdAsync(int id, int empresaId, int periodoEmpSedeId)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            string sql = $@"
-                SELECT 
-                    pc.plan_calculo_id AS Id,
-                    pc.plan_proce_id AS PlanProceId,
-                    pc.personal_id AS PersonalId,
-                    p.personal AS PersonalCodigo,
-                    prv.razon_social AS PersonalNombre,
-                    ISNULL(prv.num_doc_iden, '') AS DocumentoIdentidad,
-                    ISNULL(car.nombre, '') AS CargoNombre,
-                    pc.concep_remu_id AS ConcepRemuId,
-                    cr.concep_remu AS ConcepRemuCodigo,
-                    cr.nombre AS ConcepRemuNombre,
-                    cr.tipo_concep_remu_id AS TipoConceptoId,
-                    ISNULL(tcr.nombre, '') AS TipoConceptoNombre,
-                    pc.horas AS Horas,
-                    pc.monto_sub AS MontoSub,
-                    pc.monto AS Monto,
-                    pc.estado AS Estado
+            return await conn.QuerySingleOrDefaultAsync<PlanillaProcesoModel>(
+                PlanillaProcesoSelect + @" WHERE pp.plan_proce_id = @Id
+                    AND pla.empresa_id = @EmpresaId AND sede.empresa_id = @EmpresaId
+                    AND pp.periodo_emp_sede_id = @PeriodoEmpSedeId",
+                new { Id = id, EmpresaId = empresaId, PeriodoEmpSedeId = periodoEmpSedeId });
+        }
+
+        public async Task<List<PlanillaCalculoDetalleModel>?> GetPlanillaCalculoDetalleAsync(
+            int planProceId, int empresaId, int periodoEmpSedeId, int? personalId = null)
+        {
+            if (await GetPlanillaProcesoByIdAsync(planProceId, empresaId, periodoEmpSedeId) is null)
+                return null;
+            using var conn = _dbConnectionFactory.CreateConnection();
+            var rows = await conn.QueryAsync<PlanillaCalculoDetalleModel>(@"
+                SELECT pc.plan_calculo_id AS Id, pc.plan_proce_id AS PlanProceId,
+                       pc.personal_id AS PersonalId, p.personal AS PersonalCodigo,
+                       prv.razon_social AS PersonalNombre, ISNULL(prv.num_doc_iden,'') AS DocumentoIdentidad,
+                       ISNULL(car.nombre,'') AS CargoNombre, pc.concep_remu_id AS ConcepRemuId,
+                       cr.concep_remu AS ConcepRemuCodigo, cr.nombre AS ConcepRemuNombre,
+                       tcr.tipo_con_remu_id AS TipoConceptoId, RTRIM(tcr.tipo_con_remu) AS TipoConceptoCodigo,
+                       tcr.nombre AS TipoConceptoNombre, pc.horas AS Horas, pc.monto_sub AS MontoSub,
+                       pc.monto AS Monto, pc.estado AS Estado
                 FROM plan_calculo pc
+                INNER JOIN plan_proce pp ON pp.plan_proce_id = pc.plan_proce_id
+                INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                INNER JOIN periodo_emp_sede pes ON pes.periodo_emp_sede_id = pp.periodo_emp_sede_id
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
                 INNER JOIN personal p ON p.personal_id = pc.personal_id
                 INNER JOIN proveedor prv ON prv.proveedor_id = p.proveedor_id
                 LEFT JOIN cargo_perso car ON car.cargo_perso_id = p.cargo_perso_id
                 INNER JOIN concep_remu cr ON cr.concep_remu_id = pc.concep_remu_id
-                LEFT JOIN tipo_concep_remu tcr ON tcr.tipo_concep_remu_id = cr.tipo_concep_remu_id
-                WHERE pc.plan_proce_id = @PlanProceId
-                  { (personalId.HasValue ? "AND pc.personal_id = @PersonalId" : "") }
-                  AND pc.estado = 'A'
-                ORDER BY prv.razon_social, cr.tipo_concep_remu_id, cr.concep_remu";
-
-            var rows = await conn.QueryAsync<PlanillaCalculoDetalleModel>(sql, new {
-                PlanProceId = planProceId,
-                PersonalId = personalId
-            });
-
+                INNER JOIN tipo_con_remu tcr ON tcr.tipo_con_remu_id = cr.tipo_con_remu_id
+                WHERE pc.plan_proce_id = @PlanProceId AND pp.periodo_emp_sede_id = @PeriodoEmpSedeId
+                  AND pla.empresa_id = @EmpresaId AND sede.empresa_id = @EmpresaId
+                  AND (@PersonalId IS NULL OR pc.personal_id = @PersonalId) AND pc.estado = 'A'
+                ORDER BY prv.razon_social, pc.personal_id, tcr.tipo_con_remu, cr.concep_remu, pc.plan_calculo_id",
+                new { PlanProceId = planProceId, EmpresaId = empresaId,
+                    PeriodoEmpSedeId = periodoEmpSedeId, PersonalId = personalId });
             return rows.ToList();
         }
 
-        public async Task<(bool success, string message, int id)> SavePlanillaProcesoAsync(PlanillaProcesoCrearModel model, int userId)
+        private const string PlanillaProcesoLockSql = @"
+            SELECT pp.plan_proce_id AS Id, pp.planilla_id AS PlanillaId, pp.proc_anual AS ProcAnual,
+                   pp.mes_id AS MesId, pp.peri_remu_id AS PeriRemuId, pp.moneda_id AS MonedaId,
+                   pp.fecha_proceso AS FechaProceso, pp.estado AS Estado,
+                   RTRIM(ep.estado_plan_pro) AS EstadoPlanProceCodigo
+            FROM plan_proce pp WITH (UPDLOCK,HOLDLOCK)
+            INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+            INNER JOIN periodo_emp_sede pes ON pes.periodo_emp_sede_id = pp.periodo_emp_sede_id
+            INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
+            INNER JOIN estado_plan_pro ep ON ep.estado_plan_pro_id = pp.estado_plan_pro_id
+            WHERE pp.plan_proce_id = @Id AND pla.empresa_id = @EmpresaId AND sede.empresa_id = @EmpresaId
+              AND pp.periodo_emp_sede_id = @PeriodoEmpSedeId";
+
+        public async Task<(bool success, string message, int id)> SavePlanillaProcesoAsync(
+            PlanillaProcesoCrearModel model, int userId, int empresaId, int periodoEmpSedeId)
         {
-            try
+            if (model.Id < 0 || userId <= 0 || empresaId <= 0 || periodoEmpSedeId <= 0)
+                return (false, "El proceso o el contexto de acceso no es válido.", 0);
+            if (model.PlanillaId <= 0 || model.MesId <= 0 || model.PeriRemuId <= 0 ||
+                model.MonedaId <= 0 || model.ProcAnual <= 0)
+                return (false, "Seleccione planilla, mes, período de pago, moneda y un número de proceso positivo.", 0);
+            if (model.FechaDesde < new DateTime(1753, 1, 1) || model.FechaHasta < model.FechaDesde)
+                return (false, "Ingrese un rango de fechas válido; el inicio no puede superar el fin.", 0);
+            if (model.MontoTipoCambio <= 0 || model.MontoTipoCambio > 99999999.9999m ||
+                decimal.Round(model.MontoTipoCambio, 4) != model.MontoTipoCambio)
+                return (false, "El tipo de cambio debe ser positivo y tener como máximo cuatro decimales.", 0);
+
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+            var scope = new { Id = model.Id, EmpresaId = empresaId, PeriodoEmpSedeId = periodoEmpSedeId };
+            var validScope = await conn.ExecuteScalarAsync<int>(@"
+                SELECT COUNT(*) FROM periodo_emp_sede pes
+                INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
+                INNER JOIN periodo per ON per.periodo_id = pes.periodo_id
+                WHERE pes.periodo_emp_sede_id = @PeriodoEmpSedeId AND sede.empresa_id = @EmpresaId
+                  AND pes.estado = 'A' AND sede.estado = 'A' AND per.estado = 'A'", scope, tx);
+            if (validScope != 1)
+                return (false, "El período y la sede seleccionados no están habilitados.", 0);
+
+            PlanillaProcesoModel? actual = null;
+            if (model.Id > 0)
             {
-                using var conn = _dbConnectionFactory.CreateConnection();
-                string estado = string.IsNullOrWhiteSpace(model.Estado) ? "A" : model.Estado.ToUpper();
-
-                int id = model.Id;
-                if (id == 0)
-                {
-                    id = await conn.ExecuteScalarAsync<int>("SELECT ISNULL(MAX(plan_proce_id), 0) + 1 FROM plan_proce");
-
-                    await conn.ExecuteAsync(@"
-                        INSERT INTO plan_proce 
-                        (plan_proce_id, periodo_emp_sede_id, planilla_id, proc_anual, mes_id, moneda_id, monto_tc, peri_remu_id, fecha_desde, fecha_hasta, estado_plan_pro_id, estado, usuario_creacion_id, fecha_creacion)
-                        VALUES 
-                        (@Id, 1, @PlanillaId, @ProcAnual, @MesId, @MonedaId, @MontoTipoCambio, @PeriRemuId, @FechaDesde, @FechaHasta, 1, @Estado, @UserId, GETDATE())",
-                        new {
-                            Id = id,
-                            PlanillaId = model.PlanillaId,
-                            ProcAnual = model.ProcAnual,
-                            MesId = model.MesId,
-                            MonedaId = model.MonedaId,
-                            MontoTipoCambio = model.MontoTipoCambio,
-                            PeriRemuId = model.PeriRemuId,
-                            FechaDesde = model.FechaDesde,
-                            FechaHasta = model.FechaHasta,
-                            Estado = estado,
-                            UserId = userId
-                        });
-
-                    return (true, "Proceso de planilla creado exitosamente.", id);
-                }
-                else
-                {
-                    await conn.ExecuteAsync(@"
-                        UPDATE plan_proce
-                        SET planilla_id = @PlanillaId,
-                            proc_anual = @ProcAnual,
-                            mes_id = @MesId,
-                            moneda_id = @MonedaId,
-                            monto_tc = @MontoTipoCambio,
-                            peri_remu_id = @PeriRemuId,
-                            fecha_desde = @FechaDesde,
-                            fecha_hasta = @FechaHasta,
-                            estado = @Estado,
-                            usuario_modifica_id = @UserId,
-                            fecha_modifica = GETDATE()
-                        WHERE plan_proce_id = @Id",
-                        new {
-                            Id = id,
-                            PlanillaId = model.PlanillaId,
-                            ProcAnual = model.ProcAnual,
-                            MesId = model.MesId,
-                            MonedaId = model.MonedaId,
-                            MontoTipoCambio = model.MontoTipoCambio,
-                            PeriRemuId = model.PeriRemuId,
-                            FechaDesde = model.FechaDesde,
-                            FechaHasta = model.FechaHasta,
-                            Estado = estado,
-                            UserId = userId
-                        });
-
-                    return (true, "Proceso de planilla actualizado exitosamente.", id);
-                }
+                actual = await conn.QuerySingleOrDefaultAsync<PlanillaProcesoModel>(PlanillaProcesoLockSql, scope, tx);
+                if (actual is null)
+                    return (false, "Proceso no encontrado para el período y la sede activos.", 0);
+                if (actual.Estado != "A" || actual.EstadoPlanProceCodigo != "01")
+                    return (false, "Sólo se puede modificar un proceso activo y abierto.", 0);
+                if (actual.PlanillaId != model.PlanillaId || actual.ProcAnual != model.ProcAnual ||
+                    actual.MesId != model.MesId || actual.PeriRemuId != model.PeriRemuId)
+                    return (false, "La planilla, el número de proceso, el mes y el período de pago no se pueden cambiar.", 0);
             }
-            catch (Exception ex)
+            var validReferences = await conn.ExecuteScalarAsync<int>(@"
+                SELECT COUNT(*) FROM planilla pla
+                CROSS JOIN mes CROSS JOIN moneda mon CROSS JOIN peri_remu pr
+                WHERE pla.planilla_id = @PlanillaId AND pla.empresa_id = @EmpresaId
+                  AND mes.mes_id = @MesId AND mon.moneda_id = @MonedaId AND pr.peri_remu_id = @PeriRemuId
+                  AND (@Editing = 1 OR (pla.estado = 'A' AND mes.estado = 'A' AND pr.estado = 'A'))
+                  AND (mon.estado = 'A' OR mon.moneda_id = @ExistingMonedaId)",
+                new { model.PlanillaId, EmpresaId = empresaId, model.MesId, model.MonedaId, model.PeriRemuId,
+                    Editing = actual is not null, ExistingMonedaId = actual?.MonedaId }, tx);
+            if (validReferences != 1)
+                return (false, "La planilla, el mes, la moneda o el período de pago no son válidos para esta operación.", 0);
+            bool local = await conn.ExecuteScalarAsync<bool>(
+                "SELECT CAST(CASE WHEN es_local = 'S' THEN 1 ELSE 0 END AS bit) FROM moneda WHERE moneda_id = @MonedaId",
+                new { model.MonedaId }, tx);
+            var args = new DynamicParameters(new {
+                monedaId = model.MonedaId, montoTipoCambio = local ? 1m : model.MontoTipoCambio,
+                periodicidadRemunerativaId = model.PeriRemuId, fechaDesde = model.FechaDesde.Date,
+                fechaHasta = model.FechaHasta.Date, usuarioAccionId = userId });
+            int id = model.Id;
+            if (actual is null)
             {
-                return (false, $"Error al guardar proceso de planilla: {ex.Message}", 0);
+                var estadoId = await conn.QuerySingleAsync<int>(
+                    "SELECT estado_plan_pro_id FROM estado_plan_pro WHERE estado_plan_pro = '01' AND estado = 'A'",
+                    transaction: tx);
+                args.Add("periodoEmpresaSedeId", periodoEmpSedeId);
+                args.Add("planillaId", model.PlanillaId);
+                args.Add("procesoAnual", model.ProcAnual);
+                args.Add("mesId", model.MesId);
+                args.Add("estadoPlanillaProcesoId", estadoId);
+                args.Add("newID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                await conn.ExecuteAsync("dbo.sp_plan_proce_insertar", args, tx, commandType: CommandType.StoredProcedure);
+                id = args.Get<int>("newID");
             }
+            else
+            {
+                args.Add("planillaProcesoId", id);
+                args.Add("fechaProceso", actual.FechaProceso);
+                await conn.ExecuteAsync("dbo.sp_plan_proce_actualizar", args, tx, commandType: CommandType.StoredProcedure);
+            }
+            tx.Commit();
+            return (true, actual is null ? "Proceso de planilla creado." : "Proceso de planilla actualizado.", id);
         }
 
-        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoPlanillaProcesoAsync(int id, int userId)
+        public async Task<(bool success, string message)> InactivarPlanillaProcesoAsync(
+            int id, int userId, int empresaId, int periodoEmpSedeId)
         {
-            try
-            {
-                using var conn = _dbConnectionFactory.CreateConnection();
-                var actual = await conn.QueryFirstOrDefaultAsync<string>("SELECT estado FROM plan_proce WHERE plan_proce_id = @Id", new { Id = id });
-                if (actual == null) return (false, "Proceso de planilla no encontrado.", "");
-
-                string nuevo = actual == "A" ? "I" : "A";
-                await conn.ExecuteAsync(
-                    "UPDATE plan_proce SET estado = @Nuevo, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE plan_proce_id = @Id",
-                    new { Id = id, Nuevo = nuevo, UserId = userId });
-
-                return (true, $"Estado cambiado a {(nuevo == "A" ? "Activo" : "Inactivo")}.", nuevo);
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Error al cambiar estado: {ex.Message}", "");
-            }
+            if (id <= 0 || userId <= 0 || empresaId <= 0 || periodoEmpSedeId <= 0)
+                return (false, "El proceso o el contexto de acceso no es válido.");
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+            var actual = await conn.QuerySingleOrDefaultAsync<PlanillaProcesoModel>(
+                PlanillaProcesoLockSql, new { Id = id, EmpresaId = empresaId, PeriodoEmpSedeId = periodoEmpSedeId }, tx);
+            if (actual is null)
+                return (false, "Proceso no encontrado para el período y la sede activos.");
+            if (actual.Estado != "A" || actual.EstadoPlanProceCodigo != "01")
+                return (false, "Sólo se puede anular un proceso activo y abierto.");
+            await conn.ExecuteAsync("dbo.sp_plan_proce_eliminar",
+                new { planillaProcesoId = id, usuarioAccionId = userId }, tx, commandType: CommandType.StoredProcedure);
+            tx.Commit();
+            return (true, "Proceso de planilla anulado.");
         }
 
-        public async Task<(bool success, string message)> ProcesarCalculoPlanillaAsync(int planProceId, int userId)
+        public Task<(bool success, string message)> ProcesarCalculoPlanillaAsync(int planProceId, int userId)
         {
-            try
-            {
-                using var conn = _dbConnectionFactory.CreateConnection();
-                var proce = await conn.QueryFirstOrDefaultAsync<dynamic>("SELECT * FROM plan_proce WHERE plan_proce_id = @Id", new { Id = planProceId });
-                if (proce == null) return (false, "Proceso de planilla no encontrado.");
-
-                // Actualizar fecha_proceso y estado_plan_pro_id = 2 (Procesado)
-                await conn.ExecuteAsync(@"
-                    UPDATE plan_proce 
-                    SET estado_plan_pro_id = 2,
-                        fecha_proceso = GETDATE(),
-                        usuario_modifica_id = @UserId,
-                        fecha_modifica = GETDATE()
-                    WHERE plan_proce_id = @Id",
-                    new { Id = planProceId, UserId = userId });
-
-                return (true, "Planilla calculada y procesada con éxito.");
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Error al procesar planilla: {ex.Message}");
-            }
+            // The legacy calculation is a separate multi-step engine, not a state transition.
+            return Task.FromResult((false,
+                "El cálculo de remuneraciones aún no está disponible. No se modificó el proceso."));
         }
 
         public async Task<PlanillaHorasModel?> GetPlanillaHorasAsync(int planProceId, int empresaId)
@@ -3582,6 +3607,7 @@ namespace AspNet10ArcoERP.Services
             const string processSql = @"
                 SELECT pp.plan_proce_id AS Id,
                        pp.periodo_emp_sede_id AS PeriodoEmpSedeId,
+                       per.periodo AS PeriodoAnio,
                        pp.planilla_id AS PlanillaId,
                        pla.nombre AS PlanillaNombre,
                        pp.proc_anual AS ProcAnual,
@@ -3599,6 +3625,8 @@ namespace AspNet10ArcoERP.Services
                        pp.estado AS Estado
                 FROM plan_proce pp
                 INNER JOIN planilla pla ON pla.planilla_id = pp.planilla_id
+                INNER JOIN periodo_emp_sede pes ON pes.periodo_emp_sede_id = pp.periodo_emp_sede_id
+                INNER JOIN periodo per ON per.periodo_id = pes.periodo_id
                 LEFT JOIN moneda m ON m.moneda_id = pp.moneda_id
                 WHERE pp.plan_proce_id = @PlanProceId AND pla.empresa_id = @EmpresaId";
             var proceso = await conn.QueryFirstOrDefaultAsync<PlanillaProcesoModel>(

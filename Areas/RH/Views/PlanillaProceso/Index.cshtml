@@ -1,613 +1,248 @@
-@model List<AspNet10ArcoERP.Models.PlanillaProcesoModel>
+@model AspNet10ArcoERP.Models.PlanillaProcesoPageModel
 @{
-    ViewData["Title"] = "Procesos de Planilla de Remuneraciones";
-    var planillasList = ViewBag.Planillas as List<AspNet10ArcoERP.Models.PlanillaModel> ?? new();
-
-    int totalProcesos = Model?.Count ?? 0;
-    int totalTrabajadores = Model?.Sum(p => p.TotalTrabajadores) ?? 0;
-    decimal totalIngresos = Model?.Sum(p => p.TotalIngresos) ?? 0;
-    decimal totalNeto = Model?.Sum(p => p.TotalNeto) ?? 0;
+    ViewData["Title"] = "Procesos de planilla";
+    var pageCount = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
+    string search = ViewBag.Search as string ?? "";
+    int? mes = ViewBag.Mes as int?;
+    int? anio = ViewBag.Anio as int?;
+    bool puedeEscribir = ViewBag.PuedeEscribir is true;
 }
 
-<div class="content-header">
+<div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center mb-3">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark fw-bold">
-                    <i class="bi bi-cpu text-primary me-2"></i>Proceso de Planilla
-                </h1>
-                <small class="text-muted">Generación, procesamiento mensual y liquidación de remuneraciones de personal</small>
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-1"><i class="bi bi-calendar2-check me-2 text-primary"></i>Procesos de planilla</h3>
+                <small class="text-muted">Administra los procesos de la sede seleccionada y consulta sus remuneraciones. Período @Model.PeriodoAnio.</small>
             </div>
-            <div class="col-sm-6 text-end">
-                <button type="button" class="btn btn-primary shadow-sm" onclick="abrirModalCrear();">
-                    <i class="bi bi-plus-circle me-1"></i> Nuevo Proceso de Planilla
-                </button>
-            </div>
+            @if (puedeEscribir)
+            {
+                <div class="col-auto">
+                    <button type="button" class="btn btn-primary shadow-sm" id="createProcess">
+                        <i class="bi bi-plus-circle me-1"></i>Nuevo proceso
+                    </button>
+                </div>
+            }
         </div>
-
-        <!-- KPI SUMMARY CARDS -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-sm bg-primary-subtle text-primary h-100">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-file-earmark-spreadsheet"></i></div>
-                        <div>
-                            <div class="fs-4 fw-bold">@totalProcesos</div>
-                            <div class="small fw-semibold text-uppercase">Procesos Registrados</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-sm bg-info-subtle text-info h-100">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-people-fill"></i></div>
-                        <div>
-                            <div class="fs-4 fw-bold">@totalTrabajadores</div>
-                            <div class="small fw-semibold text-uppercase">Colaboradores Calculados</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-sm bg-secondary-subtle text-secondary h-100">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-cash-stack"></i></div>
-                        <div>
-                            <div class="fs-4 fw-bold">S/ @totalIngresos.ToString("N2")</div>
-                            <div class="small fw-semibold text-uppercase">Total Bruto / Ingresos</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-sm bg-success-subtle text-success h-100">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="fs-1 me-3 opacity-75"><i class="bi bi-wallet2"></i></div>
-                        <div>
-                            <div class="fs-4 fw-bold">S/ @totalNeto.ToString("N2")</div>
-                            <div class="small fw-semibold text-uppercase">Neto Liquidado a Pagar</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    </div>
+</div>
+<div class="app-content py-4">
+    <div class="container-fluid">
+        <div class="alert alert-info" role="status">
+            <i class="bi bi-info-circle me-2"></i>El cálculo de remuneraciones no está disponible en esta versión.
+            Puede consultar los resultados existentes. El estado abierto o cerrado es independiente del cálculo.
         </div>
-
-        <!-- FILTROS -->
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
             <div class="card-header bg-body-tertiary py-3">
-                <h6 class="m-0 fw-bold"><i class="bi bi-funnel me-2"></i>Filtros de Búsqueda</h6>
-            </div>
-            <div class="card-body">
-                <form method="get" asp-action="Index" class="row g-3">
-                    <div class="col-md-2 col-sm-6">
-                        <label class="form-label small fw-semibold">Año</label>
-                        <select name="anio" class="form-select form-select-sm">
-                            <option value="">-- Todos --</option>
-                            @for (int y = DateTime.Today.Year + 1; y >= 2018; y--)
+                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
+                    <div style="min-width:280px;flex:1 1 320px">
+                        <label for="search" class="form-label small fw-semibold">Buscar planilla</label>
+                        <input id="search" name="search" value="@search" maxlength="150" class="form-control" placeholder="Nombre de planilla..." />
+                    </div>
+                    <div>
+                        <label for="mes" class="form-label small fw-semibold">Mes</label>
+                        <select id="mes" name="mes" class="form-select">
+                            <option value="">Cualquier mes</option>
+                            @foreach (var item in Model.Meses)
                             {
-                                if (ViewBag.Anio != null && (int)ViewBag.Anio == y)
-                                {
-                                    <option value="@y" selected="selected">@y</option>
-                                }
-                                else
-                                {
-                                    <option value="@y">@y</option>
-                                }
+                                <option value="@item.Id" selected="@(mes == item.Id)">@item.Nombre</option>
                             }
                         </select>
                     </div>
-                    <div class="col-md-2 col-sm-6">
-                        <label class="form-label small fw-semibold">Mes</label>
-                        <select name="mes" class="form-select form-select-sm">
-                            <option value="">-- Todos --</option>
-                            @{
-                                var meses = new[] { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre" };
-                                for (int m = 1; m <= 12; m++)
-                                {
-                                    if (ViewBag.Mes != null && (int)ViewBag.Mes == m)
-                                    {
-                                        <option value="@m" selected="selected">@meses[m-1]</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@m">@meses[m-1]</option>
-                                    }
-                                }
+                    <div>
+                        <label for="top" class="form-label small fw-semibold">Por página</label>
+                        <select id="top" name="top" class="form-select">
+                            @foreach (var size in new[] { 25, 50, 100, 500 })
+                            {
+                                <option value="@size" selected="@(Model.PageSize == size)">@size</option>
                             }
                         </select>
                     </div>
-                    <div class="col-md-5 col-sm-12">
-                        <label class="form-label small fw-semibold">Buscar por Nombre de Planilla</label>
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="search" class="form-control" placeholder="Buscar planilla..." value="@ViewBag.Search" />
-                            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i> Filtrar</button>
-                            <a href="/RH/PlanillaProceso" class="btn btn-outline-secondary" title="Limpiar"><i class="bi bi-arrow-counterclockwise"></i></a>
-                        </div>
-                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">@Model.Total proceso(s)</span>
                 </form>
             </div>
-        </div>
-
-        <!-- TABLA DE PROCESOS DE PLANILLA -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="tabla-procesos">
-                        <thead class="table-light">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead class="bg-body-tertiary">
+                        <tr><th>Planilla</th><th>Mes / Nº proceso</th><th>Fechas</th><th>Moneda</th><th>Estado</th><th class="text-end">Trabajadores</th><th class="text-end">Neto</th><th class="text-end">Acciones</th></tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-muted py-4">No se encontraron procesos en el período y la sede seleccionados.</td></tr>
+                        }
+                        @foreach (var item in Model.Items)
+                        {
                             <tr>
-                                <th class="text-center px-3" style="width: 50px;">#</th>
-                                <th style="width: 130px;">PERÍODO</th>
-                                <th>PLANILLA / DESCRIPCIÓN</th>
-                                <th style="width: 180px;">RANGO DE FECHAS</th>
-                                <th class="text-center" style="width: 100px;">PERSONAL</th>
-                                <th class="text-end" style="width: 120px;">INGRESOS</th>
-                                <th class="text-end" style="width: 120px;">DESCUENTOS</th>
-                                <th class="text-end" style="width: 130px;">NETO A PAGAR</th>
-                                <th class="text-center" style="width: 110px;">PROCESO</th>
-                                <th class="text-center" style="width: 90px;">ESTADO</th>
-                                <th class="text-end px-4" style="width: 150px;">ACCIONES</th>
+                                <td class="fw-semibold">@item.PlanillaNombre <small class="text-muted">(#@item.Id)</small></td>
+                                <td>@item.MesNombre / @item.ProcAnual <small class="d-block text-muted">@item.PeriodoAnio · @item.PeriRemuNombre</small></td>
+                                <td class="text-nowrap">@item.FechaDesde.ToString("dd/MM/yyyy")<br />@item.FechaHasta.ToString("dd/MM/yyyy")</td>
+                                <td>@item.MonedaNombre</td>
+                                <td>
+                                    <span class="badge @(item.EstadoPlanProceCodigo == "01" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-body-secondary border")">@item.EstadoPlanProceNombre</span>
+                                    @if (item.Estado != "A")
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Anulado</span>
+                                    }
+                                </td>
+                                <td class="text-end">@item.TotalTrabajadores</td>
+                                <td class="text-end font-monospace">@item.TotalNeto.ToString("N2")</td>
+                                <td class="text-end text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-open-process" data-id="@item.Id" title="Consultar cabecera y resultados">
+                                        <i class="bi bi-folder2-open me-1"></i>Abrir
+                                    </button>
+                                    @if (puedeEscribir && item.Estado == "A" && item.EstadoPlanProceCodigo == "01")
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger js-cancel-process" data-id="@item.Id" title="Anular proceso">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @if (Model != null && Model.Any())
-                            {
-                                int idx = 1;
-                                foreach (var item in Model)
-                                {
-                                    <tr id="fila-@item.Id">
-                                        <td class="text-center text-muted fw-semibold px-3">@idx</td>
-                                        <td>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1">
-                                                @item.ProcAnual - @item.MesNombre
-                                            </span>
-                                            <div class="small text-muted">@item.PeriRemuNombre</div>
-                                        </td>
-                                        <td>
-                                            <div class="fw-bold fs-6">@item.PlanillaNombre</div>
-                                            <div class="small text-muted font-monospace">
-                                                <i class="bi bi-coin me-1"></i>@item.MonedaNombre (T.C. @item.MontoTipoCambio.ToString("N4"))
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="small">
-                                                <i class="bi bi-calendar3 me-1 text-muted"></i>@item.FechaDesde.ToString("dd/MM/yyyy") - @item.FechaHasta.ToString("dd/MM/yyyy")
-                                            </div>
-                                            @if (item.FechaProceso.HasValue)
-                                            {
-                                                <div class="small text-success">
-                                                    <i class="bi bi-check2-circle me-1"></i>Proc: @item.FechaProceso.Value.ToString("dd/MM/yyyy HH:mm")
-                                                </div>
-                                            }
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-info-subtle text-info border border-info-subtle fs-6 px-2 py-1">
-                                                <i class="bi bi-people me-1"></i>@item.TotalTrabajadores
-                                            </span>
-                                        </td>
-                                        <td class="text-end font-monospace text-secondary">
-                                            S/ @item.TotalIngresos.ToString("N2")
-                                        </td>
-                                        <td class="text-end font-monospace text-danger">
-                                            S/ @item.TotalDescuentos.ToString("N2")
-                                        </td>
-                                        <td class="text-end font-monospace fw-bold text-success fs-6">
-                                            S/ @item.TotalNeto.ToString("N2")
-                                        </td>
-                                        <td class="text-center">
-                                            @if (item.EstadoPlanProceNombre == "PROCESADO")
-                                            {
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                                    <i class="bi bi-check-circle-fill me-1"></i>Procesado
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
-                                                    <i class="bi bi-hourglass-split me-1"></i>Pendiente
-                                                </span>
-                                            }
-                                        </td>
-                                        <td class="text-center">
-                                            @if (item.Estado == "A")
-                                            {
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 estado-badge">
-                                                    <i class="bi bi-check-circle-fill me-1"></i>Activo
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 estado-badge">
-                                                    <i class="bi bi-x-circle-fill me-1"></i>Inactivo
-                                                </span>
-                                            }
-                                        </td>
-                                        <td class="text-end px-4">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <button type="button" class="btn btn-outline-info" onclick="verDetalleCalculo(@item.Id, '@item.PlanillaNombre - @item.ProcAnual @item.MesNombre');" title="Ver Sábana / Cálculos">
-                                                    <i class="bi bi-table"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalEditar(@item.Id);" title="Editar Período">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-warning" onclick="cambiarEstado(@item.Id, '@item.Estado');" title="@(item.Estado == "A" ? "Desactivar" : "Activar")">
-                                                    <i class="bi @(item.Estado == "A" ? "bi-toggle-on text-success" : "bi-toggle-off text-muted")"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    idx++;
-                                }
-                            }
-                            else
-                            {
-                                <tr>
-                                    <td colspan="11" class="text-center py-5 text-muted">
-                                        <i class="bi bi-cpu display-6 d-block mb-2 text-primary opacity-50"></i>
-                                        <span>No se encontraron procesos de planilla registrados.</span>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-body-tertiary d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span class="small text-muted">Página @Model.Page de @pageCount · @Model.Total proceso(s)</span>
+                <div class="btn-group btn-group-sm" aria-label="Paginación de procesos">
+                    @if (Model.Page > 1)
+                    {
+                        <a asp-action="Index" asp-route-search="@search" asp-route-mes="@mes" asp-route-anio="@anio" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">Anterior</a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary" disabled>Anterior</button>
+                    }
+                    @if (Model.Page < pageCount)
+                    {
+                        <a asp-action="Index" asp-route-search="@search" asp-route-mes="@mes" asp-route-anio="@anio" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">Siguiente</a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary" disabled>Siguiente</button>
+                    }
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL CREAR / EDITAR PROCESO -->
-<div class="modal fade" id="modalPlanillaProceso" tabindex="-1" aria-labelledby="modalPlanillaProcesoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold" id="modalPlanillaProcesoLabel">
-                    <i class="bi bi-cpu me-2"></i>Nuevo Proceso de Planilla
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formPlanillaProceso" onsubmit="guardarRegistro(event);">
-                <div class="modal-body p-4">
-                    <input type="hidden" id="proce-id" name="Id" value="0" />
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Tipo de Planilla <span class="text-danger">*</span></label>
-                            <select id="proce-planilla-id" name="PlanillaId" class="form-select" required>
-                                <option value="">-- Seleccione Planilla --</option>
-                                @foreach (var p in planillasList)
-                                {
-                                    <option value="@p.Id">@p.Nombre</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Año <span class="text-danger">*</span></label>
-                            <input type="number" id="proce-anio" name="ProcAnual" class="form-control" required value="@DateTime.Today.Year" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Mes <span class="text-danger">*</span></label>
-                            <select id="proce-mes" name="MesId" class="form-select" required>
-                                <option value="1">Enero</option>
-                                <option value="2">Febrero</option>
-                                <option value="3">Marzo</option>
-                                <option value="4">Abril</option>
-                                <option value="5">Mayo</option>
-                                <option value="6">Junio</option>
-                                <option value="7">Julio</option>
-                                <option value="8">Agosto</option>
-                                <option value="9">Setiembre</option>
-                                <option value="10">Octubre</option>
-                                <option value="11">Noviembre</option>
-                                <option value="12">Diciembre</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Período Remunerativo</label>
-                            <select id="proce-peri-remu-id" name="PeriRemuId" class="form-select">
-                                <option value="1">Mensual</option>
-                                <option value="2">Quincenal</option>
-                                <option value="3">Semanal</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Moneda</label>
-                            <select id="proce-moneda-id" name="MonedaId" class="form-select">
-                                <option value="1">Soles (S/)</option>
-                                <option value="2">Dólares (US$)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Tipo de Cambio</label>
-                            <input type="number" step="0.0001" id="proce-tipo-cambio" name="MontoTipoCambio" class="form-control text-end font-monospace" value="1.0000" />
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Fecha Desde <span class="text-danger">*</span></label>
-                            <input type="date" id="proce-fecha-desde" name="FechaDesde" class="form-control" required value="@DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd")" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Fecha Hasta <span class="text-danger">*</span></label>
-                            <input type="date" id="proce-fecha-hasta" name="FechaHasta" class="form-control" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Estado</label>
-                            <select id="proce-estado" name="Estado" class="form-select">
-                                <option value="A">Activo</option>
-                                <option value="I">Inactivo</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i> Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="btn-guardar-proce">
-                        <i class="bi bi-check-circle me-1"></i> Guardar Proceso
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL SÁBANA / DETALLE DE CÁLCULO DE PLANILLA -->
-<div class="modal fade" id="modalSabanaPlanilla" tabindex="-1" aria-labelledby="modalSabanaPlanillaLabel" aria-hidden="true">
+<div class="modal fade" id="processModal" tabindex="-1" aria-labelledby="processTitle" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title fw-bold" id="modalSabanaPlanillaLabel">
-                    <i class="bi bi-table me-2 text-info"></i>Detalle de Cálculos de Planilla
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div id="subtitulo-sabana" class="fs-6 fw-bold text-primary"></div>
-                    <input type="text" id="filtro-sabana" class="form-control form-control-sm w-auto" placeholder="Filtrar por trabajador o concepto..." onkeyup="filtrarSabana();" />
+        <form id="processForm" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" id="processId" value="0" />
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <div>
+                    <h5 id="processTitle" class="modal-title fw-bold">Proceso de planilla</h5>
+                    <small class="text-muted" id="processSubtitle">Período @Model.PeriodoAnio</small>
                 </div>
-                <div class="table-responsive" style="max-height: 480px;">
-                    <table class="table table-sm table-hover align-middle mb-0" id="tabla-sabana">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th>COLABORADOR</th>
-                                <th>DNI / CÓDIGO</th>
-                                <th>CONCEPTO</th>
-                                <th>TIPO</th>
-                                <th class="text-end" style="width: 90px;">HORAS</th>
-                                <th class="text-end" style="width: 120px;">MONTO SUB</th>
-                                <th class="text-end" style="width: 120px;">MONTO (S/)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-sabana">
-                            <!-- Rows loaded via AJAX -->
-                        </tbody>
-                        <tfoot class="table-light fw-bold">
-                            <tr>
-                                <td colspan="6" class="text-end">TOTAL CÁLCULOS:</td>
-                                <td class="text-end font-monospace text-primary fs-6" id="tfoot-total-sabana">S/ 0.00</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <div class="modal-footer bg-light">
-                <a href="/RH/ReporteBoleta" class="btn btn-outline-danger me-auto">
-                    <i class="bi bi-file-earmark-pdf me-1"></i> Ir a Emisión de Boletas
-                </a>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <div class="modal-body">
+                <fieldset id="processFields">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="processPlanilla" class="form-label">Planilla</label>
+                            <select id="processPlanilla" name="PlanillaId" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                @foreach (var item in Model.Planillas) { <option value="@item.Id">@item.Nombre</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="processMonth" class="form-label">Mes</label>
+                            <select id="processMonth" name="MesId" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                @foreach (var item in Model.Meses) { <option value="@item.Id">@item.Nombre</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="processNumber" class="form-label">Nº de proceso</label>
+                            <input id="processNumber" name="ProcAnual" class="form-control" type="number" min="1" max="32767" step="1" value="1" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="processPeriodicity" class="form-label">Período de pago</label>
+                            <select id="processPeriodicity" name="PeriRemuId" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                @foreach (var item in Model.Periodicidades) { <option value="@item.Id">@item.Nombre</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="processCurrency" class="form-label">Moneda</label>
+                            <select id="processCurrency" name="MonedaId" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                @foreach (var item in Model.Monedas) { <option value="@item.Id">@item.Nombre</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="processExchange" class="form-label">Tipo de cambio</label>
+                            <input id="processExchange" name="MontoTipoCambio" class="form-control" type="number" min="0.0001" max="99999999.9999" step="0.0001" value="1" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="processFrom" class="form-label">Fecha de inicio</label>
+                            <input id="processFrom" name="FechaDesde" class="form-control" type="date" min="1753-01-01" max="9999-12-31" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="processTo" class="form-label">Fecha de fin</label>
+                            <input id="processTo" name="FechaHasta" class="form-control" type="date" min="1753-01-01" max="9999-12-31" required />
+                        </div>
+                    </div>
+                    <p class="small text-body-secondary mb-3">La planilla, el mes, el número de proceso y el período de pago se conservan después del alta.</p>
+                </fieldset>
+                <section id="calculationSection" class="d-none border-top pt-3" aria-labelledby="calculationTitle">
+                    <h6 id="calculationTitle">Resultados existentes</h6>
+                    <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+                        <div style="min-width:260px;flex:1 1 320px">
+                            <label for="detailSearch" class="form-label small">Buscar trabajador o concepto</label>
+                            <input id="detailSearch" class="form-control" placeholder="Nombre, documento o concepto..." />
+                        </div>
+                        <div>
+                            <label for="detailSize" class="form-label small">Por página</label>
+                            <select id="detailSize" class="form-select">
+                                @foreach (var size in new[] { 25, 50, 100, 500 }) { <option value="@size">@size</option> }
+                            </select>
+                        </div>
+                        <button id="loadDetails" type="button" class="btn btn-outline-primary"><i class="bi bi-arrow-clockwise me-1"></i>Cargar resultados</button>
+                    </div>
+                    <div class="table-responsive border rounded process-details">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="sticky-top bg-body-tertiary"><tr><th>Trabajador</th><th>Concepto</th><th>Tipo</th><th class="text-end">Horas</th><th class="text-end">Subtotal</th><th class="text-end">Monto</th></tr></thead>
+                            <tbody id="detailBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                        <span id="detailCount" class="small text-muted" role="status"></span>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" id="detailPrevious" class="btn btn-outline-secondary">Anterior</button>
+                            <button type="button" id="detailNext" class="btn btn-outline-secondary">Siguiente</button>
+                        </div>
+                    </div>
+                    <p id="detailNet" class="small text-end mt-2 mb-0"></p>
+                </section>
             </div>
-        </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="submit" class="btn btn-primary" id="saveProcess"><i class="bi bi-check2-circle me-1"></i>Guardar</button>
+            </div>
+        </form>
     </div>
 </div>
 
 @section Scripts {
-<script>
-    let modalProcesoInstance = null;
-    let modalSabanaInstance = null;
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const modalP = document.getElementById('modalPlanillaProceso');
-        if (modalP) modalProcesoInstance = new bootstrap.Modal(modalP);
-
-        const modalS = document.getElementById('modalSabanaPlanilla');
-        if (modalS) modalSabanaInstance = new bootstrap.Modal(modalS);
-    });
-
-    function abrirModalCrear() {
-        document.getElementById('formPlanillaProceso').reset();
-        document.getElementById('proce-id').value = '0';
-        document.getElementById('proce-anio').value = new Date().getFullYear();
-        document.getElementById('proce-mes').value = (new Date().getMonth() + 1);
-        document.getElementById('proce-moneda-id').value = '1';
-        document.getElementById('proce-tipo-cambio').value = '1.0000';
-        document.getElementById('proce-peri-remu-id').value = '1';
-        document.getElementById('proce-estado').value = 'A';
-
-        const hoy = new Date();
-        const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
-        const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
-        document.getElementById('proce-fecha-desde').value = primerDia;
-        document.getElementById('proce-fecha-hasta').value = ultimoDia;
-
-        document.getElementById('modalPlanillaProcesoLabel').innerHTML = '<i class="bi bi-cpu me-2"></i>Nuevo Proceso de Planilla';
-        modalProcesoInstance.show();
-    }
-
-    async function abrirModalEditar(id) {
-        try {
-            const resp = await fetch(`/RH/PlanillaProceso/Obtener/${id}`);
-            const res = await resp.json();
-            if (!res.success) {
-                Swal.fire('Error', res.message || 'No se pudo obtener el proceso.', 'error');
-                return;
-            }
-
-            const d = res.data;
-            document.getElementById('proce-id').value = d.id;
-            document.getElementById('proce-planilla-id').value = d.planillaId;
-            document.getElementById('proce-anio').value = d.procAnual;
-            document.getElementById('proce-mes').value = d.mesId;
-            document.getElementById('proce-moneda-id').value = d.monedaId;
-            document.getElementById('proce-tipo-cambio').value = d.montoTipoCambio.toFixed(4);
-            document.getElementById('proce-peri-remu-id').value = d.periRemuId;
-            document.getElementById('proce-fecha-desde').value = d.fechaDesde ? d.fechaDesde.split('T')[0] : '';
-            document.getElementById('proce-fecha-hasta').value = d.fechaHasta ? d.fechaHasta.split('T')[0] : '';
-            document.getElementById('proce-estado').value = d.estado || 'A';
-
-            document.getElementById('modalPlanillaProcesoLabel').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Proceso de Planilla';
-            modalProcesoInstance.show();
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
-        }
-    }
-
-    async function guardarRegistro(event) {
-        event.preventDefault();
-        const form = document.getElementById('formPlanillaProceso');
-        const formData = new FormData(form);
-
-        const btn = document.getElementById('btn-guardar-proce');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Guardando...';
-
-        try {
-            const resp = await fetch('/RH/PlanillaProceso/Guardar', {
-                method: 'POST',
-                body: formData
-            });
-            const res = await resp.json();
-
-            if (res.success) {
-                modalProcesoInstance.hide();
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Operación Exitosa!',
-                    text: res.message,
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    location.reload();
-                });
-            } else {
-                Swal.fire('Error', res.message || 'No se pudo guardar el proceso.', 'error');
-            }
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Guardar Proceso';
-        }
-    }
-
-    async function cambiarEstado(id, estadoActual) {
-        const accion = estadoActual === 'A' ? 'desactivar' : 'activar';
-        const result = await Swal.fire({
-            title: `¿Desea ${accion} este proceso?`,
-            text: `Se actualizará el estado de la planilla procesada.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#ffc107',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: `Sí, ${accion}`,
-            cancelButtonText: 'Cancelar'
-        });
-
-        if (!result.isConfirmed) return;
-
-        try {
-            const formData = new FormData();
-            formData.append('id', id);
-
-            const resp = await fetch('/RH/PlanillaProceso/ToggleEstado', {
-                method: 'POST',
-                body: formData
-            });
-            const res = await resp.json();
-
-            if (res.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Actualizado',
-                    text: res.message,
-                    timer: 1200,
-                    showConfirmButton: false
-                }).then(() => {
-                    location.reload();
-                });
-            } else {
-                Swal.fire('Error', res.message || 'No se pudo cambiar el estado.', 'error');
-            }
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'Error de comunicación con el servidor.', 'error');
-        }
-    }
-
-    async function verDetalleCalculo(id, titulo) {
-        document.getElementById('subtitulo-sabana').innerText = titulo;
-        const tbody = document.getElementById('tbody-sabana');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Cargando cálculos de planilla...</td></tr>';
-        modalSabanaInstance.show();
-
-        try {
-            const resp = await fetch(`/RH/PlanillaProceso/DetalleCalculo/${id}`);
-            const res = await resp.json();
-
-            if (!res.success || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No se registran cálculos para este proceso de planilla.</td></tr>';
-                document.getElementById('tfoot-total-sabana').innerText = 'S/ 0.00';
-                return;
-            }
-
-            let html = '';
-            let suma = 0;
-            res.data.forEach(d => {
-                suma += (d.monto || 0);
-                const tipoBadge = d.tipoConceptoId === 1 
-                    ? '<span class="badge bg-success-subtle text-success border border-success-subtle">Ingreso</span>'
-                    : (d.tipoConceptoId === 3 
-                        ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Descuento</span>'
-                        : '<span class="badge bg-info-subtle text-info border border-info-subtle">Aporte</span>');
-
-                html += `
-                    <tr>
-                        <td class="fw-semibold">${d.personalNombre}</td>
-                        <td class="font-monospace small">${d.documentoIdentidad} / ${d.personalCodigo}</td>
-                        <td><span class="badge bg-light text-dark border me-1">${d.concepRemuCodigo}</span> ${d.concepRemuNombre}</td>
-                        <td>${tipoBadge}</td>
-                        <td class="text-end font-monospace">${(d.horas || 0).toFixed(2)}</td>
-                        <td class="text-end font-monospace text-muted">${(d.montoSub || 0).toFixed(2)}</td>
-                        <td class="text-end font-monospace fw-bold">${(d.monto || 0).toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-
-            tbody.innerHTML = html;
-            document.getElementById('tfoot-total-sabana').innerText = 'S/ ' + suma.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        } catch (err) {
-            console.error(err);
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error al cargar los datos del servidor.</td></tr>';
-        }
-    }
-
-    function filtrarSabana() {
-        const val = document.getElementById('filtro-sabana').value.toLowerCase().trim();
-        const filas = document.querySelectorAll('#tbody-sabana tr');
-        filas.forEach(f => {
-            f.style.display = f.innerText.toLowerCase().includes(val) ? '' : 'none';
-        });
-    }
-</script>
+    <style>
+        #processModal .modal-content { max-height:90vh; overflow:hidden; }
+        #processModal .modal-body { max-height:calc(90vh - 140px); overflow-y:auto; flex:1 1 auto; scrollbar-width:thin; }
+        #processModal .process-details { max-height:360px; overflow:auto; scrollbar-width:thin; }
+    </style>
+    <script id="processConfig" type="application/json">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+            getUrl = Url.Action("Obtener"), detailUrl = Url.Action("DetalleCalculo"),
+            saveUrl = Url.Action("Guardar"), cancelUrl = Url.Action("Anular"),
+            canWrite = puedeEscribir, year = Model.PeriodoAnio, localCurrencyId = Model.MonedaLocalId
+        }))
+    </script>
+    <script src="~/js/planilla-proceso.js" asp-append-version="true"></script>
 }

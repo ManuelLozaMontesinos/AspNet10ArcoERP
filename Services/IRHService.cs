@@ -198,10 +198,14 @@ namespace AspNet10ArcoERP.Services
         // 19. PROCESO DE PLANILLA (plan_proce & plan_calculo)
         // =========================================================================
         Task<List<PlanillaProcesoModel>> GetPlanillasProcesoListAsync(int empresaId, int? anio = null, int? mes = null, string? search = null, int top = 50);
+        Task<int?> GetPeriodoEmpresaSedePlanillaAsync(int empresaId, int empresaSedeId, int periodoId);
+        Task<int> GetPermisoPlanillaProcesoAsync(int userId, int empresaId);
+        Task<PlanillaProcesoPageModel> GetPlanillasProcesoPageAsync(int empresaId, int periodoEmpSedeId, int? anio = null, int? mes = null, string? search = null, int page = 1, int pageSize = 25);
         Task<PlanillaProcesoModel?> GetPlanillaProcesoByIdAsync(int id);
-        Task<List<PlanillaCalculoDetalleModel>> GetPlanillaCalculoDetalleAsync(int planProceId, int? personalId = null);
-        Task<(bool success, string message, int id)> SavePlanillaProcesoAsync(PlanillaProcesoCrearModel model, int userId);
-        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoPlanillaProcesoAsync(int id, int userId);
+        Task<PlanillaProcesoModel?> GetPlanillaProcesoByIdAsync(int id, int empresaId, int periodoEmpSedeId);
+        Task<List<PlanillaCalculoDetalleModel>?> GetPlanillaCalculoDetalleAsync(int planProceId, int empresaId, int periodoEmpSedeId, int? personalId = null);
+        Task<(bool success, string message, int id)> SavePlanillaProcesoAsync(PlanillaProcesoCrearModel model, int userId, int empresaId, int periodoEmpSedeId);
+        Task<(bool success, string message)> InactivarPlanillaProcesoAsync(int id, int userId, int empresaId, int periodoEmpSedeId);
         Task<(bool success, string message)> ProcesarCalculoPlanillaAsync(int planProceId, int userId);
 
         // =========================================================================

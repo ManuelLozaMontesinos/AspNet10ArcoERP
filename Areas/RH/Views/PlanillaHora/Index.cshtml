@@ -76,7 +76,7 @@
                         {
                             <tr>
                                 <td class="fw-semibold">@proceso.PlanillaNombre</td>
-                                <td>@proceso.MesNombre @proceso.ProcAnual <span class="text-muted">(#@proceso.Id)</span></td>
+                                <td>@proceso.MesNombre @proceso.PeriodoAnio · Proceso @proceso.ProcAnual <span class="text-muted">(#@proceso.Id)</span></td>
                                 <td>@proceso.FechaDesde.ToString("d") - @proceso.FechaHasta.ToString("d")</td>
                                 <td>
                                     @if (proceso.EstadoPlanProceId == 2)
@@ -328,7 +328,7 @@
                 searchInput.value = '';
                 readOnly = result.data.proceso.estadoPlanProceId === 2;
                 document.getElementById('planillaHoraSubtitle').textContent =
-                    `${result.data.proceso.planillaNombre} · ${result.data.proceso.mesNombre} ${result.data.proceso.procAnual} · ${readOnly ? 'CERRADO' : 'ABIERTO'}`;
+                    `${result.data.proceso.planillaNombre} · ${result.data.proceso.mesNombre} ${result.data.proceso.periodoAnio} · Proceso ${result.data.proceso.procAnual} · ${readOnly ? 'CERRADO' : 'ABIERTO'}`;
                 document.getElementById('saveHoursButton').disabled = readOnly;
                 document.getElementById('syncHoursButton').disabled = readOnly;
                 document.getElementById('importHoursButton').disabled = readOnly;

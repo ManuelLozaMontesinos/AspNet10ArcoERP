@@ -477,10 +477,11 @@ namespace AspNet10ArcoERP.Models
     public class PlanillaProcesoModel
     {
         public int Id { get; set; }
-        public int PeriodoEmpSedeId { get; set; } = 1;
+        public int PeriodoEmpSedeId { get; set; }
+        public int PeriodoAnio { get; set; }
         public int PlanillaId { get; set; }
         public string PlanillaNombre { get; set; } = string.Empty;
-        public short ProcAnual { get; set; } = (short)DateTime.Today.Year;
+        public short ProcAnual { get; set; } = 1; // Número de proceso dentro del año, según el legacy.
         public int MesId { get; set; } = DateTime.Today.Month;
         public string MesNombre { get; set; } = string.Empty;
         public int MonedaId { get; set; } = 1; // 1=Soles, 2=Dólares
@@ -491,13 +492,28 @@ namespace AspNet10ArcoERP.Models
         public DateTime FechaDesde { get; set; }
         public DateTime FechaHasta { get; set; }
         public DateTime? FechaProceso { get; set; }
-        public int EstadoPlanProceId { get; set; } = 1; // 1=Pendiente, 2=Procesado, 3=Cerrado
-        public string EstadoPlanProceNombre { get; set; } = "PENDIENTE";
+        public int EstadoPlanProceId { get; set; }
+        public string EstadoPlanProceCodigo { get; set; } = string.Empty;
+        public string EstadoPlanProceNombre { get; set; } = string.Empty;
         public string Estado { get; set; } = "A";
         public int TotalTrabajadores { get; set; }
         public decimal TotalIngresos { get; set; }
         public decimal TotalDescuentos { get; set; }
         public decimal TotalNeto => TotalIngresos - TotalDescuentos;
+    }
+
+    public class PlanillaProcesoPageModel
+    {
+        public List<PlanillaProcesoModel> Items { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 25;
+        public int PeriodoAnio { get; set; }
+        public int? MonedaLocalId { get; set; }
+        public List<LookupItemModel> Planillas { get; set; } = new();
+        public List<LookupItemModel> Monedas { get; set; } = new();
+        public List<LookupItemModel> Periodicidades { get; set; } = new();
+        public List<LookupItemModel> Meses { get; set; } = new();
     }
 
     public class PlanillaCalculoDetalleModel
@@ -512,7 +528,8 @@ namespace AspNet10ArcoERP.Models
         public int ConcepRemuId { get; set; }
         public string ConcepRemuCodigo { get; set; } = string.Empty;
         public string ConcepRemuNombre { get; set; } = string.Empty;
-        public int TipoConceptoId { get; set; } // 1=Ingreso, 2=Descuento, 3=Aporte
+        public int TipoConceptoId { get; set; }
+        public string TipoConceptoCodigo { get; set; } = string.Empty; // 01=Remuneración, 02=Aportación, 03=Retención.
         public string TipoConceptoNombre { get; set; } = string.Empty;
         public decimal Horas { get; set; }
         public decimal MontoSub { get; set; }
@@ -599,14 +616,23 @@ namespace AspNet10ArcoERP.Models
 
     public class PlanillaProcesoCrearModel
     {
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public int Id { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public int PlanillaId { get; set; }
-        public short ProcAnual { get; set; } = (short)DateTime.Today.Year;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
+        public short ProcAnual { get; set; } = 1;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public int MesId { get; set; } = DateTime.Today.Month;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public int MonedaId { get; set; } = 1;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public decimal MontoTipoCambio { get; set; } = 1.0m;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public int PeriRemuId { get; set; } = 1;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public DateTime FechaDesde { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public DateTime FechaHasta { get; set; }
         public string Estado { get; set; } = "A";
     }
