@@ -1,0 +1,42 @@
+@model ProduccionPageModel
+@{ ViewData["Title"]="Procesos de producción"; bool canWrite=ViewBag.PuedeEscribir is true; }
+<div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3">
+    <div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-diagram-3 text-primary me-2"></i>Procesos de producción</h3><small class="text-muted">Catálogo compartido de procesos y subprocesos · Operadores de la empresa actual</small></div>
+    <div class="col-auto">@if(canWrite){<button type="button" id="pd-new" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo proceso</button>}</div>
+</div></div></div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
+    @if(Model.Errores.Count>0){<div class="alert alert-warning" role="alert">@string.Join(" ",Model.Errores)</div>}
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar"><div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0"><input type="hidden" name="top" value="@Model.PageSize" /><input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" />
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span><input name="search" value="@Model.Search" maxlength="150" class="form-control border-start-0" placeholder="Nombre del proceso..." aria-label="Buscar procesos" /><button type="submit" class="btn btn-outline-primary">Buscar</button><a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a></div>
+            <select name="estado" class="form-select form-select-sm w-auto" aria-label="Estado"><option value="">Todos los estados</option><option value="A" selected="@(Model.Estado=="A")">Activos</option><option value="I" selected="@(Model.Estado=="I")">Anulados</option></select>
+        </form><partial name="_ListadoControles" model="Model" />
+    </div></div></div>
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="table-responsive table-scroll"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options><thead class="table-header-custom bg-body-tertiary border-bottom"><tr><th erp-sort="nombre">Nombre</th><th erp-sort="estado">Estado</th><th class="listing-options">Opciones</th></tr></thead><tbody>
+        @if(Model.Items.Count==0){<tr><td colspan="3" class="text-center text-muted py-4">No se encontraron procesos.</td></tr>}
+        @foreach(var row in Model.Items){<tr><td>@row.Nombre</td><td><span class="badge @(row.Estado=="A"?"bg-success-subtle text-success border border-success-subtle":"bg-secondary-subtle text-body-secondary border")">@(row.Estado=="A"?"Activo":"Anulado")</span></td><td class="listing-options"><button type="button" class="btn btn-sm btn-outline-primary js-pd-view" data-id="@row.Id" title="Consultar proceso"><i class="bi bi-eye"></i></button>@if(canWrite&&row.Estado=="A"){<button type="button" class="btn btn-sm btn-outline-primary js-pd-edit" data-id="@row.Id" title="Editar proceso"><i class="bi bi-pencil"></i></button><button type="button" class="btn btn-sm btn-outline-danger js-pd-cancel" data-id="@row.Id" data-revision="@row.Revision" title="Anular proceso"><i class="bi bi-x-circle"></i></button>}</td></tr>}
+    </tbody></table></div><partial name="_ListadoPaginacion" model="Model" /></div>
+</div></div>
+<div class="modal fade" id="pd-modal" tabindex="-1" aria-labelledby="pd-title" aria-hidden="true" data-bs-backdrop="static"><div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><form id="pd-form" class="modal-content">
+    @Html.AntiForgeryToken()
+    <div class="modal-header sticky-top bg-body-tertiary"><h5 class="modal-title" id="pd-title">Proceso de producción</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body"><input type="hidden" name="ContextoId" value="@ViewBag.ContextoId" /><input type="hidden" name="Id" value="0" /><input type="hidden" name="ProcesoId" value="0" /><input type="hidden" name="Revision" />
+        <div class="mb-4"><label for="pd-name" class="form-label">Nombre del proceso <span class="text-danger">*</span></label><input id="pd-name" name="Nombre" class="form-control" maxlength="150" required /></div>
+        <section class="border-top pt-3" aria-label="Subprocesos y operadores">
+            <div class="nav nav-tabs mb-3" role="group" aria-label="Detalle del proceso"><button type="button" class="nav-link active" data-pd-tab="subprocesos">Subprocesos</button><button type="button" class="nav-link" data-pd-tab="operadores">Operadores</button></div>
+            <p id="pd-note" class="small text-muted" role="status">Guarde el proceso para administrar sus detalles.</p>
+            <div id="pd-panel" hidden>
+                <div class="d-flex flex-wrap align-items-center gap-2 erp-filter-bar mb-3"><div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary"><i class="bi bi-search"></i></span><input id="pd-search" class="form-control" maxlength="150" placeholder="Buscar en el detalle..." aria-label="Buscar en el detalle" /><button id="pd-find" type="button" class="btn btn-outline-primary">Buscar</button><button id="pd-clear" type="button" class="btn btn-outline-secondary" title="Limpiar búsqueda"><i class="bi bi-x-lg"></i></button></div><select id="pd-sub" class="form-select form-select-sm w-auto" aria-label="Subproceso de operadores" hidden></select><select id="pd-size" class="form-select form-select-sm w-auto ms-auto" aria-label="Mostrar registros del detalle">@foreach(var size in new[]{25,50,100,500}){<option value="@size">@size registros</option>}</select></div>
+                <div class="d-flex gap-2 mb-3">@if(canWrite){<button id="pd-add" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle me-1"></i>Agregar</button>}<button id="pd-back" type="button" class="btn btn-sm btn-outline-secondary" hidden>Volver a operadores</button></div>
+                <div id="pd-sub-editor" class="border rounded-3 p-3 mb-3 bg-body-tertiary" hidden><label for="pd-sub-name" class="form-label">Nombre del subproceso</label><div class="input-group"><input id="pd-sub-name" class="form-control" maxlength="150" /><button id="pd-sub-save" type="button" class="btn btn-primary">Guardar subproceso</button><button id="pd-sub-discard" type="button" class="btn btn-outline-secondary">Cancelar</button></div></div>
+                <div class="table-responsive table-scroll border rounded-3"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="details" data-erp-options><thead id="pd-head" class="table-header-custom bg-body-tertiary"></thead><tbody id="pd-rows"></tbody></table></div>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3"><small id="pd-range" class="text-muted" aria-live="polite"></small><nav aria-label="Páginas del detalle"><div class="btn-group btn-group-sm"><button id="pd-prev" type="button" class="btn btn-outline-secondary">Anterior</button><button id="pd-next" type="button" class="btn btn-outline-secondary">Siguiente</button></div></nav></div>
+            </div>
+        </section>
+    </div>
+    <div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>@if(canWrite){<button id="pd-save" type="submit" class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i>Guardar proceso</button>}</div>
+</form></div></div>
+@section Scripts {
+    <script id="produccion-config" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new{canWrite,contextoId=ViewBag.ContextoId,urls=new{obtener=Url.Action("Obtener"),detalles=Url.Action("Detalles"),guardar=Url.Action("Guardar"),guardarSub=Url.Action("GuardarSubproceso"),anular=Url.Action("Anular"),agregar=Url.Action("AgregarOperador"),quitar=Url.Action("QuitarOperador")}}))</script>
+    <script src="~/js/produccion.js" asp-append-version="true"></script>
+}

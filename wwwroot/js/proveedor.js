@@ -1,6 +1,6 @@
     // @ts-nocheck
     // Variables de configuración de Lookups
-    const pageConfig = JSON.parse(document.getElementById('proveedor-page-config').textContent);
+    const pageConfig = window.erpListings.config('proveedor-page-config');
     var tiposDocData = pageConfig.TiposDoc;
 
     function onNaturalezaChange() {

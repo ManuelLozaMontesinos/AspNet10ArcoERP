@@ -294,12 +294,39 @@ namespace AspNet10ArcoERP.Models
     // =========================================================================
     public class PlanillaModel
     {
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public int Id { get; set; }
         public int EmpresaId { get; set; } = 1;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public string Nombre { get; set; } = string.Empty;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public short ProcesoAnual { get; set; } = 1;
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
         public int TipoTrabajadorId { get; set; } = 1;
         public string TipoTrabajadorNombre { get; set; } = string.Empty;
+        public string Estado { get; set; } = "A";
+    }
+
+    public class PlanillaPageModel : ListadoPaginadoModel
+    {
+        public List<PlanillaModel> Items { get; set; } = new();
+        public List<LookupItemModel> TiposTrabajador { get; set; } = new();
+        public List<LookupItemModel> ConceptosDisponibles { get; set; } = new();
+    }
+
+    public class PlanillaConceptoModel
+    {
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
+        public int Id { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
+        public int PlanillaId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
+        public int ConceptoId { get; set; }
+        public string Codigo { get; set; } = "";
+        public string Nombre { get; set; } = "";
+        public string TipoNombre { get; set; } = "";
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindRequired]
+        public short Orden { get; set; }
         public string Estado { get; set; } = "A";
     }
 
@@ -502,12 +529,9 @@ namespace AspNet10ArcoERP.Models
         public decimal TotalNeto => TotalIngresos - TotalDescuentos;
     }
 
-    public class PlanillaProcesoPageModel
+    public class PlanillaProcesoPageModel : ListadoPaginadoModel
     {
         public List<PlanillaProcesoModel> Items { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 25;
         public int PeriodoAnio { get; set; }
         public int? MonedaLocalId { get; set; }
         public List<LookupItemModel> Planillas { get; set; } = new();
@@ -596,13 +620,10 @@ namespace AspNet10ArcoERP.Models
         public string EstadoAprobacionNombre { get; set; } = string.Empty;
     }
 
-    public class SolicitudAccesoPageModel
+    public class SolicitudAccesoPageModel : ListadoPaginadoModel
     {
         public List<SolicitudAccesoModel> Items { get; set; } = new();
         public List<EstadoAprobacionModel> Estados { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
         public int? EstadoSeleccionadoId { get; set; }
         public DateTime? FechaDesde { get; set; }
         public DateTime? FechaHasta { get; set; }

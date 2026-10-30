@@ -20,10 +20,12 @@ namespace AspNet10ArcoERP.Areas.AS.Controllers
         private int CurrentUserId =>
             int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 1;
 
-        public async Task<IActionResult> Index(int? anio = null, int page = 1, int top = 25)
+        public async Task<IActionResult> Index(int? anio = null, int page = 1, int top = 25, string? sort = null, string? dir = null)
         {
+            if (!ModelState.IsValid || anio is < 1900 or > 9999)
+                return BadRequest(new { success=false, message="Ingrese un año válido para la búsqueda." });
             var pageSize = top is 25 or 50 or 100 or 500 ? top : 25;
-            var model = await _administracionService.GetPeriodosAsync(anio, page, pageSize);
+            var model = await _administracionService.GetPeriodosAsync(anio, page, pageSize, sort, dir);
             return View(model);
         }
 

@@ -1,0 +1,27 @@
+@model InventarioImpresionModel
+@{ Layout = null; }
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>@Model.Titulo</title>
+    <style>
+        body { font-family: Arial,sans-serif; margin: 1.5rem; color: #111; background: #fff; font-size: 11px; }
+        h1 { font-size: 20px; margin-bottom: .4rem; } p { margin: .3rem 0; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1rem; } th,td { border: 1px solid #bbb; padding: .35rem; text-align: left; }
+        th { background: #eee; } thead { display: table-header-group; } tr { break-inside: avoid; }
+        .toolbar { margin-bottom: 1rem; } .error { padding: 1rem; border: 1px solid #999; }
+        @@page { size: A4 landscape; margin: 12mm; }
+        @@media print { .toolbar { display: none; } body { margin: 0; } }
+    </style></head>
+<body>
+    <div class="toolbar"><button type="button" data-print-report>Imprimir / Guardar como PDF</button></div>
+    <h1>@Model.Titulo</h1><p>@Model.Empresa</p><p>@Model.Resumen</p>
+    @if (Model.Errores.Count > 0) { <div class="error" role="alert">@foreach (var error in Model.Errores) { <p>@error</p> }</div> }
+    else
+    {
+        <p>@Model.Filas.Count registros</p>
+        <table><thead><tr>@foreach (var column in Model.Columnas) { <th>@column</th> }</tr></thead><tbody>
+            @foreach (var row in Model.Filas) { <tr>@foreach (var value in row) { <td>@value</td> }</tr> }
+            @if (Model.Filas.Count == 0) { <tr><td colspan="@Model.Columnas.Count">No se encontraron registros.</td></tr> }
+        </tbody></table>
+    }
+    <script src="~/js/inventario-reportes.js" asp-append-version="true"></script>
+</body></html>

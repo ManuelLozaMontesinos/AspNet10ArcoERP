@@ -7,16 +7,16 @@
     int selectedPersoId = ViewBag.PersonalId != null ? (int)ViewBag.PersonalId : 0;
 }
 
-<div class="content-header">
+<div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center mb-3">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark fw-bold">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-file-earmark-pdf text-danger me-2"></i>Boletas de Pago
-                </h1>
+                </h3>
                 <small class="text-muted">Generación, previsualización e impresión de boletas individuales o por lote</small>
             </div>
-            <div class="col-sm-6 text-end">
+            <div class="col-sm-6 text-end" data-erp-list-actions>
                 @if (selectedPlanId > 0 && selectedPersoId > 0 && Model != null)
                 {
                     <a href="/RH/ReporteBoleta/Imprimir?planProceId=@selectedPlanId&personalId=@selectedPersoId" target="_blank" class="btn btn-outline-danger shadow-sm me-2">
@@ -31,14 +31,15 @@
                 }
             </div>
         </div>
+    </div>
+</div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
 
         <!-- BARRA DE SELECCIÓN DE PLANILLA Y TRABAJADOR -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body">
-                <form method="get" asp-action="Index" id="form-selector" class="row g-3 align-items-end">
-                    <div class="col-md-5 col-sm-12">
-                        <label class="form-label fw-semibold">Proceso de Planilla / Período</label>
-                        <select name="planProceId" id="select-planilla" class="form-select" onchange="onPlanillaChange();">
+<div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar">
+<form method="get" asp-action="Index" id="form-selector" class="d-flex flex-wrap align-items-center gap-2 m-0">
+<div class="input-group input-group-sm" style="flex:1 1 320px;min-width:280px"><span class="input-group-text bg-body-tertiary" title="Proceso de planilla"><i class="bi bi-calendar3"></i></span>
+<select name="planProceId" id="select-planilla" class="form-select form-select-sm" aria-label="Proceso de planilla" onchange="onPlanillaChange();">
                             <option value="">-- Seleccione Proceso de Planilla --</option>
                             @foreach (var pl in planillas)
                             {
@@ -51,11 +52,9 @@
                                     <option value="@pl.Id">@pl.Nombre</option>
                                 }
                             }
-                        </select>
-                    </div>
-                    <div class="col-md-5 col-sm-12">
-                        <label class="form-label fw-semibold">Colaborador / Trabajador</label>
-                        <select name="personalId" id="select-personal" class="form-select">
+                        </select></div>
+<div class="input-group input-group-sm" style="flex:1 1 320px;min-width:280px"><span class="input-group-text bg-body-tertiary" title="Colaborador"><i class="bi bi-person"></i></span>
+<select name="personalId" id="select-personal" class="form-select form-select-sm" aria-label="Colaborador">
                             <option value="">-- Seleccione Colaborador --</option>
                             @foreach (var c in colaboradores)
                             {
@@ -68,16 +67,11 @@
                                     <option value="@c.Id">@c.Nombre</option>
                                 }
                             }
-                        </select>
-                    </div>
-                    <div class="col-md-2 col-sm-12">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-eye me-1"></i> Ver Boleta
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                        </select></div>
+<button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i>Consultar boleta</button>
+<a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar selección"><i class="bi bi-x-lg"></i></a>
+</form></div></div>
+
 
         @if (Model != null)
         {

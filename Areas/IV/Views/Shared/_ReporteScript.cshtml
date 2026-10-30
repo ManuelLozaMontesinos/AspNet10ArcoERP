@@ -1,0 +1,7 @@
+@model InventarioReporteModel
+<script id="inventory-report-config" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+    kind = Model.Tipo, mes = Model.Filtro.Mes, filtros = Model.Filtro.Query(Model.Sort, Model.Dir),
+    valores = (Model as SaldoValoradoPageModel)?.Items.Select(r => new { id = r.Id, sede = r.Sede, codigo = r.Codigo, producto = r.Producto, anterior = r.Anterior, ingreso = r.Ingreso, salida = r.Salida, reserva = r.Reserva, saldo = r.Saldo, costoAnterior = r.ValorUnitarioAnterior.ToString("N8",System.Globalization.CultureInfo.GetCultureInfo("es-PE")), costo = r.ValorUnitario.ToString("N8",System.Globalization.CultureInfo.GetCultureInfo("es-PE")), importe = r.Importe }),
+    urls = new { selector = Url.Action("Selector"), detalle = Url.Action("Detalle"), movimiento = Url.Action("Movimiento") }
+}))</script>
+<script src="~/js/inventario-reportes.js" asp-append-version="true"></script>

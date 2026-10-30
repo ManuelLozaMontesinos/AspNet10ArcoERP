@@ -1,0 +1,44 @@
+@model DetraccionPageModel
+@{ ViewData["Title"]="Detracciones"; bool canWrite=ViewBag.PuedeEscribir is true; }
+<div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3"><div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-bank text-primary me-2"></i>Detracciones</h3><small class="text-muted" data-erp-list-summary>@Model.Resumen</small></div></div></div></div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
+    @if(Model.Contexto.Errores.Count>0){<div class="alert alert-warning" role="alert"><ul class="mb-0">@foreach(var error in Model.Contexto.Errores){<li>@error</li>}</ul></div>}
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar"><div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <form method="get" id="dt-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+            <input type="hidden" name="top" value="@Model.PageSize" /><input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" />
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span><input class="form-control border-start-0" name="search" value="@Model.Filtro.Search" maxlength="150" placeholder="Factura, cliente u operación de pago..." aria-label="Buscar factura o cliente" /></div>
+            <select name="consultaId" class="form-select form-select-sm w-auto" aria-label="Sede de consulta">@foreach(var item in Model.Contexto.Sedes){<option value="@item.Id" selected="@(Model.Filtro.ConsultaId==item.Id)">@item.Nombre</option>}</select>
+            <input class="form-control form-control-sm w-auto" name="numero" value="@Model.Filtro.Numero" maxlength="8" placeholder="Número exacto de factura" aria-label="Número de factura" />
+            <input class="form-control form-control-sm w-auto" name="documento" value="@Model.Filtro.Documento" maxlength="35" placeholder="Documento exacto" aria-label="Documento del cliente" />
+            <input class="form-control form-control-sm w-auto" name="razonSocial" value="@Model.Filtro.RazonSocial" maxlength="150" placeholder="Razón social del cliente" aria-label="Razón social del cliente" />
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary">Desde</span><input type="date" name="desde" class="form-control" value="@Model.Filtro.Desde?.ToString("yyyy-MM-dd")" min="1900-01-01" max="9998-12-31" aria-label="Fecha inicial" /></div>
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary">Hasta</span><input type="date" name="hasta" class="form-control" value="@Model.Filtro.Hasta?.ToString("yyyy-MM-dd")" min="1900-01-01" max="9998-12-31" aria-label="Fecha final" /></div>
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i>Buscar</button><a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+        </form><partial name="_ListadoControles" model="Model" />
+    </div></div></div>
+    <p class="small text-muted">Facturas activas y emitidas con detracción. Importes en la moneda del comprobante. El pago registra la operación, fecha, monto y cargo.</p>
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="table-responsive table-scroll"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+        <thead class="table-header-custom bg-body-tertiary border-bottom"><tr><th erp-sort="tipo">T/D</th><th erp-sort="documento">Serie–número</th><th erp-sort="fecha">Fecha</th><th erp-sort="cliente">Cliente</th><th erp-sort="identidad">Documento</th><th erp-sort="moneda">Mon.</th><th erp-sort="total" erp-numeric="true" class="text-end">Total</th><th erp-sort="detraccion">Tipo de detracción</th><th erp-sort="tasa" erp-numeric="true" class="text-end">% detracción</th><th erp-sort="monto" erp-numeric="true" class="text-end">Monto detracción</th><th erp-sort="operacion">Operación de pago</th><th erp-sort="fechapago">Fecha pago</th><th erp-sort="pago" erp-numeric="true" class="text-end">Monto pago</th><th erp-sort="cargo" erp-numeric="true" class="text-end">Cargo</th><th class="listing-options">Opciones</th></tr></thead>
+        <tbody>@if(Model.Items.Count==0){<tr><td colspan="15" class="text-center text-muted py-4">No se encontraron facturas para los filtros seleccionados.</td></tr>}
+        @foreach(var row in Model.Items){<tr><td>@row.TipoDocumento</td><td class="text-nowrap">@row.Documento</td><td class="text-nowrap">@row.Fecha.ToString("dd/MM/yyyy")</td><td>@row.Cliente</td><td>@row.DocumentoCliente</td><td>@row.Moneda</td><td class="text-end">@row.Total.ToString("N4")</td><td>@row.TipoDetraccion</td><td class="text-end">@row.Tasa.ToString("N4")</td><td class="text-end">@row.MontoDetraccion.ToString("N4")</td><td>@row.NumeroOperacionPago</td><td class="text-nowrap">@row.FechaPago?.ToString("dd/MM/yyyy")</td><td class="text-end">@row.MontoPago.ToString("N4")</td><td class="text-end">@row.MontoCargo.ToString("N4")</td><td class="listing-options"><button type="button" class="btn btn-sm btn-outline-primary js-dt-view" data-id="@row.Id" data-consulta="@row.ConsultaId" title="Consultar comprobante"><i class="bi bi-eye"></i></button>@if(canWrite){<button type="button" class="btn btn-sm btn-outline-primary js-dt-edit" data-id="@row.Id" data-consulta="@row.ConsultaId" title="Editar pago"><i class="bi bi-pencil"></i></button>}</td></tr>}
+        </tbody></table></div><partial name="_ListadoPaginacion" model="Model" /></div>
+</div></div>
+<div class="modal fade" id="dt-modal" tabindex="-1" aria-labelledby="dt-title" aria-hidden="true" data-bs-backdrop="static"><div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><form id="dt-form" class="modal-content">
+    @Html.AntiForgeryToken()
+    <div class="modal-header sticky-top bg-body-tertiary"><h5 class="modal-title" id="dt-title">Pago de detracción</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body">
+        <input type="hidden" name="ContextoId" value="@ViewBag.ContextoId" /><input type="hidden" name="ConsultaId" /><input type="hidden" name="Id" /><input type="hidden" name="Revision" />
+        <h6 class="fw-bold">Comprobante</h6><dl id="dt-details" class="row mb-4"></dl>
+        <fieldset id="dt-fields"><legend class="h6 fw-bold">Datos del pago</legend><div class="row g-3">
+            <div class="col-md-6"><label for="dt-operation" class="form-label">Número de operación <span class="text-danger">*</span></label><input id="dt-operation" name="NumeroOperacionPago" class="form-control" maxlength="50" required /></div>
+            <div class="col-md-6"><label for="dt-date" class="form-label">Fecha de pago <span class="text-danger">*</span></label><input id="dt-date" name="FechaPago" type="date" class="form-control" min="1900-01-01" max="9998-12-31" required /></div>
+            <div class="col-md-6"><label for="dt-amount" class="form-label">Monto de pago <span class="text-danger">*</span></label><input id="dt-amount" name="MontoPagoTexto" type="number" class="form-control" min="0.0001" max="99999999.9999" step="0.0001" required /></div>
+            <div class="col-md-6"><label for="dt-charge" class="form-label">Cargo</label><input id="dt-charge" name="MontoCargoTexto" type="number" class="form-control" min="0" max="99999999.9999" step="0.0001" required /></div>
+        </div></fieldset>
+    </div>
+    <div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>@if(canWrite){<button type="submit" id="dt-save" class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i>Guardar pago</button>}</div>
+</form></div></div>
+@section Scripts {
+    <script id="detraccion-config" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new{canWrite,contextoId=ViewBag.ContextoId,urls=new{obtener=Url.Action("Obtener"),guardar=Url.Action("Guardar")}}))</script>
+    <script src="~/js/ventas-detracciones.js" asp-append-version="true"></script>
+}

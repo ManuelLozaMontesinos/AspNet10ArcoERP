@@ -30,7 +30,12 @@
                     </div>
                     <form asp-controller="PerfilAcceso" asp-action="Grabar" method="post">
                         @Html.AntiForgeryToken()
+                        <input asp-for="ReturnUrl" type="hidden" />
                         <div class="card-body p-4">
+                            @if (!ViewData.ModelState.IsValid)
+                            {
+                                <div asp-validation-summary="ModelOnly" class="alert alert-warning" role="alert"></div>
+                            }
                             <p class="text-muted small mb-4">
                                 Seleccione el periodo de ejercicio contable, la empresa y la sede operativa donde realizará las operaciones.
                             </p>
@@ -38,7 +43,7 @@
                             <!-- Periodo -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"><i class="bi bi-calendar3 text-primary me-1"></i>Periodo (Año):</label>
-                                <select name="periodoId" class="form-select form-select-lg shadow-sm">
+                                <select asp-for="PeriodoId" class="form-select form-select-lg shadow-sm" required>
                                     @foreach (var p in Model.Periodos)
                                     {
                                         <option value="@p.Item1">Periodo Fiscal @p.Item2</option>
@@ -49,7 +54,7 @@
                             <!-- Empresa -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"><i class="bi bi-building text-primary me-1"></i>Empresa:</label>
-                                <select name="empresaId" class="form-select form-select-lg shadow-sm">
+                                <select asp-for="EmpresaId" class="form-select form-select-lg shadow-sm" required>
                                     @foreach (var e in Model.Empresas)
                                     {
                                         <option value="@e.Item1">@e.Item2</option>
@@ -60,7 +65,7 @@
                             <!-- Sede -->
                             <div class="mb-4">
                                 <label class="form-label fw-semibold"><i class="bi bi-geo-alt-fill text-danger me-1"></i>Sede Operativa:</label>
-                                <select name="empresaSedeId" class="form-select form-select-lg shadow-sm">
+                                <select asp-for="EmpresaSedeId" class="form-select form-select-lg shadow-sm" required>
                                     @foreach (var s in Model.Sedes)
                                     {
                                         <option value="@s.Item1">@s.Item2</option>
@@ -70,7 +75,7 @@
 
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm">
-                                    <i class="bi bi-check-circle-fill me-2"></i>Confirmar y Continuar al Dashboard
+                                    <i class="bi bi-check-circle-fill me-2"></i>@(string.IsNullOrEmpty(Model.ReturnUrl) ? "Confirmar y Continuar al Dashboard" : "Confirmar y volver al módulo")
                                 </button>
                                 <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">
                                     Cancelar y Volver

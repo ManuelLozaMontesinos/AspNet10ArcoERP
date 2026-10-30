@@ -37,8 +37,9 @@ namespace AspNet10ArcoERP.Areas.RH.Controllers
             }
         }
 
-        public async Task<IActionResult> Index(DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? personalId = null, string? estado = null, string? verificado = null, string? search = null, int top = 100)
+        public async Task<IActionResult> Index(DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? personalId = null, string? estado = null, string? verificado = null, string? search = null, int top = 25)
         {
+            top = top is 25 or 50 or 100 or 500 ? top : 25;
             ViewBag.FechaDesde = fechaDesde?.ToString("yyyy-MM-dd");
             ViewBag.FechaHasta = fechaHasta?.ToString("yyyy-MM-dd");
             ViewBag.PersonalId = personalId;

@@ -3080,45 +3080,41 @@ namespace AspNet10ArcoERP.Services
             return (true, $"Tabla {(nuevoEstado == "A" ? "activada" : "desactivada")} exitosamente.", nuevoEstado);
         }
 
-        public async Task<List<CuentaBancoModel>> GetCuentasBancoAsync(
-            int empresaId,
-            string? search = null,
-            int? bancoId = null,
-            string? estado = null,
-            int top = 25)
+        public async Task<CuentaBancoPageModel> GetCuentasBancoPageAsync(
+            int empresaId, string? search = null, int? bancoId = null, string? estado = null,
+            int page = 1, int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> {
+                ["id"]="ec.empresa_cta_id", ["banco"]="b.nombre", ["nombre"]="ec.nombre",
+                ["moneda"]="m.nombre", ["cuenta"]="ec.cuenta", ["cci"]="ec.cta_interbanca", ["estado"]="ec.estado" };
+            var model = new CuentaBancoPageModel();
+            model.Ordenar(sort, dir, columns.Keys, "banco");
             using var conn = _dbConnectionFactory.CreateConnection();
-            const string sql = @"
-                SELECT TOP (@Top)
-                    ec.empresa_cta_id AS Id,
-                    ec.empresa_id AS EmpresaId,
-                    ec.banco_id AS BancoId,
-                    b.nombre AS BancoNombre,
-                    ec.nombre AS Nombre,
-                    ec.moneda_id AS MonedaId,
-                    m.nombre AS MonedaNombre,
-                    ec.cuenta AS Cuenta,
-                    ec.cta_interbanca AS CuentaInterbancaria,
-                    ec.estado AS Estado
+            const string fromWhere = @"
                 FROM empresa_cta ec
-                INNER JOIN banco b ON b.banco_id = ec.banco_id
-                INNER JOIN moneda m ON m.moneda_id = ec.moneda_id
-                WHERE ec.empresa_id = @EmpresaId
-                  AND (@BancoId IS NULL OR ec.banco_id = @BancoId)
-                  AND (@Estado IS NULL OR ec.estado = @Estado)
-                  AND (@Search IS NULL OR ec.nombre LIKE @SearchLike
-                       OR ec.cuenta LIKE @SearchLike OR b.nombre LIKE @SearchLike)
-                ORDER BY b.nombre, ec.nombre";
-            var rows = await conn.QueryAsync<CuentaBancoModel>(sql, new
-            {
-                Top = Math.Clamp(top, 1, 500),
-                EmpresaId = empresaId,
-                BancoId = bancoId,
-                Estado = string.IsNullOrWhiteSpace(estado) ? null : estado,
-                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
-                SearchLike = $"%{search?.Trim()}%"
-            });
-            return rows.ToList();
+                INNER JOIN banco b ON b.banco_id=ec.banco_id
+                INNER JOIN moneda m ON m.moneda_id=ec.moneda_id
+                WHERE ec.empresa_id=@EmpresaId
+                  AND (@BancoId IS NULL OR ec.banco_id=@BancoId)
+                  AND (@Estado IS NULL OR ec.estado=@Estado)
+                  AND (@Search IS NULL OR ec.nombre LIKE @Search OR b.nombre LIKE @Search
+                       OR ec.cuenta LIKE @Search OR ec.cta_interbanca LIKE @Search OR m.nombre LIKE @Search)";
+            var args = new DynamicParameters(new { EmpresaId=empresaId, BancoId=bancoId,
+                Estado=string.IsNullOrWhiteSpace(estado)?null:estado,
+                Search=string.IsNullOrWhiteSpace(search)?null:$"%{search.Trim()}%" });
+            int total = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) " + fromWhere, args);
+            model.Paginar(total,page,pageSize);
+            args.Add("Offset",(model.Page-1)*model.PageSize);
+            args.Add("PageSize",model.PageSize);
+            model.Items = (await conn.QueryAsync<CuentaBancoModel>(@"
+                SELECT ec.empresa_cta_id AS Id, ec.empresa_id AS EmpresaId,
+                       ec.banco_id AS BancoId, b.nombre AS BancoNombre, ec.nombre AS Nombre,
+                       ec.moneda_id AS MonedaId, m.nombre AS MonedaNombre,
+                       ec.cuenta AS Cuenta, ec.cta_interbanca AS CuentaInterbancaria, ec.estado AS Estado " +
+                fromWhere + $" ORDER BY {columns[model.Sort]} {model.Dir}{(model.Sort=="id"?"":", ec.empresa_cta_id ASC")} OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
+                args)).ToList();
+            model.VisibleCount=model.Items.Count;
+            return model;
         }
 
         public async Task<CuentaBancoModel?> GetCuentaBancoByIdAsync(int id, int empresaId)
@@ -3137,32 +3133,6 @@ namespace AspNet10ArcoERP.Services
             return await conn.QueryFirstOrDefaultAsync<CuentaBancoModel>(
                 sql,
                 new { Id = id, EmpresaId = empresaId });
-        }
-
-        public async Task<int> GetCuentasBancoCountAsync(
-            int empresaId,
-            string? search = null,
-            int? bancoId = null,
-            string? estado = null)
-        {
-            using var conn = _dbConnectionFactory.CreateConnection();
-            const string sql = @"
-                SELECT COUNT(*)
-                FROM empresa_cta ec
-                INNER JOIN banco b ON b.banco_id = ec.banco_id
-                WHERE ec.empresa_id = @EmpresaId
-                  AND (@BancoId IS NULL OR ec.banco_id = @BancoId)
-                  AND (@Estado IS NULL OR ec.estado = @Estado)
-                  AND (@Search IS NULL OR ec.nombre LIKE @SearchLike
-                       OR ec.cuenta LIKE @SearchLike OR b.nombre LIKE @SearchLike)";
-            return await conn.ExecuteScalarAsync<int>(sql, new
-            {
-                EmpresaId = empresaId,
-                BancoId = bancoId,
-                Estado = string.IsNullOrWhiteSpace(estado) ? null : estado,
-                Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
-                SearchLike = $"%{search?.Trim()}%"
-            });
         }
 
         public async Task<List<LookupItemModel>> GetBancosCuentaLookupAsync()

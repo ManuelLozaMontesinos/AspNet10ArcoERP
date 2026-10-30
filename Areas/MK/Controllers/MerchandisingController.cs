@@ -25,14 +25,14 @@ namespace AspNet10ArcoERP.Areas.MK.Controllers
             DateTime? desde = null,
             DateTime? hasta = null,
             int page = 1,
-            int top = 25)
+            int top = 25, string? sort = null, string? dir = null)
         {
             var pageSize = top is 25 or 50 or 100 or 500 ? top : 25;
             if (desde.HasValue && hasta.HasValue && desde.Value.Date > hasta.Value.Date)
                 ModelState.AddModelError(string.Empty, "La fecha inicial no puede ser posterior a la fecha final.");
 
             var model = await _mkService.GetMerchandisingMovementsAsync(
-                search, transaccionId, desde, hasta, CurrentPeriodoAnio, CurrentEmpresaSedeId, page, pageSize);
+                search, transaccionId, desde, hasta, CurrentPeriodoAnio, CurrentEmpresaSedeId, page, pageSize, sort, dir);
             return View(model);
         }
 

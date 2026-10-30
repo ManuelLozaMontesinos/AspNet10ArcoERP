@@ -1,134 +1,64 @@
+@addTagHelper *, AspNet10ArcoERP
 @model AspNet10ArcoERP.Models.PlanillaProcesoPageModel
 @{
-    ViewData["Title"] = "Procesos de planilla";
-    var pageCount = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
-    string search = ViewBag.Search as string ?? "";
-    int? mes = ViewBag.Mes as int?;
-    int? anio = ViewBag.Anio as int?;
-    bool puedeEscribir = ViewBag.PuedeEscribir is true;
+    ViewData["Title"]="Procesos de planilla";
+    string search=ViewBag.Search as string ?? "";
+    int? mes=ViewBag.Mes as int?;
+    int? anio=ViewBag.Anio as int?;
+    bool puedeEscribir=ViewBag.PuedeEscribir is true;
 }
-
-<div class="app-content-header py-3 border-bottom">
-    <div class="container-fluid">
-        <div class="row align-items-center g-3">
-            <div class="col">
-                <h3 class="mb-1"><i class="bi bi-calendar2-check me-2 text-primary"></i>Procesos de planilla</h3>
-                <small class="text-muted">Administra los procesos de la sede seleccionada y consulta sus remuneraciones. Período @Model.PeriodoAnio.</small>
-            </div>
-            @if (puedeEscribir)
-            {
-                <div class="col-auto">
-                    <button type="button" class="btn btn-primary shadow-sm" id="createProcess">
-                        <i class="bi bi-plus-circle me-1"></i>Nuevo proceso
-                    </button>
+<div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3">
+    <div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-calendar2-check me-2 text-primary"></i>Procesos de planilla</h3><small class="text-muted">Procesos y remuneraciones de la sede seleccionada. Período @Model.PeriodoAnio.</small></div>
+    @if(puedeEscribir){<div class="col-auto"><button type="button" class="btn btn-primary shadow-sm" id="createProcess"><i class="bi bi-plus-circle-fill me-1"></i>Nuevo proceso</button></div>}
+</div></div></div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
+    <div class="alert alert-info" role="status"><i class="bi bi-info-circle me-2"></i>El cálculo de remuneraciones no está disponible en esta versión. Puede consultar los resultados existentes. El estado abierto o cerrado es independiente del cálculo.</div>
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                <input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" /><input type="hidden" name="top" value="@Model.PageSize" />
+                @if(anio.HasValue){<input type="hidden" name="anio" value="@anio" />}
+                <div class="input-group input-group-sm listing-search">
+                    <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input id="search" name="search" value="@search" maxlength="150" class="form-control border-start-0" placeholder="Buscar por nombre de planilla..." aria-label="Buscar planilla" />
+                    <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                    <a asp-action="Index" asp-route-top="@Model.PageSize" asp-route-sort="@Model.Sort" asp-route-dir="@Model.Dir" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
                 </div>
-            }
+                <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar-month"></i></span><select id="mes" name="mes" class="form-select form-select-sm" aria-label="Mes del proceso"><option value="">Cualquier mes</option>@foreach(var item in Model.Meses){<option value="@item.Id" selected="@(mes==item.Id)">@item.Nombre</option>}</select></div>
+            </form>
+            <partial name="_ListadoControles" model="Model" />
         </div>
+    </div></div>
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+        <div class="table-responsive table-scroll"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+            <thead class="table-header-custom bg-body-tertiary border-bottom"><tr>
+                <th erp-sort="id" erp-numeric="true" class="text-center">ID</th>
+                <th erp-sort="planilla">Planilla</th><th erp-sort="mes" erp-numeric="true">Mes</th><th erp-sort="numero" erp-numeric="true">Nº proceso</th>
+                <th erp-sort="desde">Desde</th><th erp-sort="hasta">Hasta</th><th erp-sort="moneda">Moneda</th><th erp-sort="estado">Estado</th>
+                <th erp-sort="trabajadores" erp-numeric="true" class="text-end">Trabajadores</th><th erp-sort="neto" erp-numeric="true" class="text-end">Neto</th><th class="listing-options">Opciones</th>
+            </tr></thead>
+            <tbody>
+                @if(Model.Items.Count==0){<tr><td colspan="11" class="text-center text-muted py-5"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No se encontraron procesos en el período y la sede seleccionados.</td></tr>}
+                @foreach(var item in Model.Items)
+                {
+                    <tr>
+                        <td class="text-center font-monospace small text-muted">@item.Id</td>
+                        <td class="fw-semibold">@item.PlanillaNombre<small class="d-block text-muted">@item.PeriRemuNombre</small></td>
+                        <td>@item.MesNombre</td><td class="font-monospace">@item.ProcAnual</td>
+                        <td class="text-nowrap">@item.FechaDesde.ToString("dd/MM/yyyy")</td><td class="text-nowrap">@item.FechaHasta.ToString("dd/MM/yyyy")</td><td>@item.MonedaNombre</td>
+                        <td><span class="badge @(item.EstadoPlanProceCodigo=="01"?"bg-success-subtle text-success border border-success-subtle":"bg-secondary-subtle text-body-secondary border")">@item.EstadoPlanProceNombre</span>@if(item.Estado!="A"){<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Anulado</span>}</td>
+                        <td class="text-end">@item.TotalTrabajadores</td><td class="text-end font-monospace">@item.TotalNeto.ToString("N2")</td>
+                        <td class="listing-options">
+                            <button type="button" class="btn btn-sm btn-outline-primary js-open-process" data-id="@item.Id" title="Abrir cabecera y resultados"><i class="bi bi-folder2-open"></i></button>
+                            @if(puedeEscribir && item.Estado=="A" && item.EstadoPlanProceCodigo=="01"){<button type="button" class="btn btn-sm btn-outline-danger js-cancel-process" data-id="@item.Id" title="Anular proceso"><i class="bi bi-x-circle"></i></button>}
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table></div>
+        <partial name="_ListadoPaginacion" model="Model" />
     </div>
-</div>
-<div class="app-content py-4">
-    <div class="container-fluid">
-        <div class="alert alert-info" role="status">
-            <i class="bi bi-info-circle me-2"></i>El cálculo de remuneraciones no está disponible en esta versión.
-            Puede consultar los resultados existentes. El estado abierto o cerrado es independiente del cálculo.
-        </div>
-        <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-header bg-body-tertiary py-3">
-                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
-                    <div style="min-width:280px;flex:1 1 320px">
-                        <label for="search" class="form-label small fw-semibold">Buscar planilla</label>
-                        <input id="search" name="search" value="@search" maxlength="150" class="form-control" placeholder="Nombre de planilla..." />
-                    </div>
-                    <div>
-                        <label for="mes" class="form-label small fw-semibold">Mes</label>
-                        <select id="mes" name="mes" class="form-select">
-                            <option value="">Cualquier mes</option>
-                            @foreach (var item in Model.Meses)
-                            {
-                                <option value="@item.Id" selected="@(mes == item.Id)">@item.Nombre</option>
-                            }
-                        </select>
-                    </div>
-                    <div>
-                        <label for="top" class="form-label small fw-semibold">Por página</label>
-                        <select id="top" name="top" class="form-select">
-                            @foreach (var size in new[] { 25, 50, 100, 500 })
-                            {
-                                <option value="@size" selected="@(Model.PageSize == size)">@size</option>
-                            }
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
-                    <a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-arrow-counterclockwise"></i></a>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">@Model.Total proceso(s)</span>
-                </form>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0">
-                    <thead class="bg-body-tertiary">
-                        <tr><th>Planilla</th><th>Mes / Nº proceso</th><th>Fechas</th><th>Moneda</th><th>Estado</th><th class="text-end">Trabajadores</th><th class="text-end">Neto</th><th class="text-end">Acciones</th></tr>
-                    </thead>
-                    <tbody>
-                        @if (Model.Items.Count == 0)
-                        {
-                            <tr><td colspan="8" class="text-center text-muted py-4">No se encontraron procesos en el período y la sede seleccionados.</td></tr>
-                        }
-                        @foreach (var item in Model.Items)
-                        {
-                            <tr>
-                                <td class="fw-semibold">@item.PlanillaNombre <small class="text-muted">(#@item.Id)</small></td>
-                                <td>@item.MesNombre / @item.ProcAnual <small class="d-block text-muted">@item.PeriodoAnio · @item.PeriRemuNombre</small></td>
-                                <td class="text-nowrap">@item.FechaDesde.ToString("dd/MM/yyyy")<br />@item.FechaHasta.ToString("dd/MM/yyyy")</td>
-                                <td>@item.MonedaNombre</td>
-                                <td>
-                                    <span class="badge @(item.EstadoPlanProceCodigo == "01" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-body-secondary border")">@item.EstadoPlanProceNombre</span>
-                                    @if (item.Estado != "A")
-                                    {
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Anulado</span>
-                                    }
-                                </td>
-                                <td class="text-end">@item.TotalTrabajadores</td>
-                                <td class="text-end font-monospace">@item.TotalNeto.ToString("N2")</td>
-                                <td class="text-end text-nowrap">
-                                    <button type="button" class="btn btn-sm btn-outline-primary js-open-process" data-id="@item.Id" title="Consultar cabecera y resultados">
-                                        <i class="bi bi-folder2-open me-1"></i>Abrir
-                                    </button>
-                                    @if (puedeEscribir && item.Estado == "A" && item.EstadoPlanProceCodigo == "01")
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-danger js-cancel-process" data-id="@item.Id" title="Anular proceso">
-                                            <i class="bi bi-x-circle"></i>
-                                        </button>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="card-footer bg-body-tertiary d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <span class="small text-muted">Página @Model.Page de @pageCount · @Model.Total proceso(s)</span>
-                <div class="btn-group btn-group-sm" aria-label="Paginación de procesos">
-                    @if (Model.Page > 1)
-                    {
-                        <a asp-action="Index" asp-route-search="@search" asp-route-mes="@mes" asp-route-anio="@anio" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary">Anterior</a>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-secondary" disabled>Anterior</button>
-                    }
-                    @if (Model.Page < pageCount)
-                    {
-                        <a asp-action="Index" asp-route-search="@search" asp-route-mes="@mes" asp-route-anio="@anio" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary">Siguiente</a>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-secondary" disabled>Siguiente</button>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+</div></div>
 
 <div class="modal fade" id="processModal" tabindex="-1" aria-labelledby="processTitle" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -233,8 +163,6 @@
 
 @section Scripts {
     <style>
-        #processModal .modal-content { max-height:90vh; overflow:hidden; }
-        #processModal .modal-body { max-height:calc(90vh - 140px); overflow-y:auto; flex:1 1 auto; scrollbar-width:thin; }
         #processModal .process-details { max-height:360px; overflow:auto; scrollbar-width:thin; }
     </style>
     <script id="processConfig" type="application/json">

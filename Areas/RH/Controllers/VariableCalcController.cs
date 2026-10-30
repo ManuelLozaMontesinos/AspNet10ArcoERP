@@ -27,8 +27,9 @@ namespace AspNet10ArcoERP.Areas.RH.Controllers
             }
         }
 
-        public async Task<IActionResult> Index(string? search = null, string? estado = null, int top = 50)
+        public async Task<IActionResult> Index(string? search = null, string? estado = null, int top = 25)
         {
+            top = top is 25 or 50 or 100 or 500 ? top : 25;
             ViewBag.Search = search;
             ViewBag.Estado = estado;
             ViewBag.Top = top;

@@ -18,8 +18,11 @@ namespace AspNet10ArcoERP.Services
             string? search = null,
             string? estado = null,
             int page = 1,
-            int pageSize = 25)
+            int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> { ["id"]="lead_source_id", ["nombre"]="nombre", ["estado"]="estado" };
+            var ordering = new ListadoPaginadoModel();
+            ordering.Ordenar(sort, dir, columns.Keys, "nombre", "asc");
             using var conn = _dbConnectionFactory.CreateConnection();
             var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var safePage = Math.Max(page, 1);
@@ -42,7 +45,7 @@ namespace AspNet10ArcoERP.Services
             var items = await conn.QueryAsync<LeadSourceModel>(
                 $@"SELECT lead_source_id AS Id, nombre AS Nombre, estado AS Estado
                    {where}
-                   ORDER BY nombre, lead_source_id
+                   ORDER BY {columns[ordering.Sort]} {ordering.Dir}{(ordering.Sort == "id" ? "" : ", lead_source_id ASC")}
                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
                 new
                 {
@@ -55,6 +58,9 @@ namespace AspNet10ArcoERP.Services
             return new LeadSourcePageModel
             {
                 Items = items.AsList(),
+                VisibleCount = items.Count(),
+                Sort = ordering.Sort,
+                Dir = ordering.Dir,
                 Total = total,
                 Page = safePage,
                 PageSize = safePageSize,
@@ -161,8 +167,11 @@ namespace AspNet10ArcoERP.Services
             string? search = null,
             string? estado = null,
             int page = 1,
-            int pageSize = 25)
+            int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> { ["id"]="tipo_prof_ofi_id", ["nombre"]="nombre", ["estado"]="estado" };
+            var ordering = new ListadoPaginadoModel();
+            ordering.Ordenar(sort, dir, columns.Keys, "nombre", "asc");
             using var conn = _dbConnectionFactory.CreateConnection();
             var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var safePage = Math.Max(page, 1);
@@ -185,7 +194,7 @@ namespace AspNet10ArcoERP.Services
             var items = await conn.QueryAsync<TipoProfesionModel>(
                 $@"SELECT tipo_prof_ofi_id AS Id, nombre AS Nombre, estado AS Estado
                    {where}
-                   ORDER BY nombre, tipo_prof_ofi_id
+                   ORDER BY {columns[ordering.Sort]} {ordering.Dir}{(ordering.Sort == "id" ? "" : ", tipo_prof_ofi_id ASC")}
                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
                 new
                 {
@@ -198,6 +207,9 @@ namespace AspNet10ArcoERP.Services
             return new TipoProfesionPageModel
             {
                 Items = items.AsList(),
+                VisibleCount = items.Count(),
+                Sort = ordering.Sort,
+                Dir = ordering.Dir,
                 Total = total,
                 Page = safePage,
                 PageSize = safePageSize,
@@ -281,8 +293,11 @@ namespace AspNet10ArcoERP.Services
             string? search = null,
             string? estado = null,
             int page = 1,
-            int pageSize = 25)
+            int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> { ["id"]="oportu_venta_id", ["nombre"]="nombre", ["estado"]="estado" };
+            var ordering = new ListadoPaginadoModel();
+            ordering.Ordenar(sort, dir, columns.Keys, "nombre", "asc");
             using var conn = _dbConnectionFactory.CreateConnection();
             var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var safePage = Math.Max(page, 1);
@@ -305,7 +320,7 @@ namespace AspNet10ArcoERP.Services
             var items = await conn.QueryAsync<OportunidadVentaModel>(
                 $@"SELECT oportu_venta_id AS Id, nombre AS Nombre, estado AS Estado
                    {where}
-                   ORDER BY nombre, oportu_venta_id
+                   ORDER BY {columns[ordering.Sort]} {ordering.Dir}{(ordering.Sort == "id" ? "" : ", oportu_venta_id ASC")}
                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
                 new
                 {
@@ -318,6 +333,9 @@ namespace AspNet10ArcoERP.Services
             return new OportunidadVentaPageModel
             {
                 Items = items.AsList(),
+                VisibleCount = items.Count(),
+                Sort = ordering.Sort,
+                Dir = ordering.Dir,
                 Total = total,
                 Page = safePage,
                 PageSize = safePageSize,
@@ -409,8 +427,11 @@ namespace AspNet10ArcoERP.Services
             string? search = null,
             string? estado = null,
             int page = 1,
-            int pageSize = 25)
+            int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> { ["id"]="tipo_venta_c_id", ["nombre"]="nombre", ["estado"]="estado" };
+            var ordering = new ListadoPaginadoModel();
+            ordering.Ordenar(sort, dir, columns.Keys, "nombre", "asc");
             using var conn = _dbConnectionFactory.CreateConnection();
             var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var safePage = Math.Max(page, 1);
@@ -433,7 +454,7 @@ namespace AspNet10ArcoERP.Services
             var items = await conn.QueryAsync<TipoVentaClienteModel>(
                 $@"SELECT tipo_venta_c_id AS Id, nombre AS Nombre, estado AS Estado
                    {where}
-                   ORDER BY nombre, tipo_venta_c_id
+                   ORDER BY {columns[ordering.Sort]} {ordering.Dir}{(ordering.Sort == "id" ? "" : ", tipo_venta_c_id ASC")}
                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
                 new
                 {
@@ -446,6 +467,9 @@ namespace AspNet10ArcoERP.Services
             return new TipoVentaClientePageModel
             {
                 Items = items.AsList(),
+                VisibleCount = items.Count(),
+                Sort = ordering.Sort,
+                Dir = ordering.Dir,
                 Total = total,
                 Page = safePage,
                 PageSize = safePageSize,
@@ -687,8 +711,11 @@ namespace AspNet10ArcoERP.Services
             int periodoAnio,
             int empresaSedeId,
             int page,
-            int pageSize)
+            int pageSize, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> { ["id"]="m.mov_almacen_id", ["codigo"]="m.mov_almacen", ["fecha"]="m.fecha", ["transaccion"]="ta.nombre", ["origen"]="a.nombre", ["tercero"]="COALESCE(p.razon_social, LTRIM(RTRIM(CONCAT(p.nombres, ' ', p.apellido_pat, ' ', p.apellido_mat))), '')", ["observacion"]="m.observacion", ["estado"]="ema.nombre" };
+            var ordering = new ListadoPaginadoModel();
+            ordering.Ordenar(sort, dir, columns.Keys, "fecha", "desc");
             using var conn = _dbConnectionFactory.CreateConnection();
             var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var safePage = Math.Max(page, 1);
@@ -741,7 +768,7 @@ namespace AspNet10ArcoERP.Services
                           m.estado AS Estado,
                           COALESCE(u.usuario_logon, '') AS Usuario
                    {filters}
-                   ORDER BY m.fecha DESC, m.mov_almacen_id DESC
+                   ORDER BY {columns[ordering.Sort]} {ordering.Dir}{(ordering.Sort == "id" ? "" : ", m.mov_almacen_id DESC")}
                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
                 new
                 {
@@ -758,6 +785,9 @@ namespace AspNet10ArcoERP.Services
             return new MerchandisingMovementPageModel
             {
                 Items = items.AsList(),
+                VisibleCount = items.Count(),
+                Sort = ordering.Sort,
+                Dir = ordering.Dir,
                 Total = total,
                 Page = safePage,
                 PageSize = safePageSize,
@@ -840,7 +870,8 @@ namespace AspNet10ArcoERP.Services
                     AND pes.empresa_sede_id = @EmpresaSedeId
                     AND per.periodo = @PeriodoAnio
                     AND ta.estado = 'A'
-                  ORDER BY ta.nombre");
+                  ORDER BY ta.nombre",
+                new { PeriodoAnio = periodoAnio, EmpresaSedeId = empresaSedeId });
             return rows.AsList();
         }
     }

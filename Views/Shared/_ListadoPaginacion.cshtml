@@ -1,0 +1,22 @@
+@model AspNet10ArcoERP.Models.ListadoPaginadoModel
+<div class="card-footer bg-body-tertiary d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span class="small text-muted" role="status">Viendo @Model.FirstRecord–@Model.LastRecord de @Model.Total registros · Página @Model.Page de @Model.PageCount</span>
+    <nav class="btn-group btn-group-sm" aria-label="Paginación del listado">
+        @if (Model.Page > 1)
+        {
+            <a class="btn btn-outline-secondary" href="@AspNet10ArcoERP.TagHelpers.ListadoEnlaces.Url(Context.Request, ("page", (Model.Page - 1).ToString()), ("top", Model.PageSize.ToString()), ("sort", Model.Sort), ("dir", Model.Dir))"><i class="bi bi-chevron-left me-1"></i>Anterior</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled><i class="bi bi-chevron-left me-1"></i>Anterior</button>
+        }
+        @if (Model.Page < Model.PageCount)
+        {
+            <a class="btn btn-outline-secondary" href="@AspNet10ArcoERP.TagHelpers.ListadoEnlaces.Url(Context.Request, ("page", (Model.Page + 1).ToString()), ("top", Model.PageSize.ToString()), ("sort", Model.Sort), ("dir", Model.Dir))">Siguiente<i class="bi bi-chevron-right ms-1"></i></a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled>Siguiente<i class="bi bi-chevron-right ms-1"></i></button>
+        }
+    </nav>
+</div>

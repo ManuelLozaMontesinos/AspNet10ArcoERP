@@ -20,19 +20,13 @@
         height: 40px !important;
         line-height: 1.2;
     }
-    #modal-crud-transportista .modal-content { max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
-    #modal-crud-transportista .modal-body { max-height: calc(90vh - 135px) !important; overflow-y: auto !important; flex: 1 1 auto; scrollbar-width: thin; scrollbar-color: rgba(140, 150, 165, 0.4) transparent; scroll-behavior: smooth; }
-    #modal-crud-transportista .modal-body::-webkit-scrollbar { width: 7px; }
-    #modal-crud-transportista .modal-body::-webkit-scrollbar-track { background: transparent; }
-    #modal-crud-transportista .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
-    #modal-crud-transportista .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
 </style>
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-7">
-                <h3 class="mb-0 fw-bold"><i class="bi bi-truck text-primary me-2"></i>Transportistas</h3>
+                <h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-truck text-primary me-2"></i>Transportistas</h3>
                 <small class="text-muted">Maestro de transportistas, unidades vehiculares y conductores</small>
             </div>
             <div class="col-sm-5 text-sm-end mt-2 mt-sm-0">
@@ -44,19 +38,19 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <form method="get" class="d-flex flex-wrap align-items-center justify-content-between gap-2 m-0" id="filtro-form-transp">
                     <input type="hidden" name="top" id="filtro-top-input" value="@top" />
 
                     <!-- Filtros a la izquierda -->
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- Buscador -->
-                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                        <div class="listing-search input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
-                            <input class="form-control border-start-0 ps-0" type="search" id="filtro-tabla" name="search" value="@ViewBag.Search" placeholder="Buscar razón social, RUC o inscripción..." onkeyup="filtrarTablaCliente();" />
+                            <input class="form-control border-start-0 ps-0" type="search" id="filtro-tabla" name="search" value="@ViewBag.Search" placeholder="Buscar razón social, RUC o inscripción..." onkeyup="filtrarTablaCliente();" aria-label="Buscar registros" />
                             <button type="submit" class="btn btn-outline-primary">Buscar</button>
                             @if (!string.IsNullOrEmpty(ViewBag.Search as string) || !string.IsNullOrEmpty(ViewBag.Estado as string))
                             {
@@ -69,7 +63,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select class="form-select form-select-sm border-start-0" name="estado" style="min-width: 150px;" onchange="this.form.submit();">
+                            <select class="form-select form-select-sm border-start-0" name="estado" style="min-width: 150px;" onchange="this.form.requestSubmit();" aria-label="Estado">
                                 <option value="">Todos los estados</option>
                                 <option value="A" selected="@(ViewBag.Estado as string == "A")">Solo Activos</option>
                                 <option value="I" selected="@(ViewBag.Estado as string == "I")">Solo Inactivos</option>
@@ -93,7 +87,7 @@
                                 @foreach (var count in new[] { 25, 50, 100, 500 })
                                 {
                                     <li>
-                                        <a class="dropdown-item item-top @(top == count ? "active" : "")" href="javascript:void(0)" onclick="$('#filtro-top-input').val(@count); $('#filtro-form-transp').submit();">
+                                        <a class="dropdown-item item-top @(top == count ? "active" : "")" href="javascript:void(0)" onclick="$('#filtro-top-input').val(@count); $('#filtro-form-transp').get(0).requestSubmit();">
                                             @count registros
                                         </a>
                                     </li>
@@ -106,7 +100,7 @@
         </div>
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-transportistas">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-transportistas" data-erp-grid="main" data-erp-options>
                     <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
                             <th style="width: 140px;" class="font-monospace th-sortable" onclick="ordenarTabla('tabla-transportistas', 0, false)">
@@ -121,7 +115,7 @@
                             <th style="width: 110px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-transportistas', 3, false)">
                                 <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
                             </th>
-                            <th style="width: 120px;" class="text-center">Acciones</th>
+                            <th style="width: 120px;" class="text-center">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -149,7 +143,8 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 

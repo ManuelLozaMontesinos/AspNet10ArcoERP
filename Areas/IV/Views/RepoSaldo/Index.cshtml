@@ -1,0 +1,21 @@
+@model SaldoUnidadesPageModel
+@{ ViewData["Title"] = Model.Titulo; bool matrix = Model.Filtro.Variante == "almacenes"; }
+<partial name="_ReporteCabecera" model="Model" />
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
+    <partial name="_SaldoFiltros" model="Model" />
+    <p class="small text-muted">@(matrix ? "Cada columna identifica sede y almacén, incluidos almacenes históricos con saldos. El saldo descuenta reservas sólo cuando activa esa opción." : Model.Filtro.Variante == "general" ? "Consolidado de todas las sedes y almacenes de la empresa. Saldo = anterior + ingresos − salidas, sin descontar reservas." : "Saldo inicial y movimientos del mes contable hasta el corte elegido. Los movimientos se redondean a dos decimales antes de sumar, como en el reporte anterior. Las reservas son informativas en el detalle.")</p>
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="table-responsive table-scroll"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+        <thead class="table-header-custom bg-body-tertiary border-bottom"><tr><th erp-sort="codigo">Código</th><th erp-sort="producto">Producto</th><th erp-sort="unidad">U.M.</th>
+            @if (matrix) { foreach (var warehouse in Model.ColumnasAlmacen) { <th erp-sort="@("almacen_" + warehouse.Id)" erp-numeric="true" class="text-end">@warehouse.Nombre</th> } }
+            else { <th erp-sort="anterior" erp-numeric="true" class="text-end">Anterior</th><th erp-sort="ingreso" erp-numeric="true" class="text-end">Ingresos</th><th erp-sort="salida" erp-numeric="true" class="text-end">Salidas</th> }
+            <th erp-sort="saldo" erp-numeric="true" class="text-end">Saldo</th><th class="listing-options">Opciones</th></tr></thead><tbody>
+            @if (Model.Items.Count == 0) { <tr><td colspan="@(matrix ? 5 + Model.ColumnasAlmacen.Count : 8)" class="text-center text-muted py-4">@(Model.Consultada ? "No se encontraron saldos para los filtros seleccionados." : "Seleccione la modalidad y los filtros para consultar.")</td></tr> }
+            @foreach (var item in Model.Items) { <tr><td class="font-monospace text-muted">@item.Codigo</td><td class="fw-semibold">@item.Producto</td><td>@item.Unidad</td>
+                @if (matrix) { foreach (var warehouse in Model.ColumnasAlmacen) { <td class="text-end">@item.PorAlmacen.GetValueOrDefault(warehouse.Id).ToString("N4")</td> } }
+                else { <td class="text-end">@item.Anterior.ToString("N4")</td><td class="text-end">@item.Ingreso.ToString("N4")</td><td class="text-end">@item.Salida.ToString("N4")</td> }
+                <td class="text-end fw-semibold @(item.Saldo < 0 ? "text-danger" : "")">@item.Saldo.ToString("N4")</td><td class="listing-options"><button type="button" class="btn btn-sm btn-outline-primary js-report-saldo" data-product-id="@item.ProductoId" data-label="@item.Codigo · @item.Producto" title="Consultar composición del saldo"><i class="bi bi-eye"></i></button></td>
+            </tr> }
+        </tbody></table></div><partial name="_ListadoPaginacion" model="Model" /></div>
+</div></div>
+<partial name="_ReporteModal" />
+@section Scripts { <partial name="_ReporteScript" model="Model" /> }

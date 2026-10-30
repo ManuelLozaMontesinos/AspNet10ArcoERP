@@ -71,26 +71,6 @@
         flex-direction: column;
         overflow: hidden;
     }
-    #modal-crud-producto .modal-body {
-        max-height: calc(90vh - 145px) !important;
-        overflow-y: auto !important;
-        flex: 1 1 auto;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
-    }
-    #modal-crud-producto .modal-body::-webkit-scrollbar {
-        width: 7px;
-    }
-    #modal-crud-producto .modal-body::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    #modal-crud-producto .modal-body::-webkit-scrollbar-thumb {
-        background: rgba(140, 150, 165, 0.45);
-        border-radius: 4px;
-    }
-    #modal-crud-producto .modal-body::-webkit-scrollbar-thumb:hover {
-        background: rgba(140, 150, 165, 0.75);
-    }
 
     /* Pestañas (Tabs) compatibles con Dark Mode y Light Mode */
     #prodTabs {
@@ -118,7 +98,7 @@
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-box-seam-fill text-primary me-2" style="font-size: 1.6rem;"></i>Catálogo de Productos y Servicios
@@ -134,26 +114,26 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing" data-product-type="@tipoFiltro">
     <div class="container-fluid">
         <!-- BARRA DE FILTROS: TODOS/PRODUCTOS/SERVICIOS - BUSCADOR - GRUPO - CLASE - FAMILIA - ESTADO - MOSTRANDO -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <!-- 1. FILA SUPERIOR: PÍLDORAS DE TIPO (IZQUIERDA) Y SELECTOR MOSTRANDO (DERECHA) -->
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
                     <!-- Píldoras de Rol / Tipo de Ítem -->
                     <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Filtro de Tipo">
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(string.IsNullOrEmpty(tipoFiltro) ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-grid-fill me-1"></i>Todos <span class="badge @(string.IsNullOrEmpty(tipoFiltro) ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@totalCount</span>
+                            <i class="bi bi-grid-fill me-1"></i>Todos <span class="badge @(string.IsNullOrEmpty(tipoFiltro) ? "bg-body text-primary" : "bg-body-secondary text-body") ms-1">@totalCount</span>
                         </a>
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "P", estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(tipoFiltro == "P" ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-box-seam me-1"></i>Productos <span class="badge @(tipoFiltro == "P" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@productosCount</span>
+                            <i class="bi bi-box-seam me-1"></i>Productos <span class="badge @(tipoFiltro == "P" ? "bg-body text-primary" : "bg-body-secondary text-body") ms-1">@productosCount</span>
                         </a>
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, tipo = "S", estado = estadoFiltro, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(tipoFiltro == "S" ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-gear-wide-connected me-1"></i>Servicios <span class="badge @(tipoFiltro == "S" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@serviciosCount</span>
+                            <i class="bi bi-gear-wide-connected me-1"></i>Servicios <span class="badge @(tipoFiltro == "S" ? "bg-body text-primary" : "bg-body-secondary text-body") ms-1">@serviciosCount</span>
                         </a>
                     </div>
 
@@ -200,11 +180,11 @@
                     <input type="hidden" name="top" value="@currentTop" />
 
                     <!-- Buscador Amplio -->
-                    <div class="input-group input-group-sm flex-grow-1" style="min-width: 320px; max-width: 440px;">
+                    <div class="listing-search input-group input-group-sm flex-grow-1" style="min-width: 320px; max-width: 440px;">
                         <span class="input-group-text bg-body-tertiary border-end-0">
                             <i class="bi bi-search text-muted"></i>
                         </span>
-                        <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código, descripción o ref..." value="@ViewBag.Search" />
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código, descripción o ref..." value="@ViewBag.Search" aria-label="Buscar registros" />
                         <button type="submit" class="btn btn-outline-primary">Buscar</button>
                         @if (!string.IsNullOrEmpty(ViewBag.Search as string) || grupoFiltro.HasValue || claseFiltro.HasValue || familiaFiltro.HasValue || !string.IsNullOrEmpty(estadoFiltro))
                         {
@@ -217,7 +197,7 @@
                         <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                             <i class="bi bi-folder text-primary"></i>
                         </span>
-                        <select name="grupoId" id="filtro-grupo" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="$('#filtro-clase').val(''); $('#filtro-familia').val(''); this.form.submit();" title="Filtrar por Grupo">
+                        <select name="grupoId" id="filtro-grupo" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="$('#filtro-clase').val(''); $('#filtro-familia').val(''); this.form.requestSubmit();" title="Filtrar por Grupo">
                             <option value="" selected="@(!grupoFiltro.HasValue)">Todos los Grupos</option>
                             @foreach (var g in gruposLookup)
                             {
@@ -231,7 +211,7 @@
                         <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                             <i class="bi bi-tag text-primary"></i>
                         </span>
-                        <select name="claseId" id="filtro-clase" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="$('#filtro-familia').val(''); this.form.submit();" title="Filtrar por Clase">
+                        <select name="claseId" id="filtro-clase" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="$('#filtro-familia').val(''); this.form.requestSubmit();" title="Filtrar por Clase">
                             <option value="" selected="@(!claseFiltro.HasValue)">Todas las Clases</option>
                             @foreach (var c in clasesLookup)
                             {
@@ -245,7 +225,7 @@
                         <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                             <i class="bi bi-diagram-3 text-primary"></i>
                         </span>
-                        <select name="familiaId" id="filtro-familia" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.submit();" title="Filtrar por Familia">
+                        <select name="familiaId" id="filtro-familia" class="form-select form-select-sm border-start-0" style="min-width: 155px;" onchange="this.form.requestSubmit();" title="Filtrar por Familia">
                             <option value="" selected="@(!familiaFiltro.HasValue)">Todas las Familias</option>
                             @foreach (var f in familiasLookup)
                             {
@@ -259,7 +239,7 @@
                         <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                             <i class="bi bi-toggle-on text-primary"></i>
                         </span>
-                        <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 135px;" onchange="this.form.submit();" title="Filtrar por Estado">
+                        <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 135px;" onchange="this.form.requestSubmit();" title="Filtrar por Estado" aria-label="Estado">
                             <option value="" selected="@(string.IsNullOrEmpty(estadoFiltro))">Todos los Estados</option>
                             <option value="A" selected="@(estadoFiltro == "A")">Activos</option>
                             <option value="I" selected="@(estadoFiltro == "I")">Inactivos</option>
@@ -272,7 +252,7 @@
         <!-- TABLA PRINCIPAL DE PRODUCTOS Y SERVICIOS -->
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-productos">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-productos" data-erp-grid="main" data-erp-options>
                     <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
                             <th style="width: 70px;" class="text-center">
@@ -323,7 +303,7 @@
                                     <i class="bi @SortIcon("estado", currentSort, currentDir) small"></i>
                                 </a>
                             </th>
-                            <th style="width: 120px;" class="text-center">Acciones</th>
+                            <th style="width: 120px;" class="text-center">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -370,7 +350,7 @@
                                         <div class="d-flex flex-wrap gap-1">
                                             @if (!string.IsNullOrEmpty(item.GrupoNombre))
                                             {
-                                                <span class="badge bg-light text-dark border">@item.GrupoNombre</span>
+                                                <span class="badge bg-body-tertiary text-body border">@item.GrupoNombre</span>
                                             }
                                             @if (!string.IsNullOrEmpty(item.ClaseNombre))
                                             {
@@ -425,7 +405,8 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 
@@ -439,7 +420,7 @@
             <input type="hidden" id="prod-id" name="Id" value="0" />
             <input type="hidden" id="prod-estado" name="Estado" value="A" />
 
-            <div class="modal-header border-bottom border-secondary-subtle py-3 px-4 bg-body-tertiary">
+            <div class="modal-header border-bottom border-secondary-subtle py-3 px-4 bg-body-tertiary sticky-top">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-box-seam text-primary fs-4" id="modal-icono"></i>
                     <div>
@@ -857,7 +838,7 @@
                 </div>
             </div>
 
-            <div class="modal-footer border-top border-secondary-subtle py-3 px-4 bg-body-tertiary d-flex justify-content-between">
+            <div class="modal-footer border-top border-secondary-subtle py-3 px-4 bg-body-tertiary d-flex justify-content-between sticky-bottom">
                 <div>
                     <span class="small text-body-secondary"><i class="bi bi-shield-check me-1"></i>Gestión integral de catálogo en tiempo real</span>
                 </div>
@@ -876,9 +857,9 @@
 <!-- MODAL RÁPIDO: CREAR COLOR                                -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-color-rapido" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content shadow border border-secondary-subtle rounded-3">
-            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom border-secondary-subtle">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom border-secondary-subtle sticky-top">
                 <h6 class="modal-title fw-bold mb-0 text-body"><i class="bi bi-palette text-primary me-2"></i>Nuevo Color</h6>
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
@@ -886,7 +867,7 @@
                 <label class="form-label small fw-semibold text-body">Nombre del Color <span class="text-danger">*</span></label>
                 <input type="text" class="form-control form-control-sm text-uppercase" id="input-nuevo-color" placeholder="Ej: BLANCO HUMO / NOGAL" maxlength="50" />
             </div>
-            <div class="modal-footer py-2 px-3 bg-body-tertiary border-top border-secondary-subtle">
+            <div class="modal-footer py-2 px-3 bg-body-tertiary border-top border-secondary-subtle sticky-bottom">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-sm btn-primary" onclick="guardarColorRapido();">Guardar</button>
             </div>
@@ -1071,7 +1052,7 @@
         $('#count-pres, #count-proc, #count-det').text('0');
 
         // Predeterminar tipo según filtro activo
-        var tipoFiltro = '@tipoFiltro';
+        var tipoFiltro = document.querySelector('main.app-main .app-content')?.getAttribute('data-product-type') || '';
         if (tipoFiltro === 'S') {
             $('#tipo-prod-2').prop('checked', true);
         } else {

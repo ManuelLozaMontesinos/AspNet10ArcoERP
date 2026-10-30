@@ -9,12 +9,9 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
     }
 
-    public class LeadSourcePageModel
+    public class LeadSourcePageModel : ListadoPaginadoModel
     {
         public List<LeadSourceModel> Items { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
         public string Search { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
     }
@@ -26,12 +23,9 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
     }
 
-    public class TipoProfesionPageModel
+    public class TipoProfesionPageModel : ListadoPaginadoModel
     {
         public List<TipoProfesionModel> Items { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
         public string Search { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
     }
@@ -43,12 +37,9 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
     }
 
-    public class OportunidadVentaPageModel
+    public class OportunidadVentaPageModel : ListadoPaginadoModel
     {
         public List<OportunidadVentaModel> Items { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
         public string Search { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
     }
@@ -60,12 +51,9 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
     }
 
-    public class TipoVentaClientePageModel
+    public class TipoVentaClientePageModel : ListadoPaginadoModel
     {
         public List<TipoVentaClienteModel> Items { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
         public string Search { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
     }
@@ -103,13 +91,10 @@ namespace AspNet10ArcoERP.Models
         public List<MerchandisingMovementLineModel> Detalle { get; set; } = new();
     }
 
-    public class MerchandisingMovementPageModel
+    public class MerchandisingMovementPageModel : ListadoPaginadoModel
     {
         public List<MerchandisingMovementModel> Items { get; set; } = new();
         public List<LookupItemModel> Transacciones { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
         public string Search { get; set; } = string.Empty;
         public int? TransaccionId { get; set; }
         public DateTime? Desde { get; set; }

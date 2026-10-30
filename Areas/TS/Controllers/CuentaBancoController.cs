@@ -23,8 +23,11 @@ namespace AspNet10ArcoERP.Areas.TS.Controllers
         private int CurrentEmpresaId =>
             int.TryParse(User.FindFirst("EmpresaId")?.Value, out var id) ? id : 1;
 
-        public async Task<IActionResult> Index(string? search = null, int? bancoId = null, string? estado = null, int top = 25)
+        public async Task<IActionResult> Index(string? search = null, int? bancoId = null, string? estado = null, int top = 25, int page = 1, string? sort = null, string? dir = null)
         {
+            if (!ModelState.IsValid || search?.Length > 150 || bancoId <= 0 ||
+                (!string.IsNullOrEmpty(estado) && estado is not ("A" or "I")))
+                return BadRequest(new { success=false, message="Los filtros indicados no son válidos." });
             int pageSize = top is 25 or 50 or 100 or 500 ? top : 25;
             ViewBag.Search = search;
             ViewBag.BancoId = bancoId;
@@ -32,14 +35,12 @@ namespace AspNet10ArcoERP.Areas.TS.Controllers
             ViewBag.Top = pageSize;
             ViewBag.Bancos = await _maestrosService.GetBancosCuentaLookupAsync();
             ViewBag.Monedas = await _maestrosService.GetMonedasCuentaLookupAsync();
-            ViewBag.Total = await _maestrosService.GetCuentasBancoCountAsync(CurrentEmpresaId, search, bancoId, estado);
-
-            var cuentas = await _maestrosService.GetCuentasBancoAsync(
+            var cuentas = await _maestrosService.GetCuentasBancoPageAsync(
                 CurrentEmpresaId,
                 search,
                 bancoId,
                 estado,
-                pageSize);
+                page, pageSize, sort, dir);
             return View(cuentas);
         }
 

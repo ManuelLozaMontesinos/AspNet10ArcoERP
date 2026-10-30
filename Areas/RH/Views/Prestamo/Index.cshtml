@@ -33,20 +33,11 @@
         background-color: #1e2227 !important;
         color: #e9ecef !important;
     }
-    [data-bs-theme="dark"] .modal-content {
-        background-color: #1e2227 !important;
-        border: 1px solid #343a40 !important;
-    }
-    [data-bs-theme="dark"] .modal-header,
-    [data-bs-theme="dark"] .modal-footer {
-        background-color: #181b1f !important;
-        border-color: #2b3035 !important;
-    }
 </style>
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-wallet2 text-success me-2" style="font-size: 1.6rem;"></i>Préstamos y Adelantos
@@ -62,20 +53,20 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <!-- BARRA DE FILTROS -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- Buscador -->
-                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                        <div class="listing-search input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por N° préstamo, trabajador, DNI..." onkeyup="aplicarFiltros();" />
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por N° préstamo, trabajador, DNI..." onkeyup="aplicarFiltros();" aria-label="Buscar registros" />
                             <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
                         </div>
 
@@ -84,7 +75,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-funnel text-primary"></i>
                             </span>
-                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 150px;" onchange="aplicarFiltros();">
+                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 150px;" onchange="aplicarFiltros();" aria-label="Tipo">
                                 <option value="">Todos los Tipos</option>
                                 @foreach (var tp in tiposPrestamo)
                                 {
@@ -112,7 +103,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 130px;" onchange="aplicarFiltros();">
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 130px;" onchange="aplicarFiltros();" aria-label="Estado">
                                 <option value="">Todos</option>
                                 <option value="A">Solo Activos</option>
                                 <option value="I">Solo Inactivos</option>
@@ -129,15 +120,13 @@
                         <div class="dropdown flex-shrink-0">
                             <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-list-ol"></i>
-                                <span>Mostrar: <strong>@(ViewBag.Top == 0 ? "Todos" : ViewBag.Top.ToString())</strong></span>
+                                <span>Mostrar: <strong>@(ViewBag.Top ?? 25)</strong></span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                <li><a class="dropdown-item @(ViewBag.Top == 25 ? "active" : "")" asp-action="Index" asp-route-top="25" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 25</a></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 50 ? "active" : "")" asp-action="Index" asp-route-top="50" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 50</a></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 100 ? "active" : "")" asp-action="Index" asp-route-top="100" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 100</a></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 500 ? "active" : "")" asp-action="Index" asp-route-top="500" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 500</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 0 ? "active" : "")" asp-action="Index" asp-route-top="0" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Ver Todos</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 25 ? "active" : "")" asp-action="Index" asp-route-top="25" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">25 registros</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 50 ? "active" : "")" asp-action="Index" asp-route-top="50" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">50 registros</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 100 ? "active" : "")" asp-action="Index" asp-route-top="100" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">100 registros</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 500 ? "active" : "")" asp-action="Index" asp-route-top="500" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">500 registros</a></li>
                             </ul>
                         </div>
                     </div>
@@ -149,10 +138,10 @@
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header" id="tabla-prestamos">
+                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header table-striped" id="tabla-prestamos" data-erp-grid="main" data-erp-options>
                         <thead class="table-header-custom border-bottom bg-body-tertiary">
                             <tr>
-                                <th class="text-center px-3" style="width: 50px;">#</th>
+                                <th class="text-center px-3" style="width: 50px;"><button type="button" data-erp-sort-index="0"># <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
                                 <th class="th-sortable" onclick="ordenarTabla(1)" style="width: 100px;">
                                     N° PRÉSTAMO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
                                 </th>
@@ -168,14 +157,14 @@
                                 <th class="text-end px-3 th-sortable" onclick="ordenarTabla(5)">
                                     MONTO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
                                 </th>
-                                <th class="text-center" style="width: 90px;">CUOTAS</th>
+                                <th class="text-center" style="width: 90px;"><button type="button" data-erp-sort-index="6">CUOTAS <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
                                 <th class="text-center th-sortable" onclick="ordenarTabla(7)" style="width: 110px;">
                                     PAGO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
                                 </th>
                                 <th class="text-center th-sortable" onclick="ordenarTabla(8)" style="width: 90px;">
                                     ESTADO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
                                 </th>
-                                <th class="text-end px-4" style="width: 120px;">ACCIONES</th>
+                                <th class="text-end px-4" style="width: 120px;">Opciones</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-prestamos">
@@ -275,21 +264,22 @@
                     </table>
                 </div>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 
 <!-- MODAL CREAR / EDITAR PRÉSTAMO -->
 <div class="modal fade" id="modalPrestamo" tabindex="-1" aria-labelledby="modalPrestamoLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow border-0">
-            <div class="modal-header border-bottom py-3">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="formPrestamo" onsubmit="guardarPrestamo(event);" class="modal-content shadow border-0">
+            <div class="modal-header border-bottom py-3 sticky-top bg-body-tertiary">
                 <h5 class="modal-title fw-bold d-flex align-items-center" id="modalPrestamoLabel">
                     <i class="bi bi-wallet2 me-2 text-success"></i>Nuevo Préstamo / Adelanto
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="formPrestamo" onsubmit="guardarPrestamo(event);">
+
                 <div class="modal-body p-4">
                     <input type="hidden" id="presta-id" name="Id" value="0" />
 
@@ -372,22 +362,22 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top py-2">
+                <div class="modal-footer border-top py-2 sticky-bottom bg-body-tertiary">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary" id="btnGuardarPrestamo">
                         <i class="bi bi-save me-1"></i>Guardar Préstamo
                     </button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 
 <!-- MODAL CRONOGRAMA DE CUOTAS -->
 <div class="modal fade" id="modalCuotas" tabindex="-1" aria-labelledby="modalCuotasLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content shadow border-0">
-            <div class="modal-header border-bottom py-3">
+            <div class="modal-header border-bottom py-3 sticky-top bg-body-tertiary">
                 <h5 class="modal-title fw-bold d-flex align-items-center" id="modalCuotasLabel">
                     <i class="bi bi-calendar3 me-2 text-info"></i>Cronograma de Cuotas
                 </h5>
@@ -413,7 +403,7 @@
                     </table>
                 </div>
             </div>
-            <div class="modal-footer border-top py-2">
+            <div class="modal-footer border-top py-2 sticky-bottom bg-body-tertiary">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>

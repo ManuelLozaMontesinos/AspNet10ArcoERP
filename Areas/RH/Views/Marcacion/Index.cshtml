@@ -1,4 +1,5 @@
 @model List<AspNet10ArcoERP.Models.MarcacionPersonalModel>
+@{ var listado = new AspNet10ArcoERP.Models.ListadoPaginadoModel { Total=Model?.Count ?? 0, VisibleCount=Model?.Count ?? 0, PageSize=ViewBag.Top is int size ? size : 25 }; }
 @{
     ViewData["Title"] = "Control de Marcaciones de Personal";
     var personalList = ViewBag.Personal as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new();
@@ -10,13 +11,13 @@
     int conHorasExtra = Model?.Count(m => m.HorasDetalle.Any(h => h.HoraRemNombre.Contains("EXTRA", StringComparison.OrdinalIgnoreCase))) ?? 0;
 }
 
-<div class="content-header">
+<div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center mb-3">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark fw-bold">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-fingerprint text-info me-2"></i>Control de Marcaciones
-                </h1>
+                </h3>
                 <small class="text-muted">Registro de asistencia, control de reloj marcador y cómputo de horas</small>
             </div>
             <div class="col-sm-6 text-end">
@@ -25,6 +26,9 @@
                 </button>
             </div>
         </div>
+    </div>
+</div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
 
         <!-- KPI SUMMARY CARDS -->
         <div class="row g-3 mb-4">
@@ -74,24 +78,22 @@
             </div>
         </div>
 
-        <!-- FILTROS DE BÚSQUEDA -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-body-tertiary py-3">
-                <h6 class="m-0 fw-bold"><i class="bi bi-funnel me-2"></i>Filtros de Búsqueda y Rango de Fechas</h6>
-            </div>
-            <div class="card-body">
-                <form method="get" asp-action="Index" id="form-filtros" class="row g-3">
-                    <div class="col-md-2 col-sm-6">
-                        <label class="form-label small fw-semibold">Fecha Desde</label>
-                        <input type="date" name="fechaDesde" class="form-control form-control-sm" value="@ViewBag.FechaDesde" />
-                    </div>
-                    <div class="col-md-2 col-sm-6">
-                        <label class="form-label small fw-semibold">Fecha Hasta</label>
-                        <input type="date" name="fechaHasta" class="form-control form-control-sm" value="@ViewBag.FechaHasta" />
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <label class="form-label small fw-semibold">Colaborador</label>
-                        <select name="personalId" class="form-select form-select-sm">
+<div class="card border-0 shadow-sm rounded-3 mb-3">
+<div class="card-body py-2 px-3 erp-filter-bar">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+<form method="get" asp-action="Index" id="form-filtros" class="d-flex flex-wrap align-items-center gap-2 m-0">
+<input type="hidden" name="top" value="@listado.PageSize" />
+<div class="input-group input-group-sm listing-search">
+<span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+<input type="text" name="search" class="form-control border-start-0" placeholder="Nombre, DNI o código..." aria-label="Buscar colaborador" value="@ViewBag.Search" />
+<button type="submit" class="btn btn-outline-primary">Buscar</button>
+<a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a></div>
+<div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar3 me-1"></i>Desde</span>
+<input type="date" name="fechaDesde" class="form-control form-control-sm" value="@ViewBag.FechaDesde" aria-label="Fecha desde" /></div>
+<div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar3 me-1"></i>Hasta</span>
+<input type="date" name="fechaHasta" class="form-control form-control-sm" value="@ViewBag.FechaHasta" aria-label="Fecha hasta" /></div>
+<div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary" title="Colaborador"><i class="bi bi-person"></i></span>
+<select aria-label="Colaborador" name="personalId" class="form-select form-select-sm">
                             <option value="">-- Todos los Colaboradores --</option>
                             @foreach (var p in personalList)
                             {
@@ -104,45 +106,31 @@
                                     <option value="@p.Id">@p.Nombre</option>
                                 }
                             }
-                        </select>
-                    </div>
-                    <div class="col-md-2 col-sm-6">
-                        <label class="form-label small fw-semibold">Verificación</label>
-                        <select name="verificado" class="form-select form-select-sm">
+                        </select></div>
+<div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary" title="Verificación"><i class="bi bi-check2-circle"></i></span>
+<select aria-label="Verificación" name="verificado" class="form-select form-select-sm">
                             <option value="">-- Todos --</option>
                             <!option value="S" @(ViewBag.Verificado == "S" ? "selected" : "")>Verificados</!option>
                             <!option value="N" @(ViewBag.Verificado == "N" ? "selected" : "")>Pendientes</!option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 col-sm-12">
-                        <label class="form-label small fw-semibold">Búsqueda rápida</label>
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="search" class="form-control" placeholder="Nombre, DNI o código..." value="@ViewBag.Search" />
-                            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i> Filtrar</button>
-                            <a href="/RH/Marcacion" class="btn btn-outline-secondary" title="Limpiar"><i class="bi bi-arrow-counterclockwise"></i></a>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
+                        </select></div>
+</form><partial name="_ListadoControles" model="listado" /></div></div></div>
         <!-- TABLA DE MARCACIONES -->
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="tabla-marcaciones">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0 table-striped" id="tabla-marcaciones" data-erp-grid="main" data-erp-options>
+                        <thead class="table-light table-header-custom bg-body-tertiary border-bottom">
                             <tr>
-                                <th class="text-center px-3" style="width: 50px;">#</th>
-                                <th style="width: 110px;">FECHA</th>
-                                <th>COLABORADOR</th>
-                                <th class="text-center" style="width: 120px;">HORA / TIEMPO</th>
-                                <th>DESGLOSE DE HORAS COMPUTADAS</th>
-                                <th class="text-center" style="width: 80px;">FALTA</th>
-                                <th class="text-center" style="width: 100px;">REMUNERADO</th>
-                                <th class="text-center" style="width: 110px;">VERIFICADO</th>
-                                <th class="text-center" style="width: 90px;">ESTADO</th>
-                                <th class="text-end px-4" style="width: 100px;">ACCIONES</th>
+                                <th class="text-center px-3" style="width: 50px;"><button type="button" data-erp-sort-index="0"># <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th style="width: 110px;"><button type="button" data-erp-sort-index="1">FECHA <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th><button type="button" data-erp-sort-index="2">COLABORADOR <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-center" style="width: 120px;"><button type="button" data-erp-sort-index="3">HORA / TIEMPO <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th><button type="button" data-erp-sort-index="4">DESGLOSE DE HORAS COMPUTADAS <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-center" style="width: 80px;"><button type="button" data-erp-sort-index="5">FALTA <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-center" style="width: 100px;"><button type="button" data-erp-sort-index="6">REMUNERADO <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-center" style="width: 110px;"><button type="button" data-erp-sort-index="7">VERIFICADO <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-center" style="width: 90px;"><button type="button" data-erp-sort-index="8">ESTADO <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-end px-4" style="width: 100px;">Opciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -166,14 +154,14 @@
                                             {
                                                 <div class="small text-secondary">
                                                     <span class="badge bg-secondary-subtle text-secondary me-1">@item.CargoNombre</span>
-                                                    <span class="badge bg-light text-dark border">@item.CentroCostoNombre</span>
+                                                    <span class="badge bg-body-tertiary text-body border">@item.CentroCostoNombre</span>
                                                 </div>
                                             }
                                         </td>
                                         <td class="text-center">
                                             @if (!string.IsNullOrWhiteSpace(item.HoraMinuto))
                                             {
-                                                <span class="badge bg-dark-subtle text-dark border font-monospace px-2 py-1 fs-6">
+                                                <span class="badge bg-dark-subtle text-body border font-monospace px-2 py-1 fs-6">
                                                     <i class="bi bi-clock me-1"></i>@item.HoraMinuto
                                                 </span>
                                             }
@@ -216,7 +204,7 @@
                                             }
                                             else
                                             {
-                                                <span class="badge bg-light text-muted border px-2 py-1">No</span>
+                                                <span class="badge bg-body-tertiary text-muted border px-2 py-1">No</span>
                                             }
                                         </td>
                                         <td class="text-center">
@@ -286,21 +274,22 @@
                     </table>
                 </div>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 
 <!-- MODAL CREAR / EDITAR MARCACIÓN -->
 <div class="modal fade" id="modalMarcacion" tabindex="-1" aria-labelledby="modalMarcacionLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-primary text-white">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="formMarcacion" onsubmit="guardarRegistro(event);" class="modal-content shadow-lg border-0">
+            <div class="modal-header sticky-top bg-body-tertiary">
                 <h5 class="modal-title fw-bold" id="modalMarcacionLabel">
                     <i class="bi bi-fingerprint me-2"></i>Nueva Marcación de Personal
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close " data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formMarcacion" onsubmit="guardarRegistro(event);">
+
                 <div class="modal-body p-4">
                     <input type="hidden" id="marca-id" name="Id" value="0" />
 
@@ -366,7 +355,7 @@
                                     {
                                         <div class="col-md-6 col-sm-12">
                                             <div class="input-group input-group-sm">
-                                                <span class="input-group-text bg-white" style="width: 60%; font-size: 0.85rem;" title="@hr.Nombre">
+                                                <span class="input-group-text bg-body" style="width: 60%; font-size: 0.85rem;" title="@hr.Nombre">
                                                     @hr.Nombre
                                                 </span>
                                                 <input type="hidden" name="Horas[@hIdx].HoraRemId" value="@hr.Id" />
@@ -395,7 +384,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
+                <div class="modal-footer bg-body-tertiary sticky-bottom bg-body-tertiary">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i> Cancelar
                     </button>
@@ -403,8 +392,8 @@
                         <i class="bi bi-check-circle me-1"></i> Guardar Marcación
                     </button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 

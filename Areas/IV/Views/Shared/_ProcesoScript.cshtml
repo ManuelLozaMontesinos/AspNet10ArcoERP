@@ -1,0 +1,7 @@
+@model InventarioProcesoPageModel
+<script type="application/json" id="inventory-process-config">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+    almacenId = Model.AlmacenId, almacen = Model.Almacenes.FirstOrDefault(a => a.Id == Model.AlmacenId)?.Nombre,
+    anio = Model.Contexto.Anio, sede = Model.Contexto.Sede, rows = Model.Items.Select(r => new { id = r.Id, mes = r.MesNombre, codigo = r.MesCodigo, estado = r.EstadoNombre, fecha = r.FechaCierre?.ToString("dd/MM/yyyy"), posterior = r.MovimientoPostCierre }),
+    urls = new { preparar = Url.Action("Preparar"), apertura = Url.Action("Aperturar"), cierre = Url.Action("Cerrar"), reproceso = Url.Action("Reprocesar"), anual = Url.Action("ReprocesoAnual") }
+}))</script>
+<script src="~/js/inventario-procesos.js" asp-append-version="true"></script>

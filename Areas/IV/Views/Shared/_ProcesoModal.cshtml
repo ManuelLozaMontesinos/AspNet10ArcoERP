@@ -1,0 +1,8 @@
+<div class="modal fade" id="inventory-process-modal" tabindex="-1" aria-labelledby="inventory-process-title" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content" id="inventory-process-form" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-header sticky-top bg-body-tertiary"><h5 class="modal-title" id="inventory-process-title">Detalle de la operación</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body" id="inventory-process-body"></div>
+        <div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button><button type="submit" class="btn btn-sm btn-primary d-none" id="inventory-process-submit"><i class="bi bi-check2-circle me-1"></i>Confirmar operación</button></div>
+    </form>
+</div></div>

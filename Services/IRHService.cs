@@ -140,10 +140,13 @@ namespace AspNet10ArcoERP.Services
         // =========================================================================
         // 13. PLANILLAS (planilla)
         // =========================================================================
-        Task<List<PlanillaModel>> GetPlanillasAdminListAsync(int empresaId, string? search = null, string? estado = null, int top = 25);
-        Task<PlanillaModel?> GetPlanillaAdminByIdAsync(int id);
+        Task<PlanillaPageModel> GetPlanillasPageAsync(int empresaId, string? search = null, string? estado = null, int page = 1, int pageSize = 25, string? sort = null, string? dir = null);
+        Task<PlanillaModel?> GetPlanillaAdminByIdAsync(int id, int empresaId);
+        Task<List<PlanillaConceptoModel>?> GetPlanillaConceptosAsync(int planillaId, int empresaId);
+        Task<(bool success, string message, int id)> SavePlanillaConceptoAsync(PlanillaConceptoModel model, int empresaId, int userId);
+        Task<(bool success, string message)> AnularPlanillaConceptoAsync(int id, int planillaId, int empresaId, int userId);
         Task<(bool success, string message, int id)> SavePlanillaAsync(PlanillaModel model, int userId);
-        Task<(bool success, string message, string nuevoEstado)> ToggleEstadoPlanillaAsync(int id, int userId);
+        Task<(bool success, string message)> AnularPlanillaAsync(int id, int empresaId, int userId);
 
         // =========================================================================
         // 14. VARIABLES DE CÁLCULO (var_calc)
@@ -200,7 +203,9 @@ namespace AspNet10ArcoERP.Services
         Task<List<PlanillaProcesoModel>> GetPlanillasProcesoListAsync(int empresaId, int? anio = null, int? mes = null, string? search = null, int top = 50);
         Task<int?> GetPeriodoEmpresaSedePlanillaAsync(int empresaId, int empresaSedeId, int periodoId);
         Task<int> GetPermisoPlanillaProcesoAsync(int userId, int empresaId);
-        Task<PlanillaProcesoPageModel> GetPlanillasProcesoPageAsync(int empresaId, int periodoEmpSedeId, int? anio = null, int? mes = null, string? search = null, int page = 1, int pageSize = 25);
+        Task<int> GetPermisoModuloRHAsync(int userId, int empresaId, string menuUrl);
+        Task<int> GetPermisoModuloAsync(int userId, int empresaId, string area, string menuUrl);
+        Task<PlanillaProcesoPageModel> GetPlanillasProcesoPageAsync(int empresaId, int periodoEmpSedeId, int? anio = null, int? mes = null, string? search = null, int page = 1, int pageSize = 25, string? sort = null, string? dir = null);
         Task<PlanillaProcesoModel?> GetPlanillaProcesoByIdAsync(int id);
         Task<PlanillaProcesoModel?> GetPlanillaProcesoByIdAsync(int id, int empresaId, int periodoEmpSedeId);
         Task<List<PlanillaCalculoDetalleModel>?> GetPlanillaCalculoDetalleAsync(int planProceId, int empresaId, int periodoEmpSedeId, int? personalId = null);
@@ -228,7 +233,7 @@ namespace AspNet10ArcoERP.Services
         // =========================================================================
         // 22. SOLICITUDES DE ACCESO EXTENDIDO (perso_sol_acc)
         // =========================================================================
-        Task<SolicitudAccesoPageModel> GetSolicitudesAccesoAsync(int empresaId, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? estadoAprobacionId = null, int page = 1, int pageSize = 25);
+        Task<SolicitudAccesoPageModel> GetSolicitudesAccesoAsync(int empresaId, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? estadoAprobacionId = null, int page = 1, int pageSize = 25, string? sort = null, string? dir = null);
         Task<(bool success, string message)> ResolverSolicitudAccesoAsync(int id, string? horaAutorizada, bool aprobar, int empresaId, int userId);
 
         // =========================================================================

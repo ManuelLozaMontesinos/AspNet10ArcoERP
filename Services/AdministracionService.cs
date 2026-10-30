@@ -4,7 +4,7 @@ using Dapper;
 
 namespace AspNet10ArcoERP.Services
 {
-    public class AdministracionService : IAdministracionService
+    public partial class AdministracionService : IAdministracionService
     {
         private readonly IDbConnectionFactory _dbConnectionFactory;
 
@@ -14,8 +14,12 @@ namespace AspNet10ArcoERP.Services
         }
 
         public async Task<PeriodoSistemaPageModel> GetPeriodosAsync(
-            int? searchYear = null, int page = 1, int pageSize = 25)
+            int? searchYear = null, int page = 1, int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> {
+                ["id"]="periodo_id", ["anio"]="periodo", ["batch"]="habi_proc_bat", ["estado"]="estado" };
+            var model = new PeriodoSistemaPageModel { SearchYear=searchYear };
+            model.Ordenar(sort, dir, columns.Keys, "anio", "desc");
             using var connection = _dbConnectionFactory.CreateConnection();
             var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var safePage = Math.Max(page, 1);
@@ -34,7 +38,7 @@ namespace AspNet10ArcoERP.Services
                           CASE WHEN habi_proc_bat = 'S' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS HabilitarProcesoBatch,
                           estado AS Estado
                    {fromWhere}
-                   ORDER BY periodo DESC, periodo_id DESC
+                   ORDER BY {columns[model.Sort]} {model.Dir}{(model.Sort=="id"?"":", periodo_id DESC")}
                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
                 new
                 {
@@ -43,14 +47,10 @@ namespace AspNet10ArcoERP.Services
                     PageSize = safePageSize
                 });
 
-            return new PeriodoSistemaPageModel
-            {
-                Items = items.AsList(),
-                Total = total,
-                Page = safePage,
-                PageSize = safePageSize,
-                SearchYear = searchYear
-            };
+            model.Items = items.AsList();
+            model.Paginar(total, safePage, safePageSize);
+            model.VisibleCount = model.Items.Count;
+            return model;
         }
 
         public async Task<PeriodoSistemaModel?> GetPeriodoAsync(int id)
@@ -90,6 +90,14 @@ namespace AspNet10ArcoERP.Services
                     {
                         transaction.Rollback();
                         return (false, "Ya existe un período para ese año.", existing.Value);
+                    }
+
+                    if (model.HabilitarProcesoBatch && await connection.ExecuteScalarAsync<int>(
+                        "SELECT COUNT(*) FROM dbo.periodo WITH (UPDLOCK,HOLDLOCK) WHERE habi_proc_bat='S'",
+                        transaction: transaction) > 0)
+                    {
+                        transaction.Rollback();
+                        return (false, "Ya existe un período con procesos por lotes habilitados.", 0);
                     }
 
                     var id = await connection.QuerySingleAsync<int>(

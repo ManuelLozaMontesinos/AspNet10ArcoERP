@@ -105,11 +105,6 @@
         color: #e9ecef !important;
         border: 1px solid #2c3138 !important;
     }
-    [data-bs-theme="dark"] .modal-header,
-    [data-bs-theme="dark"] .modal-footer {
-        background-color: #16181b !important;
-        border-color: #2c3138 !important;
-    }
     [data-bs-theme="dark"] .modal-header .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
     }
@@ -185,7 +180,7 @@
 <!-- ENCABEZADO DE PÁGINA -->
 <div class="app-content-header py-3 border-bottom bg-body">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h4 class="mb-1 text-primary fw-bold d-flex align-items-center gap-2">
                     <i class="bi bi-person-lines-fill"></i> Registro de Personal
@@ -201,26 +196,26 @@
     </div>
 </div>
 
-<div class="app-content py-3">
+<div class="app-content py-3 erp-listing">
     <div class="container-fluid">
         <!-- BARRA DE FILTROS SUPERIOR -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <!-- 1. Píldoras de Estado y Selector Mostrando -->
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
                     <!-- Píldoras de Estado -->
                     <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Filtro de Estado">
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(string.IsNullOrEmpty(estadoFiltro) ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-people me-1"></i>Todos <span class="badge @(string.IsNullOrEmpty(estadoFiltro) ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@totalCount</span>
+                            <i class="bi bi-people me-1"></i>Todos <span class="badge @(string.IsNullOrEmpty(estadoFiltro) ? "bg-body text-primary" : "bg-body-secondary text-body") ms-1">@totalCount</span>
                         </a>
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, estado = "A", sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(estadoFiltro == "A" ? "btn-primary" : "btn-outline-secondary")">
-                            <i class="bi bi-check-circle me-1"></i>Activos <span class="badge @(estadoFiltro == "A" ? "bg-white text-primary" : "bg-body-secondary text-body") ms-1">@activosCount</span>
+                            <i class="bi bi-check-circle me-1"></i>Activos <span class="badge @(estadoFiltro == "A" ? "bg-body text-primary" : "bg-body-secondary text-body") ms-1">@activosCount</span>
                         </a>
                         <a href="@Url.Action("Index", new { search = ViewBag.Search, estado = "C", sort = currentSort, dir = currentDir, top = currentTop })" 
                            class="btn @(estadoFiltro == "C" ? "btn-danger" : "btn-outline-secondary")">
-                            <i class="bi bi-person-dash me-1"></i>Cesados <span class="badge @(estadoFiltro == "C" ? "bg-white text-danger" : "bg-body-secondary text-body") ms-1">@cesadosCount</span>
+                            <i class="bi bi-person-dash me-1"></i>Cesados <span class="badge @(estadoFiltro == "C" ? "bg-body text-danger" : "bg-body-secondary text-body") ms-1">@cesadosCount</span>
                         </a>
                     </div>
 
@@ -266,11 +261,11 @@
                     <input type="hidden" name="dir" value="@currentDir" />
                     <input type="hidden" name="top" value="@currentTop" />
 
-                    <div class="input-group input-group-sm flex-grow-1" style="max-width: 500px;">
+                    <div class="listing-search input-group input-group-sm flex-grow-1" style="max-width: 500px;">
                         <span class="input-group-text bg-body-tertiary border-end-0">
                             <i class="bi bi-search text-muted"></i>
                         </span>
-                        <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por DNI, apellidos, nombres o código..." value="@ViewBag.Search" />
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por DNI, apellidos, nombres o código..." value="@ViewBag.Search" aria-label="Buscar registros" />
                         <button type="submit" class="btn btn-outline-primary">Buscar</button>
                         @if (!string.IsNullOrEmpty(ViewBag.Search as string) || !string.IsNullOrEmpty(estadoFiltro))
                         {
@@ -284,8 +279,8 @@
         <!-- GRILLA DE PERSONAL -->
         <div class="card border-0 shadow-sm rounded-3">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 table-fixed-header" id="tabla-personal">
-                    <thead class="table-light table-header-custom border-bottom">
+                <table class="table table-hover align-middle mb-0 table-fixed-header table-striped" id="tabla-personal" data-erp-grid="main" data-erp-options>
+                    <thead class="table-light table-header-custom border-bottom bg-body-tertiary">
                         <tr>
                             <th class="ps-3 text-center" style="width: 85px;">
                                 <a href="@SortUrl("codigo", currentSort, currentDir, ViewBag.Search, estadoFiltro, currentTop)" class="text-decoration-none text-body d-inline-flex align-items-center">
@@ -327,7 +322,7 @@
                                     ESTADO <i class="bi @SortIcon("estado", currentSort, currentDir) ms-1 sort-icon"></i>
                                 </a>
                             </th>
-                            <th class="text-end pe-3" style="width: 125px;">ACCIONES</th>
+                            <th class="text-end pe-3" style="width: 125px;">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -435,7 +430,8 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 
@@ -444,8 +440,8 @@
 <!-- ========================================================================= -->
 <div class="modal fade" id="modal-crud-personal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content shadow border border-secondary-subtle rounded-3">
-            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom border-secondary-subtle">
+        <form id="form-personal" onsubmit="guardarPersonal(event);" class="modal-content shadow border border-secondary-subtle rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom border-secondary-subtle sticky-top">
                 <div>
                     <h5 class="modal-title fw-bold mb-0 text-body d-flex align-items-center gap-2">
                         <i class="bi bi-person-badge text-primary" id="modal-icono"></i>
@@ -498,7 +494,7 @@
                 </ul>
 
                 <!-- Contenido de Pestañas -->
-                <form id="form-personal" onsubmit="guardarPersonal(event);">
+
                     <input type="hidden" id="pers-id" name="Id" value="0" />
                     <input type="hidden" id="pers-proveedor-id" name="ProveedorId" value="0" />
                     <input type="hidden" id="pers-empresa-sede-id" name="EmpresaSedeId" value="1" />
@@ -1000,15 +996,16 @@
 
                     </div>
 
-                    <div class="modal-footer py-2 px-3 bg-body-tertiary border-top border-secondary-subtle">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-sm btn-primary px-3 shadow-sm">
-                            <i class="bi bi-save me-1"></i>Guardar Colaborador
-                        </button>
-                    </div>
-                </form>
+
+
             </div>
-        </div>
+            <div class="modal-footer py-2 px-3 bg-body-tertiary border-top border-secondary-subtle sticky-bottom">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-sm btn-primary px-3 shadow-sm">
+                    <i class="bi bi-save me-1"></i>Guardar Colaborador
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1016,13 +1013,13 @@
 <!-- MODAL REGISTRAR CESE LABORAL                                              -->
 <!-- ========================================================================= -->
 <div class="modal fade" id="modal-cese-personal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow border border-danger-subtle rounded-3">
-            <div class="modal-header py-2 px-3 bg-danger-subtle border-bottom border-danger-subtle">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form onsubmit="confirmarCese(event);" class="modal-content shadow border border-danger-subtle rounded-3">
+            <div class="modal-header py-2 px-3 bg-danger-subtle border-bottom border-danger-subtle sticky-top bg-body-tertiary">
                 <h6 class="modal-title fw-bold text-danger mb-0"><i class="bi bi-person-x-fill me-2"></i>Registrar Cese de Personal</h6>
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
-            <form onsubmit="confirmarCese(event);">
+
                 <div class="modal-body p-3">
                     <input type="hidden" id="cese-personal-id" value="0" />
                     <div class="alert alert-warning py-2 px-3 small mb-3">
@@ -1042,12 +1039,12 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                <div class="modal-footer py-2 px-3 bg-body-tertiary sticky-bottom">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-sm btn-danger px-3 shadow-sm">Confirmar Cese</button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 
@@ -1055,13 +1052,13 @@
 <!-- MODAL RÁPIDO: AGREGAR REMUNERACIÓN                                        -->
 <!-- ========================================================================= -->
 <div class="modal fade" id="modal-nueva-rem" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content shadow border rounded-3">
-            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form onsubmit="guardarRemuneracionRapida(event);" class="modal-content shadow border rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom sticky-top">
                 <h6 class="modal-title fw-bold mb-0">Agregar Remuneración</h6>
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
-            <form onsubmit="guardarRemuneracionRapida(event);">
+
                 <div class="modal-body p-3">
                     <div class="mb-2">
                         <label class="form-label small fw-semibold">Concepto</label>
@@ -1086,12 +1083,12 @@
                         <input type="number" step="0.01" class="form-control form-control-sm text-end" id="modal-rem-monto" required min="0" placeholder="0.00" />
                     </div>
                 </div>
-                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                <div class="modal-footer py-2 px-3 bg-body-tertiary sticky-bottom">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-sm btn-primary">Asignar</button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 
@@ -1099,13 +1096,13 @@
 <!-- MODAL RÁPIDO: AGREGAR DERECHOHABIENTE                                     -->
 <!-- ========================================================================= -->
 <div class="modal fade" id="modal-nuevo-dep" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-md modal-dialog-centered">
-        <div class="modal-content shadow border rounded-3">
-            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="form-dependiente" onsubmit="guardarDependienteRapido(event);" class="modal-content shadow border rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom sticky-top">
                 <h6 class="modal-title fw-bold mb-0">Agregar Derechohabiente</h6>
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
-            <form id="form-dependiente" onsubmit="guardarDependienteRapido(event);">
+
                 <div class="modal-body p-3">
                     <input type="hidden" id="modal-dep-id" value="0" />
                     <div class="row g-2 mb-2">
@@ -1163,12 +1160,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                <div class="modal-footer py-2 px-3 bg-body-tertiary sticky-bottom">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-sm btn-primary">Guardar Familiar</button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 
@@ -1176,13 +1173,13 @@
 <!-- MODAL RÁPIDO: ASIGNAR PLANILLA                                            -->
 <!-- ========================================================================= -->
 <div class="modal fade" id="modal-nueva-plan" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content shadow border rounded-3">
-            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form onsubmit="guardarPlanillaRapida(event);" class="modal-content shadow border rounded-3">
+            <div class="modal-header py-2 px-3 bg-body-tertiary border-bottom sticky-top">
                 <h6 class="modal-title fw-bold mb-0">Asignar a Planilla</h6>
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
-            <form onsubmit="guardarPlanillaRapida(event);">
+
                 <div class="modal-body p-3">
                     <div class="mb-2">
                         <label class="form-label small fw-semibold">Seleccionar Planilla</label>
@@ -1194,12 +1191,12 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer py-2 px-3 bg-body-tertiary">
+                <div class="modal-footer py-2 px-3 bg-body-tertiary sticky-bottom">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-sm btn-primary">Asignar</button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 

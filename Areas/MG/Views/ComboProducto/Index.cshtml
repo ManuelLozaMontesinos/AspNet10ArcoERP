@@ -53,26 +53,6 @@
         flex-direction: column;
         overflow: hidden;
     }
-    #modal-crud-combo .modal-body {
-        max-height: calc(90vh - 135px) !important;
-        overflow-y: auto !important;
-        flex: 1 1 auto;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
-    }
-    #modal-crud-combo .modal-body::-webkit-scrollbar {
-        width: 7px;
-    }
-    #modal-crud-combo .modal-body::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    #modal-crud-combo .modal-body::-webkit-scrollbar-thumb {
-        background: rgba(140, 150, 165, 0.45);
-        border-radius: 4px;
-    }
-    #modal-crud-combo .modal-body::-webkit-scrollbar-thumb:hover {
-        background: rgba(140, 150, 165, 0.75);
-    }
 
     /* Lista flotante de autocompletado de productos para el combo */
     .autocomplete-results {
@@ -98,7 +78,7 @@
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-collection-fill text-info me-2" style="font-size: 1.6rem;"></i>Combos / Kits
@@ -114,11 +94,11 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <!-- BARRA DE FILTROS: BUSCADOR LARGO - GRUPO - CLASE - FAMILIA - ESTADO - MOSTRANDO -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <form method="get" class="d-flex flex-wrap align-items-center justify-content-between gap-2 m-0" id="filtro-form">
                     <input type="hidden" name="sort" value="@currentSort" />
                     <input type="hidden" name="dir" value="@currentDir" />
@@ -127,11 +107,11 @@
                     <!-- CONTENEDOR DE FILTROS A LA IZQUIERDA -->
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- 1. Buscador Amplio -->
-                        <div class="input-group input-group-sm" style="min-width: 240px; max-width: 320px;">
+                        <div class="listing-search input-group input-group-sm" style="min-width: 240px; max-width: 320px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código o descripción..." value="@ViewBag.Search" />
+                            <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Buscar por código o descripción..." value="@ViewBag.Search" aria-label="Buscar registros" />
                             <button type="submit" class="btn btn-outline-primary">Buscar</button>
                             @if (!string.IsNullOrEmpty(ViewBag.Search as string) || grupoFiltro.HasValue || claseFiltro.HasValue || familiaFiltro.HasValue || !string.IsNullOrEmpty(estadoFiltro))
                             {
@@ -172,7 +152,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-diagram-3 text-warning"></i>
                             </span>
-                            <select id="filtro-familia" name="familiaId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="this.form.submit();" title="Filtrar por Familia">
+                            <select id="filtro-familia" name="familiaId" class="form-select form-select-sm border-start-0" style="min-width: 145px;" onchange="this.form.requestSubmit();" title="Filtrar por Familia">
                                 <option value="" selected="@(!familiaFiltro.HasValue)">Todas las Familias</option>
                                 @foreach (var f in familiasLookup)
                                 {
@@ -186,7 +166,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 135px;" onchange="this.form.submit();" title="Filtrar por Estado">
+                            <select name="estado" class="form-select form-select-sm border-start-0" style="min-width: 135px;" onchange="this.form.requestSubmit();" title="Filtrar por Estado" aria-label="Estado">
                                 <option value="" selected="@(string.IsNullOrEmpty(estadoFiltro))">Todos los Estados</option>
                                 <option value="A" selected="@(estadoFiltro == "A")">Solo Activos</option>
                                 <option value="I" selected="@(estadoFiltro == "I")">Solo Inactivos</option>
@@ -230,7 +210,7 @@
         <!-- TABLA PRINCIPAL DE COMBOS -->
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-combos">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-combos" data-erp-grid="main" data-erp-options>
                     <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
                             <th style="width: 70px;" class="text-center">
@@ -269,16 +249,14 @@
                                     <i class="bi @(currentSort == "items" ? (currentDir == "asc" ? "bi-sort-numeric-down text-primary fw-bold" : "bi-sort-numeric-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
                                 </a>
                             </th>
-                            <th style="width: 110px;" class="text-center">
-                                <span>Estado Com.</span>
-                            </th>
+                            <th style="width: 110px;" class="text-center"><button type="button" data-erp-sort-index="6"><span>Estado Com.</span> <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
                             <th style="width: 95px;" class="text-center">
                                 <a href="@Url.Action("Index", new { search = ViewBag.Search, grupoId = grupoFiltro, claseId = claseFiltro, familiaId = familiaFiltro, estado = estadoFiltro, sort = "estado", dir = (currentSort == "estado" && currentDir == "asc" ? "desc" : "asc"), top = currentTop })" class="justify-content-center">
                                     <span>Estado</span>
                                     <i class="bi @(currentSort == "estado" ? (currentDir == "asc" ? "bi-sort-alpha-down text-primary fw-bold" : "bi-sort-alpha-down-alt text-primary fw-bold") : "bi-arrow-down-up text-muted opacity-50") ms-1"></i>
                                 </a>
                             </th>
-                            <th style="width: 110px;" class="text-center">Acciones</th>
+                            <th style="width: 110px;" class="text-center">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -353,7 +331,8 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 
@@ -638,12 +617,12 @@
     function onFiltroGrupoChange() {
         $('#filtro-clase').val('');
         $('#filtro-familia').val('');
-        $('#filtro-form').submit();
+        $('#filtro-form').get(0).requestSubmit();
     }
 
     function onFiltroClaseChange() {
         $('#filtro-familia').val('');
-        $('#filtro-form').submit();
+        $('#filtro-form').get(0).requestSubmit();
     }
 
     // =========================================================================

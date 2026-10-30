@@ -2049,126 +2049,200 @@ namespace AspNet10ArcoERP.Services
         // =========================================================================
         // 13. PLANILLAS (planilla)
         // =========================================================================
-        public async Task<List<PlanillaModel>> GetPlanillasAdminListAsync(int empresaId, string? search = null, string? estado = null, int top = 25)
+        private const string PlanillaSelect = @"
+            SELECT p.planilla_id AS Id, p.empresa_id AS EmpresaId, p.nombre AS Nombre,
+                   p.proc_anual AS ProcesoAnual, p.tipo_trabaja_id AS TipoTrabajadorId,
+                   tt.nombre AS TipoTrabajadorNombre, p.estado AS Estado
+            FROM planilla p INNER JOIN tipo_trabaja tt ON tt.tipo_trabaja_id = p.tipo_trabaja_id ";
+
+        public async Task<PlanillaPageModel> GetPlanillasPageAsync(
+            int empresaId, string? search = null, string? estado = null, int page = 1,
+            int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> {
+                ["id"] = "p.planilla_id", ["nombre"] = "p.nombre", ["trabajador"] = "tt.nombre",
+                ["procesos"] = "p.proc_anual", ["estado"] = "p.estado" };
+            var model = new PlanillaPageModel();
+            model.Ordenar(sort, dir, columns.Keys, "id");
             using var conn = _dbConnectionFactory.CreateConnection();
-            string sql = $@"
-                SELECT {(top > 0 ? $"TOP ({top})" : "")}
-                    p.planilla_id AS Id,
-                    p.empresa_id AS EmpresaId,
-                    p.nombre AS Nombre,
-                    p.proc_anual AS ProcesoAnual,
-                    p.tipo_trabaja_id AS TipoTrabajadorId,
-                    ISNULL(tt.nombre, '') AS TipoTrabajadorNombre,
-                    p.estado AS Estado
-                FROM planilla p
-                LEFT JOIN tipo_trabaja tt ON tt.tipo_trabaja_id = p.tipo_trabaja_id
-                WHERE p.empresa_id = @EmpresaId
-                {(!string.IsNullOrWhiteSpace(search) ? "AND (p.nombre LIKE @Search OR tt.nombre LIKE @Search)" : "")}
-                {(!string.IsNullOrWhiteSpace(estado) ? "AND p.estado = @Estado" : "")}
-                ORDER BY p.planilla_id ASC";
-            var rows = await conn.QueryAsync<PlanillaModel>(sql, new {
-                EmpresaId = empresaId,
-                Search = $"%{search}%",
-                Estado = estado
-            });
-            return rows.ToList();
+            const string where = @" WHERE p.empresa_id = @EmpresaId
+                AND (@Search IS NULL OR p.nombre LIKE @Search OR tt.nombre LIKE @Search)
+                AND (@Estado IS NULL OR p.estado = @Estado)";
+            var args = new DynamicParameters(new { EmpresaId = empresaId,
+                Search = string.IsNullOrWhiteSpace(search) ? null : $"%{search.Trim()}%",
+                Estado = string.IsNullOrWhiteSpace(estado) ? null : estado });
+            int total = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM planilla p INNER JOIN tipo_trabaja tt ON tt.tipo_trabaja_id=p.tipo_trabaja_id" + where, args);
+            model.Paginar(total, page, pageSize);
+            args.Add("Offset", (model.Page - 1) * model.PageSize);
+            args.Add("PageSize", model.PageSize);
+            model.Items = (await conn.QueryAsync<PlanillaModel>(PlanillaSelect + where +
+                $" ORDER BY {columns[model.Sort]} {model.Dir}{(model.Sort == "id" ? "" : ", p.planilla_id ASC")} OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
+                args)).ToList();
+            model.VisibleCount = model.Items.Count;
+            model.TiposTrabajador = await GetTiposTrabajadorLookupAsync();
+            model.ConceptosDisponibles = (await conn.QueryAsync<LookupItemModel>(@"
+                SELECT concep_remu_id AS Id, RTRIM(concep_remu) AS Codigo, nombre AS Nombre
+                FROM concep_remu WHERE empresa_id = @EmpresaId AND estado = 'A' ORDER BY concep_remu",
+                new { EmpresaId = empresaId })).ToList();
+            return model;
         }
 
-        public async Task<PlanillaModel?> GetPlanillaAdminByIdAsync(int id)
+        public async Task<PlanillaModel?> GetPlanillaAdminByIdAsync(int id, int empresaId)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            const string sql = @"
-                SELECT 
-                    p.planilla_id AS Id,
-                    p.empresa_id AS EmpresaId,
-                    p.nombre AS Nombre,
-                    p.proc_anual AS ProcesoAnual,
-                    p.tipo_trabaja_id AS TipoTrabajadorId,
-                    ISNULL(tt.nombre, '') AS TipoTrabajadorNombre,
-                    p.estado AS Estado
-                FROM planilla p
-                LEFT JOIN tipo_trabaja tt ON tt.tipo_trabaja_id = p.tipo_trabaja_id
-                WHERE p.planilla_id = @Id";
-            return await conn.QueryFirstOrDefaultAsync<PlanillaModel>(sql, new { Id = id });
+            return await conn.QuerySingleOrDefaultAsync<PlanillaModel>(
+                PlanillaSelect + " WHERE p.planilla_id=@Id AND p.empresa_id=@EmpresaId", new { Id = id, EmpresaId = empresaId });
         }
 
         public async Task<(bool success, string message, int id)> SavePlanillaAsync(PlanillaModel model, int userId)
         {
-            try
+            if (model.Id < 0 || model.EmpresaId <= 0 || userId <= 0 ||
+                string.IsNullOrWhiteSpace(model.Nombre) || model.Nombre.Trim().Length > 150)
+                return (false, "Ingrese un nombre válido de hasta 150 caracteres y un contexto de acceso válido.", 0);
+            if (model.TipoTrabajadorId <= 0 || model.ProcesoAnual <= 0)
+                return (false, "Seleccione un tipo de trabajador y un número positivo de procesos anuales.", 0);
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+            if (model.Id > 0)
             {
-                using var conn = _dbConnectionFactory.CreateConnection();
-                if (conn.State != ConnectionState.Open) conn.Open();
-
-                if (string.IsNullOrWhiteSpace(model.Nombre))
-                    return (false, "El nombre de la planilla es obligatorio.", 0);
-
-                if (model.TipoTrabajadorId <= 0)
-                    return (false, "Debe seleccionar un tipo de trabajador.", 0);
-
-                string estado = string.IsNullOrWhiteSpace(model.Estado) ? "A" : model.Estado.Trim().ToUpper();
-
-                if (model.Id <= 0)
-                {
-                    var p = new DynamicParameters();
-                    p.Add("@empresaId", model.EmpresaId <= 0 ? 1 : model.EmpresaId);
-                    p.Add("@nombre", model.Nombre.Trim().ToUpper());
-                    p.Add("@procesoAnual", model.ProcesoAnual <= 0 ? (short)1 : model.ProcesoAnual);
-                    p.Add("@tipoTrabajadorId", model.TipoTrabajadorId);
-                    p.Add("@usuarioAccionId", userId);
-                    p.Add("@newID", dbType: DbType.Int32, direction: ParameterDirection.Output);
-                    await conn.ExecuteAsync("sp_planilla_insertar", p, commandType: CommandType.StoredProcedure);
-                    int newId = p.Get<int>("@newID");
-
-                    if (estado != "A")
-                    {
-                        await conn.ExecuteAsync("UPDATE planilla SET estado = @Estado WHERE planilla_id = @Id", new { Estado = estado, Id = newId });
-                    }
-
-                    return (true, "Planilla registrada exitosamente.", newId);
-                }
-                else
-                {
-                    var p = new DynamicParameters();
-                    p.Add("@planillaId", model.Id);
-                    p.Add("@nombre", model.Nombre.Trim().ToUpper());
-                    p.Add("@procesoAnual", model.ProcesoAnual <= 0 ? (short)1 : model.ProcesoAnual);
-                    p.Add("@tipoTrabajadorId", model.TipoTrabajadorId);
-                    p.Add("@usuarioAccionId", userId);
-                    await conn.ExecuteAsync("sp_planilla_actualizar", p, commandType: CommandType.StoredProcedure);
-
-                    await conn.ExecuteAsync(
-                        "UPDATE planilla SET estado = @Estado, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE planilla_id = @Id",
-                        new { Estado = estado, UserId = userId, Id = model.Id });
-
-                    return (true, "Planilla actualizada exitosamente.", model.Id);
-                }
+                var actual = await conn.QuerySingleOrDefaultAsync<string>(@"
+                    SELECT estado FROM planilla WITH (UPDLOCK,HOLDLOCK)
+                    WHERE planilla_id=@Id AND empresa_id=@EmpresaId", new { model.Id, model.EmpresaId }, tx);
+                if (actual is null) return (false, "Planilla no encontrada para la empresa seleccionada.", 0);
+                if (actual != "A") return (false, "La planilla está anulada y no admite cambios.", 0);
             }
-            catch (Exception ex)
+            int validType = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM tipo_trabaja WHERE tipo_trabaja_id=@Id AND estado='A'",
+                new { Id = model.TipoTrabajadorId }, tx);
+            if (validType != 1) return (false, "El tipo de trabajador no está habilitado.", 0);
+            var parameters = new DynamicParameters(new {
+                nombre = model.Nombre.Trim().ToUpperInvariant(), procesoAnual = model.ProcesoAnual,
+                tipoTrabajadorId = model.TipoTrabajadorId, usuarioAccionId = userId });
+            int id = model.Id;
+            if (id == 0)
             {
-                return (false, $"Error al guardar planilla: {ex.Message}", 0);
+                parameters.Add("empresaId", model.EmpresaId);
+                parameters.Add("newID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                await conn.ExecuteAsync("dbo.sp_planilla_insertar", parameters, tx, commandType: CommandType.StoredProcedure);
+                id = parameters.Get<int>("newID");
             }
+            else
+            {
+                parameters.Add("planillaId", id);
+                await conn.ExecuteAsync("dbo.sp_planilla_actualizar", parameters, tx, commandType: CommandType.StoredProcedure);
+            }
+            tx.Commit();
+            return (true, "Planilla guardada correctamente.", id);
         }
 
-        public async Task<(bool success, string message, string nuevoEstado)> ToggleEstadoPlanillaAsync(int id, int userId)
+        public async Task<(bool success, string message)> AnularPlanillaAsync(int id, int empresaId, int userId)
         {
-            try
-            {
-                using var conn = _dbConnectionFactory.CreateConnection();
-                var actual = await conn.QueryFirstOrDefaultAsync<string>("SELECT estado FROM planilla WHERE planilla_id = @Id", new { Id = id });
-                if (actual == null) return (false, "Planilla no encontrada.", "");
+            if (id <= 0 || empresaId <= 0 || userId <= 0) return (false, "La planilla indicada no es válida.");
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+            var state = await conn.QuerySingleOrDefaultAsync<string>(@"
+                SELECT estado FROM planilla WITH (UPDLOCK,HOLDLOCK)
+                WHERE planilla_id=@Id AND empresa_id=@EmpresaId", new { Id=id, EmpresaId=empresaId }, tx);
+            if (state != "A") return (false, "La planilla no existe para esta empresa o ya está anulada.");
+            await conn.ExecuteAsync("dbo.sp_planilla_eliminar",
+                new { planillaId=id, usuarioAccionId=userId }, tx, commandType: CommandType.StoredProcedure);
+            tx.Commit();
+            return (true, "Planilla anulada.");
+        }
 
-                string nuevo = actual == "A" ? "I" : "A";
-                await conn.ExecuteAsync(
-                    "UPDATE planilla SET estado = @Nuevo, usuario_modifica_id = @UserId, fecha_modifica = GETDATE() WHERE planilla_id = @Id",
-                    new { Id = id, Nuevo = nuevo, UserId = userId });
+        public async Task<List<PlanillaConceptoModel>?> GetPlanillaConceptosAsync(int planillaId, int empresaId)
+        {
+            if (await GetPlanillaAdminByIdAsync(planillaId, empresaId) is null) return null;
+            using var conn = _dbConnectionFactory.CreateConnection();
+            return (await conn.QueryAsync<PlanillaConceptoModel>(@"
+                SELECT pcr.plan_con_rem_id AS Id, pcr.planilla_id AS PlanillaId, pcr.concep_remu_id AS ConceptoId,
+                       RTRIM(cr.concep_remu) AS Codigo, cr.nombre AS Nombre, tcr.nombre AS TipoNombre,
+                       pcr.orden AS Orden, pcr.estado AS Estado
+                FROM plan_con_rem pcr
+                INNER JOIN planilla p ON p.planilla_id=pcr.planilla_id
+                INNER JOIN concep_remu cr ON cr.concep_remu_id=pcr.concep_remu_id AND cr.empresa_id=p.empresa_id
+                INNER JOIN tipo_con_remu tcr ON tcr.tipo_con_remu_id=cr.tipo_con_remu_id
+                WHERE pcr.planilla_id=@PlanillaId AND p.empresa_id=@EmpresaId AND pcr.estado='A'
+                ORDER BY pcr.orden, pcr.plan_con_rem_id",
+                new { PlanillaId=planillaId, EmpresaId=empresaId })).ToList();
+        }
 
-                return (true, $"Estado cambiado a {(nuevo == "A" ? "Activo" : "Inactivo")}.", nuevo);
-            }
-            catch (Exception ex)
+        public async Task<(bool success, string message, int id)> SavePlanillaConceptoAsync(
+            PlanillaConceptoModel model, int empresaId, int userId)
+        {
+            if (model.Id < 0 || model.PlanillaId <= 0 || model.ConceptoId <= 0 || empresaId <= 0 || userId <= 0)
+                return (false, "Seleccione una planilla y un concepto válidos.", 0);
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+            var state = await conn.QuerySingleOrDefaultAsync<string>(@"
+                SELECT estado FROM planilla WITH (UPDLOCK,HOLDLOCK)
+                WHERE planilla_id=@PlanillaId AND empresa_id=@EmpresaId",
+                new { model.PlanillaId, EmpresaId=empresaId }, tx);
+            if (state != "A") return (false, "La planilla no existe para esta empresa o está anulada.", 0);
+            if (model.Id > 0)
             {
-                return (false, $"Error al cambiar estado: {ex.Message}", "");
+                var current = await conn.QuerySingleOrDefaultAsync<int?>(@"
+                    SELECT concep_remu_id FROM plan_con_rem WITH (UPDLOCK,HOLDLOCK)
+                    WHERE plan_con_rem_id=@Id AND planilla_id=@PlanillaId AND estado='A'",
+                    new { model.Id, model.PlanillaId }, tx);
+                if (current != model.ConceptoId)
+                    return (false, "El concepto no pertenece a la planilla o su identidad fue modificada.", 0);
             }
+            else
+            {
+                int valid = await conn.ExecuteScalarAsync<int>(@"
+                    SELECT COUNT(*) FROM concep_remu
+                    WHERE concep_remu_id=@ConceptoId AND empresa_id=@EmpresaId AND estado='A'",
+                    new { model.ConceptoId, EmpresaId=empresaId }, tx);
+                if (valid != 1) return (false, "El concepto no está habilitado para esta empresa.", 0);
+                int duplicate = await conn.ExecuteScalarAsync<int>(@"
+                    SELECT COUNT(*) FROM plan_con_rem
+                    WHERE planilla_id=@PlanillaId AND concep_remu_id=@ConceptoId AND estado='A'",
+                    new { model.PlanillaId, model.ConceptoId }, tx);
+                if (duplicate > 0) return (false, "El concepto ya está asignado a esta planilla.", 0);
+            }
+            var parameters = new DynamicParameters(new { orden=model.Orden, usuarioAccionId=userId });
+            int id = model.Id;
+            if (id == 0)
+            {
+                parameters.Add("planillaId", model.PlanillaId);
+                parameters.Add("conceptoRemunerativoId", model.ConceptoId);
+                parameters.Add("newID", dbType: DbType.Int32, direction: ParameterDirection.Output);
+                await conn.ExecuteAsync("dbo.sp_plan_con_rem_insertar", parameters, tx, commandType: CommandType.StoredProcedure);
+                id = parameters.Get<int>("newID");
+            }
+            else
+            {
+                parameters.Add("planillaConceptoRemunerativoId", id);
+                await conn.ExecuteAsync("dbo.sp_plan_con_rem_actualizar", parameters, tx, commandType: CommandType.StoredProcedure);
+            }
+            tx.Commit();
+            return (true, "Concepto guardado.", id);
+        }
+
+        public async Task<(bool success, string message)> AnularPlanillaConceptoAsync(
+            int id, int planillaId, int empresaId, int userId)
+        {
+            if (id <= 0 || planillaId <= 0 || empresaId <= 0 || userId <= 0)
+                return (false, "La asignación indicada no es válida.");
+            using var conn = _dbConnectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+            var state = await conn.QuerySingleOrDefaultAsync<string>(@"
+                SELECT estado FROM planilla WITH (UPDLOCK,HOLDLOCK)
+                WHERE planilla_id=@PlanillaId AND empresa_id=@EmpresaId",
+                new { PlanillaId=planillaId, EmpresaId=empresaId }, tx);
+            if (state != "A") return (false, "La planilla no existe para esta empresa o está anulada.");
+            int exists = await conn.ExecuteScalarAsync<int>(@"
+                SELECT COUNT(*) FROM plan_con_rem
+                WHERE plan_con_rem_id=@Id AND planilla_id=@PlanillaId AND estado='A'",
+                new { Id=id, PlanillaId=planillaId }, tx);
+            if (exists != 1) return (false, "El concepto no existe en esta planilla o ya fue anulado.");
+            // The local SP expects usuarioAccionId, unlike the stale legacy repository parameter.
+            await conn.ExecuteAsync("dbo.sp_plan_con_rem_eliminar",
+                new { planillaConceptoRemunerativoId=id, usuarioAccionId=userId }, tx, commandType: CommandType.StoredProcedure);
+            tx.Commit();
+            return (true, "Concepto retirado de la planilla.");
         }
 
         // =========================================================================
@@ -3329,14 +3403,20 @@ namespace AspNet10ArcoERP.Services
                 WHERE pc.plan_proce_id = pp.plan_proce_id AND pc.estado = 'A'
             ) calc ";
 
-        public async Task<int> GetPermisoPlanillaProcesoAsync(int userId, int empresaId)
+        public Task<int> GetPermisoPlanillaProcesoAsync(int userId, int empresaId)
+            => GetPermisoModuloRHAsync(userId, empresaId, "planillaProceso/index");
+
+        public Task<int> GetPermisoModuloRHAsync(int userId, int empresaId, string menuUrl)
+            => GetPermisoModuloAsync(userId, empresaId, "rh", menuUrl);
+
+        public async Task<int> GetPermisoModuloAsync(int userId, int empresaId, string area, string menuUrl)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
             // Legacy administrator role codes; never trust the session's default IsAdmin flag.
             return await conn.ExecuteScalarAsync<int>(@"
                 SELECT ISNULL(MAX(CASE
                     WHEN r.rol IN ('S0001','S0002','00020') THEN 3
-                    WHEN m.area = 'rh' AND m.url = 'planillaProceso/index' AND m.estado = 'A'
+                    WHEN m.area = @Area AND m.url = @MenuUrl AND m.estado = 'A'
                          AND rm.lectura = 'S' THEN CASE WHEN rm.escritura = 'S' THEN 3 ELSE 1 END
                     ELSE 0 END),0)
                 FROM usuario u
@@ -3347,7 +3427,7 @@ namespace AspNet10ArcoERP.Services
                 WHERE u.usuario_id = @UserId AND u.estado = 'A'
                   AND (u.empresa_id IS NULL OR u.empresa_id = @EmpresaId)
                   AND (r.empresa_id IS NULL OR r.empresa_id = @EmpresaId)",
-                new { UserId = userId, EmpresaId = empresaId });
+                new { UserId = userId, EmpresaId = empresaId, Area = area, MenuUrl = menuUrl });
         }
 
         public async Task<int?> GetPeriodoEmpresaSedePlanillaAsync(int empresaId, int empresaSedeId, int periodoId)
@@ -3383,8 +3463,14 @@ namespace AspNet10ArcoERP.Services
 
         public async Task<PlanillaProcesoPageModel> GetPlanillasProcesoPageAsync(
             int empresaId, int periodoEmpSedeId, int? anio = null, int? mes = null,
-            string? search = null, int page = 1, int pageSize = 25)
+            string? search = null, int page = 1, int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> {
+                ["id"]="pp.plan_proce_id", ["planilla"]="pla.nombre", ["mes"]="pp.mes_id",
+                ["numero"]="pp.proc_anual", ["desde"]="pp.fecha_desde", ["hasta"]="pp.fecha_hasta",
+                ["moneda"]="m.nombre", ["estado"]="ep.nombre", ["trabajadores"]="calc.TotalTrabajadores", ["neto"]="ISNULL(calc.TotalIngresos,0) - ISNULL(calc.TotalDescuentos,0)" };
+            var model = new PlanillaProcesoPageModel();
+            model.Ordenar(sort, dir, columns.Keys, "id", "desc");
             using var conn = _dbConnectionFactory.CreateConnection();
             pageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var args = new DynamicParameters(new {
@@ -3402,15 +3488,13 @@ namespace AspNet10ArcoERP.Services
                 INNER JOIN periodo_emp_sede pes ON pes.periodo_emp_sede_id = pp.periodo_emp_sede_id
                 INNER JOIN empresa_sede sede ON sede.empresa_sede_id = pes.empresa_sede_id
                 INNER JOIN periodo per ON per.periodo_id = pes.periodo_id " + filter, args);
-            page = Math.Clamp(page, 1, Math.Max(1, (int)Math.Ceiling(total / (double)pageSize)));
-            args.Add("Offset", (page - 1) * pageSize);
-            args.Add("PageSize", pageSize);
-            var model = new PlanillaProcesoPageModel {
-                Total = total, Page = page, PageSize = pageSize,
-                Items = (await conn.QueryAsync<PlanillaProcesoModel>(
-                    PlanillaProcesoSelect + filter + @"
-                    ORDER BY pp.plan_proce_id DESC OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", args)).ToList()
-            };
+            model.Paginar(total, page, pageSize);
+            args.Add("Offset", (model.Page - 1) * model.PageSize);
+            args.Add("PageSize", model.PageSize);
+            model.Items = (await conn.QueryAsync<PlanillaProcesoModel>(
+                PlanillaProcesoSelect + filter +
+                $" ORDER BY {columns[model.Sort]} {model.Dir}{(model.Sort == "id" ? "" : ", pp.plan_proce_id DESC")} OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", args)).ToList();
+            model.VisibleCount = model.Items.Count;
             model.PeriodoAnio = await conn.QuerySingleAsync<int>(@"
                 SELECT per.periodo FROM periodo_emp_sede pes
                 INNER JOIN periodo per ON per.periodo_id = pes.periodo_id
@@ -4309,8 +4393,11 @@ namespace AspNet10ArcoERP.Services
             DateTime? fechaHasta = null,
             int? estadoAprobacionId = null,
             int page = 1,
-            int pageSize = 25)
+            int pageSize = 25, string? sort = null, string? dir = null)
         {
+            var columns = new Dictionary<string, string> { ["id"]="solicitud.perso_sol_acc_id", ["solicitante"]="proveedorSolicita.razon_social", ["fecha"]="solicitud.fecha", ["hora"]="solicitud.hora_sol", ["autoriza"]="proveedorAutoriza.razon_social", ["hora_autorizada"]="solicitud.hora_auto", ["estado"]="estado.nombre" };
+            var ordering = new ListadoPaginadoModel();
+            ordering.Ordenar(sort, dir, columns.Keys, "fecha", "desc");
             using var conn = _dbConnectionFactory.CreateConnection();
             var safePageSize = pageSize is 25 or 50 or 100 or 500 ? pageSize : 25;
             var safePage = Math.Max(page, 1);
@@ -4369,7 +4456,7 @@ namespace AspNet10ArcoERP.Services
                        estado.estado_aproba AS EstadoAprobacionCodigo,
                        estado.nombre AS EstadoAprobacionNombre
                 {fromAndFilter}
-                ORDER BY solicitud.fecha DESC, solicitud.fecha_registro DESC, solicitud.perso_sol_acc_id DESC
+                ORDER BY {columns[ordering.Sort]} {ordering.Dir}{(ordering.Sort == "id" ? "" : ", solicitud.perso_sol_acc_id DESC")}
                 OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
                 new
                 {
@@ -4384,6 +4471,9 @@ namespace AspNet10ArcoERP.Services
             return new SolicitudAccesoPageModel
             {
                 Items = items.ToList(),
+                VisibleCount = items.Count(),
+                Sort = ordering.Sort,
+                Dir = ordering.Dir,
                 Estados = estados,
                 Total = total,
                 Page = safePage,

@@ -1,70 +1,83 @@
+@addTagHelper *, AspNet10ArcoERP
 @model AspNet10ArcoERP.Models.SolicitudAccesoPageModel
 @{
     ViewData["Title"] = "Aprobación de accesos extendidos";
-    var pageCount = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
 }
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
         <div class="row align-items-center g-3">
             <div class="col">
-                <h3 class="mb-1"><i class="bi bi-person-check me-2 text-primary"></i>Aprobación de accesos extendidos</h3>
+                <h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-person-check me-2 text-primary"></i>Aprobación de accesos extendidos</h3>
                 <small class="text-muted">Revisa las solicitudes de salida y autoriza la hora de retorno del personal.</small>
             </div>
         </div>
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-header bg-body-tertiary py-3">
-                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
-                    <div>
-                        <label for="fechaDesde" class="form-label small fw-semibold">Fecha desde</label>
-                        <input id="fechaDesde" name="fechaDesde" type="date" value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" class="form-control" />
-                    </div>
-                    <div>
-                        <label for="fechaHasta" class="form-label small fw-semibold">Fecha hasta</label>
-                        <input id="fechaHasta" name="fechaHasta" type="date" value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" class="form-control" />
-                    </div>
-                    <div>
-                        <label for="estadoAprobacionId" class="form-label small fw-semibold">Estado</label>
-                        <select id="estadoAprobacionId" name="estadoAprobacionId" class="form-select">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+<form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0">
+<input type="hidden" name="top" value="@Model.PageSize" />
+<input type="hidden" name="sort" value="@Model.Sort" />
+<input type="hidden" name="dir" value="@Model.Dir" />
+<div class="input-group input-group-sm w-auto">
+<span class="input-group-text bg-body-tertiary" title="Desde">
+<i class="bi bi-calendar3">
+</i>
+<span class="ms-1 small">Desde</span>
+</span>
+<input id="fechaDesde" name="fechaDesde" type="date" value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" aria-label="Fecha desde" />
+</div>
+<div class="input-group input-group-sm w-auto">
+<span class="input-group-text bg-body-tertiary" title="Hasta">
+<i class="bi bi-calendar3">
+</i>
+<span class="ms-1 small">Hasta</span>
+</span>
+<input id="fechaHasta" name="fechaHasta" type="date" value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" aria-label="Fecha hasta" />
+</div>
+<div class="input-group input-group-sm w-auto">
+<span class="input-group-text bg-body-tertiary" title="Estado">
+<i class="bi bi-toggle-on">
+</i>
+<span class="ms-1 small">Estado</span>
+</span>
+<select id="estadoAprobacionId" name="estadoAprobacionId" class="form-select form-select-sm" aria-label="Estado de aprobación">
                             <option value="">Todos los estados</option>
                             @foreach (var estado in Model.Estados)
                             {
                                 <option value="@estado.Id" selected="@(Model.EstadoSeleccionadoId == estado.Id)">@estado.Nombre</option>
                             }
                         </select>
-                    </div>
-                    <div>
-                        <label for="top" class="form-label small fw-semibold">Mostrando</label>
-                        <select id="top" name="top" class="form-select">
-                            @foreach (var size in new[] { 25, 50, 100, 500 })
-                            {
-                                <option value="@size" selected="@(Model.PageSize == size)">@size</option>
-                            }
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Filtrar</button>
-                    <a asp-area="RH" asp-controller="AccesoExt" asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                    </a>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">@Model.Total solicitud(es)</span>
-                </form>
-            </div>
+</div>
+<button type="submit" class="btn btn-outline-primary btn-sm">
+<i class="bi bi-search me-1">
+</i>Buscar</button>
+<a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar filtros">
+<i class="bi bi-x-lg">
+</i>
+</a>
+</form>
+<partial name="_ListadoControles" model="Model" />
+</div>
+</div>
+</div>
+<div class="card border-0 shadow-sm rounded-3 mb-3">
             <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
-                    <thead class="bg-body-tertiary">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" data-erp-grid="main" data-erp-options>
+                    <thead class="bg-body-tertiary table-header-custom border-bottom">
                         <tr>
-                            <th>Solicitante</th>
-                            <th>Fecha solicitada</th>
-                            <th>Hora solicitada</th>
-                            <th>Autorizado por</th>
-                            <th>Hora autorizada</th>
-                            <th>Estado</th>
-                            <th class="text-end">Acciones</th>
+                            <th erp-sort="solicitante">Solicitante</th>
+                            <th erp-sort="fecha">Fecha solicitada</th>
+                            <th erp-sort="hora">Hora solicitada</th>
+                            <th erp-sort="autoriza">Autorizado por</th>
+                            <th erp-sort="hora_autorizada">Hora autorizada</th>
+                            <th erp-sort="estado">Estado</th>
+                            <th class="text-end">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -107,12 +120,8 @@
                                                 data-request-id="@solicitud.Id"
                                                 data-employee="@solicitud.PersonalNombre"
                                                 data-date="@solicitud.Fecha.ToString("dd/MM/yyyy")"
-                                                data-requested-hour="@solicitud.HoraSolicitada">
-                                            <i class="bi bi-check-circle me-1"></i>Aprobar
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger js-reject" data-request-id="@solicitud.Id">
-                                            <i class="bi bi-x-circle me-1"></i>Desaprobar
-                                        </button>
+                                                data-requested-hour="@solicitud.HoraSolicitada" title="Aprobar" aria-label="Aprobar"><i class="bi bi-check-circle me-1"></i></button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger js-reject" data-request-id="@solicitud.Id" title="Desaprobar" aria-label="Desaprobar"><i class="bi bi-x-circle me-1"></i></button>
                                     }
                                     else
                                     {
@@ -124,45 +133,13 @@
                     </tbody>
                 </table>
             </div>
-            <div class="card-footer bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <span class="small text-muted">Página @Model.Page de @pageCount · @Model.Total solicitud(es)</span>
-                <div class="btn-group btn-group-sm">
-                    @if (Model.Page > 1)
-                    {
-                        <a class="btn btn-outline-secondary" asp-area="RH" asp-controller="AccesoExt" asp-action="Index"
-                           asp-route-fechaDesde="@Model.FechaDesde?.ToString("yyyy-MM-dd")"
-                           asp-route-fechaHasta="@Model.FechaHasta?.ToString("yyyy-MM-dd")"
-                           asp-route-estadoAprobacionId="@Model.EstadoSeleccionadoId"
-                           asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page - 1)">
-                            <i class="bi bi-chevron-left me-1"></i>Anterior
-                        </a>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-secondary" disabled><i class="bi bi-chevron-left me-1"></i>Anterior</button>
-                    }
-                    @if (Model.Page < pageCount)
-                    {
-                        <a class="btn btn-outline-secondary" asp-area="RH" asp-controller="AccesoExt" asp-action="Index"
-                           asp-route-fechaDesde="@Model.FechaDesde?.ToString("yyyy-MM-dd")"
-                           asp-route-fechaHasta="@Model.FechaHasta?.ToString("yyyy-MM-dd")"
-                           asp-route-estadoAprobacionId="@Model.EstadoSeleccionadoId"
-                           asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page + 1)">
-                            Siguiente<i class="bi bi-chevron-right ms-1"></i>
-                        </a>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-secondary" disabled>Siguiente<i class="bi bi-chevron-right ms-1"></i></button>
-                    }
-                </div>
-            </div>
+            <partial name="_ListadoPaginacion" model="Model" />
         </div>
     </div>
 </div>
 
 <div class="modal fade" id="modal-crud-acceso-extendido" tabindex="-1" aria-labelledby="accesoExtendidoTitle" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <form id="formAprobarAcceso" class="modal-content">
             @Html.AntiForgeryToken()
             <input type="hidden" id="solicitudId" />
@@ -199,28 +176,7 @@
 </div>
 
 @section Scripts {
-    <style>
-        #modal-crud-acceso-extendido .modal-content {
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
 
-        #modal-crud-acceso-extendido .modal-body {
-            max-height: calc(90vh - 135px) !important;
-            overflow-y: auto !important;
-            flex: 1 1 auto;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
-            scroll-behavior: smooth;
-        }
-
-        #modal-crud-acceso-extendido .modal-body::-webkit-scrollbar { width: 7px; }
-        #modal-crud-acceso-extendido .modal-body::-webkit-scrollbar-track { background: transparent; }
-        #modal-crud-acceso-extendido .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
-        #modal-crud-acceso-extendido .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
-    </style>
     <script>
         (() => {
             const modalElement = document.getElementById('modal-crud-acceso-extendido');
@@ -249,8 +205,7 @@
                 window.location.reload();
             }
 
-            document.querySelectorAll('.js-approve').forEach(button => {
-                button.addEventListener('click', () => {
+            window.erpListings.onClick('.js-approve', (button) => {
                     document.getElementById('solicitudId').value = button.dataset.requestId;
                     document.getElementById('solicitudSubtitle').textContent =
                         `${button.dataset.employee} · ${button.dataset.date}`;
@@ -258,10 +213,8 @@
                     document.getElementById('horaAutorizada').value = button.dataset.requestedHour;
                     modal.show();
                 });
-            });
 
-            document.querySelectorAll('.js-reject').forEach(button => {
-                button.addEventListener('click', async () => {
+            window.erpListings.onClick('.js-reject', async (button) => {
                     const confirmation = await Swal.fire({
                         title: '¿Desaprobar solicitud?',
                         text: 'La solicitud cambiará al estado desaprobado.',
@@ -280,7 +233,6 @@
                         Swal.fire({ icon: 'error', title: 'No se pudo desaprobar', text: error.message });
                     }
                 });
-            });
 
             form.addEventListener('submit', async event => {
                 event.preventDefault();

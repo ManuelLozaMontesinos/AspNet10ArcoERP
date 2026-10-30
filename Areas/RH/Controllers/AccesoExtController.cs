@@ -39,7 +39,7 @@ namespace AspNet10ArcoERP.Areas.RH.Controllers
             DateTime? fechaHasta = null,
             int? estadoAprobacionId = null,
             int page = 1,
-            int top = 25)
+            int top = 25, string? sort = null, string? dir = null)
         {
             var pageSize = top is 25 or 50 or 100 or 500 ? top : 25;
             var model = await _rhService.GetSolicitudesAccesoAsync(
@@ -48,7 +48,7 @@ namespace AspNet10ArcoERP.Areas.RH.Controllers
                 fechaHasta,
                 estadoAprobacionId,
                 page,
-                pageSize);
+                pageSize, sort, dir);
             return View(model);
         }
 

@@ -1,0 +1,21 @@
+@model InventarioReporteModel
+@{
+    var links = Model.Filtro.Query(Model.Sort, Model.Dir);
+    bool ready = Model.Consultada && Model.Errores.Count == 0;
+}
+<div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3">
+    <div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi @(Model.Tipo is "saldos" or "saldo-unidades" ? "bi-boxes" : Model.Tipo == "saldo-valorado" ? "bi-cash-stack" : Model.Tipo == "kardex" ? "bi-journal-text" : "bi-arrow-left-right") text-primary me-2"></i>@Model.Titulo</h3>
+        <small class="text-muted" data-erp-list-summary>@Model.Resumen</small></div>
+    <div class="col-auto d-flex flex-wrap gap-2" data-erp-list-actions>
+        @if (ready)
+        {
+            <a asp-action="Exportar" asp-all-route-data="links" class="btn btn-outline-success shadow-sm" data-full-navigation><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+            <a asp-action="Imprimir" asp-all-route-data="links" class="btn btn-outline-secondary shadow-sm" target="_blank" rel="noopener" data-full-navigation><i class="bi bi-printer me-1"></i>Imprimir</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-success" disabled><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
+            <button type="button" class="btn btn-outline-secondary" disabled><i class="bi bi-printer me-1"></i>Imprimir</button>
+        }
+    </div>
+</div></div></div>

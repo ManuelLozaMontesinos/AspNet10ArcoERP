@@ -1,0 +1,57 @@
+@model string
+@{
+    bool canWrite = ViewBag.PuedeEscribir is true;
+    var series = ViewData["SeriesModel"] as DocumentoSeriePageModel;
+}
+<div class="modal fade" id="me-modal" tabindex="-1" aria-labelledby="me-title" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><form id="me-form" class="modal-content">
+        @Html.AntiForgeryToken()
+        <div class="modal-header sticky-top bg-body-tertiary"><div><h5 class="modal-title" id="me-title">Datos generales</h5><small class="text-muted">Complete los campos requeridos para guardar.</small></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body">
+            <input type="hidden" name="Datos.Id" value="0" /><input type="hidden" name="Revision" /><input type="hidden" name="ContextoId" value="@ViewBag.ContextoId" />
+            <fieldset id="me-fields"><div class="row g-3 mb-4">
+            @if (Model == "serie")
+            {
+                <div class="col-md-5"><label for="me-site" class="form-label">Sede <span class="text-danger">*</span></label><select id="me-site" name="Datos.EmpresaSedeId" class="form-select" required><option value="">Seleccione</option>@foreach(var item in series!.Sedes){<option value="@item.Id">@item.Nombre</option>}</select></div>
+                <div class="col-md-7"><label for="me-type" class="form-label">Tipo de documento <span class="text-danger">*</span></label><select id="me-type" name="Datos.TipoDocumentoId" class="form-select" required><option value="">Seleccione</option>@foreach(var item in series!.TiposDocumento){<option value="@item.Id">@item.Nombre</option>}</select></div>
+                <div class="col-md-3"><label for="me-series" class="form-label">Serie <span class="text-danger">*</span></label><input id="me-series" name="Datos.Serie" class="form-control text-uppercase" maxlength="4" required /></div>
+                <div class="col-md-3"><label for="me-counter" class="form-label">Correlativo</label><input id="me-counter" name="Datos.Correlativo" class="form-control" type="number" min="0" max="2147483647" step="1" value="0" required /></div>
+                <div class="col-md-3"><label for="me-format" class="form-label">Formato <span class="text-danger">*</span></label><input id="me-format" name="Datos.Formato" class="form-control" maxlength="10" value="00000000" required /></div>
+                <div class="col-md-3"><label for="me-items" class="form-label">Máximo de ítems</label><input id="me-items" name="Datos.MaximoItems" class="form-control" type="number" value="0" readonly /></div>
+                <div class="col-md-6"><label for="me-warehouse" class="form-label">Almacén de ventas</label><select id="me-warehouse" name="Datos.AlmacenId" class="form-select"><option value="">Seleccione una sede</option></select></div>
+                <div class="col-md-6"><label for="me-related" class="form-label">Documento relacionado</label><select id="me-related" name="Datos.TipoRelacionadoId" class="form-select"><option value="">Sin especificar</option>@foreach(var item in series!.TiposDocumento){<option value="@item.Id">@item.Nombre</option>}</select></div>
+                <div class="col-md-6"><label for="me-file" class="form-label">Archivo de formato</label><input id="me-file" name="Datos.ArchivoFormato" class="form-control" maxlength="30" /></div>
+                <div class="col-md-6 d-flex flex-wrap align-items-center gap-4 pt-4"><div class="form-check form-switch"><input id="me-contingency" name="Datos.EsContingencia" class="form-check-input" type="checkbox" value="true" /><label for="me-contingency" class="form-check-label">Contingencia</label></div><div class="form-check form-switch"><input id="me-online" name="Datos.EnvioEnLinea" class="form-check-input" type="checkbox" value="true" /><label for="me-online" class="form-check-label">Envío en línea</label></div></div>
+                <div class="col-12"><small class="text-muted">Sede, documento, serie y correlativo se conservan después del alta. Las series electrónicas comienzan en cero.</small></div>
+            }
+            else
+            {
+                @if(Model == "medio") { <div class="col-md-2"><label for="me-code" class="form-label">Código</label><input id="me-code" name="Datos.Codigo" class="form-control" readonly placeholder="Automático" /></div> }
+                <div class="@(Model == "medio" ? "col-md-6" : "col-md-8")"><label for="me-name" class="form-label">Nombre <span class="text-danger">*</span></label><input id="me-name" name="Datos.Nombre" class="form-control" maxlength="100" required /></div>
+                @if(Model == "medio")
+                {
+                    <div class="col-md-4"><label for="me-short" class="form-label">Abreviatura <span class="text-danger">*</span></label><input id="me-short" name="Datos.Abreviatura" class="form-control" maxlength="5" required /></div>
+                    <div class="col-md-4"><label for="me-commission" class="form-label">Comisión de tarjeta (%)</label><input id="me-commission" name="Datos.PorcentajeTarjeta" class="form-control" type="number" min="0" max="99999999.9999" step="0.0001" value="0" required /></div>
+                }
+                else
+                {
+                    <div class="col-md-4 d-flex align-items-center pt-4"><div class="form-check form-switch"><input id="me-fraction" name="Datos.IgnorarIncrementoFraccion" class="form-check-input" type="checkbox" value="true" checked /><label for="me-fraction" class="form-check-label">Ignorar incremento por fracción</label></div></div>
+                }
+            }
+            </div></fieldset>
+            @if(Model == "grupo")
+            {
+                <section id="me-members" class="border-top pt-3" aria-labelledby="me-members-title">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><h6 id="me-members-title" class="fw-bold mb-0">Clientes / proveedores del grupo</h6><div class="d-flex gap-2">@if(canWrite){<button type="button" id="me-add-mode" class="btn btn-sm btn-outline-primary"><i class="bi bi-person-plus me-1"></i>Agregar tercero</button>}<button type="button" id="me-links-mode" class="btn btn-sm btn-outline-secondary d-none">Volver al grupo</button></div></div>
+                    <p id="me-members-note" class="small text-muted" role="status">Guarde los datos del grupo para administrar sus integrantes.</p>
+                    <div id="me-people-panel" class="d-none">
+                        <div class="d-flex flex-wrap align-items-center gap-2 erp-filter-bar mb-3"><div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary"><i class="bi bi-search"></i></span><input id="me-people-search" class="form-control" maxlength="150" placeholder="Código, nombre o documento..." aria-label="Buscar terceros" /><button type="button" id="me-people-find" class="btn btn-outline-primary">Buscar</button><button type="button" id="me-people-clear" class="btn btn-outline-secondary" title="Limpiar búsqueda"><i class="bi bi-x-lg"></i></button></div><div class="d-flex align-items-center gap-2 ms-auto"><label for="me-people-size" class="small text-muted">Mostrar</label><select id="me-people-size" class="form-select form-select-sm w-auto">@foreach(var size in new[]{25,50,100,500}){<option value="@size">@size registros</option>}</select></div></div>
+                        <div class="table-responsive table-scroll border rounded-3"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="members" data-erp-options><thead class="table-header-custom bg-body-tertiary"><tr>@foreach(var col in new[]{("codigo","Código"),("nombre","Nombre"),("documento","Documento"),("estado","Estado")}){<th data-me-column="@col.Item1"><button type="button" class="btn btn-link text-body fw-semibold p-0 text-decoration-none me-people-sort" data-sort="@col.Item1">@col.Item2 <span aria-hidden="true">↕</span></button></th>}<th class="listing-options">Opciones</th></tr></thead><tbody id="me-people-rows"></tbody></table></div>
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3"><small id="me-people-range" class="text-muted" aria-live="polite"></small><nav aria-label="Páginas de terceros"><div class="btn-group btn-group-sm"><button id="me-people-prev" type="button" class="btn btn-outline-secondary">Anterior</button><button id="me-people-next" type="button" class="btn btn-outline-secondary">Siguiente</button></div></nav></div>
+                    </div>
+                </section>
+            }
+        </div>
+        <div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>@if(canWrite){<button id="me-save" type="submit" class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>}</div>
+    </form></div>
+</div>

@@ -30,20 +30,11 @@
         background-color: #1e2227 !important;
         color: #e9ecef !important;
     }
-    [data-bs-theme="dark"] .modal-content {
-        background-color: #1e2227 !important;
-        border: 1px solid #343a40 !important;
-    }
-    [data-bs-theme="dark"] .modal-header,
-    [data-bs-theme="dark"] .modal-footer {
-        background-color: #181b1f !important;
-        border-color: #2b3035 !important;
-    }
 </style>
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-shield-lock text-warning me-2" style="font-size: 1.6rem;"></i>Régimen Pensionario
@@ -59,20 +50,20 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <!-- BARRA DE FILTROS -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- Buscador -->
-                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                        <div class="listing-search input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código o régimen previsional..." onkeyup="aplicarFiltros();" />
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código o régimen previsional..." onkeyup="aplicarFiltros();" aria-label="Buscar registros" />
                             <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
                         </div>
 
@@ -81,7 +72,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado">
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado" aria-label="Estado">
                                 <option value="">Todos los Estados</option>
                                 <option value="A">Solo Activos</option>
                                 <option value="I">Solo Inactivos</option>
@@ -116,7 +107,7 @@
         <!-- TABLA PRINCIPAL -->
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-regimenes">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-regimenes" data-erp-grid="main" data-erp-options>
                     <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
                             <th style="width: 70px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-regimenes', 0, true)">
@@ -131,7 +122,7 @@
                             <th style="width: 120px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-regimenes', 3, false)">
                                 <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
                             </th>
-                            <th style="width: 120px;" class="text-center">Acciones</th>
+                            <th style="width: 120px;" class="text-center">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -178,21 +169,22 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 
 <!-- MODAL CRUD: RÉGIMEN PENSIONARIO -->
 <div class="modal fade" id="modal-crud-regimen" tabindex="-1" aria-labelledby="modalRegimenLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow border-0 rounded-4">
-            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form id="form-regimen" onsubmit="guardarRegimen(event);" class="modal-content shadow border-0 rounded-4">
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary sticky-top">
                 <h5 class="modal-title fw-bold" id="modalRegimenLabel">
                     <i class="bi bi-shield-lock text-warning me-2"></i><span id="modal-titulo">Nuevo Régimen Pensionario</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="form-regimen" onsubmit="guardarRegimen(event);">
+
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="regimen-id" name="Id" value="0" />
                 <div class="modal-body p-4">
@@ -212,14 +204,14 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary sticky-bottom">
                     <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-regimen" disabled>
                         <i class="bi bi-check-circle me-1"></i>Guardar Régimen
                     </button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 
@@ -307,7 +299,7 @@
         topActual = nuevoTop;
         $('#lbl-top-actual').text(nuevoTop === 0 ? 'Todos' : nuevoTop);
         $('.item-top').removeClass('active');
-        $(event.target).addClass('active');
+        if (typeof event !== 'undefined' && event?.target) $(event.target).addClass('active');
         aplicarFiltros();
     }
 

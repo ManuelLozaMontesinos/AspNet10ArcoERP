@@ -26,7 +26,7 @@
         return found;
     }
 
-    const config = JSON.parse(element("processConfig").textContent || "{}");
+    const config = window.erpListings.config("processConfig");
     const form = element("processForm");
     function getFields() {
         const found = element("processFields");
@@ -171,9 +171,7 @@
         modal.show();
     });
 
-    document.querySelectorAll(".js-open-process").forEach(control => {
-        if (!(control instanceof HTMLButtonElement)) return;
-        control.addEventListener("click", async () => {
+    window.erpListings.onClick(".js-open-process", async (control) => {
             if (opening || saving) return;
             opening = true;
             control.disabled = true;
@@ -207,7 +205,6 @@
                 control.disabled = false;
             }
         });
-    });
 
     load.addEventListener("click", async () => {
         detailController.abort();
@@ -268,9 +265,7 @@
         }
     });
 
-    document.querySelectorAll(".js-cancel-process").forEach(control => {
-        if (!(control instanceof HTMLButtonElement)) return;
-        control.addEventListener("click", async () => {
+    window.erpListings.onClick(".js-cancel-process", async (control) => {
             const answer = await Swal.fire({ icon: "warning", title: "Anular proceso",
                 text: "El proceso quedará inactivo. Esta pantalla no permite reactivarlo.",
                 showCancelButton: true, confirmButtonText: "Anular", cancelButtonText: "Cancelar" });
@@ -290,7 +285,6 @@
                 control.disabled = false;
             }
         });
-    });
 
     input("detailSearch").addEventListener("input", () => { detailPage = 1; renderDetails(); });
     select("detailSize").addEventListener("change", () => { detailPage = 1; renderDetails(); });

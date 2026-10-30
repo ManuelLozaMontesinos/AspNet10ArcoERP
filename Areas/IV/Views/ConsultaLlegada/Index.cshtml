@@ -1,0 +1,30 @@
+@model LlegadaCompraPageModel
+@{ ViewData["Title"] = "Consulta de llegadas"; }
+<div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3"><div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-truck text-primary me-2"></i>Consulta de llegadas</h3><small class="text-muted">@Model.Contexto.Sede · Entregas programadas de órdenes de compra aprobadas con productos pendientes de ingreso</small></div></div></div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
+    @if (Model.Errores.Count > 0) { <div class="alert alert-warning" role="alert">@foreach (var error in Model.Errores) { <p class="mb-0">@error</p> }</div> }
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar"><div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <form method="get" id="inventory-arrivals-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+            <input type="hidden" name="top" value="@Model.PageSize" /><input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" />
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span><input name="search" value="@Model.Filtro.Search" maxlength="150" class="form-control border-start-0" placeholder="Buscar por producto o código..." aria-label="Buscar producto" /></div>
+            @if (!Model.SinProveedor) { <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary"><i class="bi bi-person-vcard"></i></span><input name="proveedor" value="@Model.Filtro.Proveedor" maxlength="150" class="form-control" placeholder="Buscar proveedor..." aria-label="Buscar proveedor" /></div> }
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar3"></i></span><input type="date" name="fecha" value="@Model.Filtro.Fecha?.ToString("yyyy-MM-dd")" class="form-control" min="1900-01-01" max="9998-12-31" aria-label="Fecha programada" /></div>
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i>Buscar</button><a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+        </form><partial name="_ListadoControles" model="Model" />
+    </div></div></div>
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="table-responsive table-scroll"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+        <thead class="table-header-custom bg-body-tertiary border-bottom"><tr>@if (!Model.SinProveedor) { <th erp-sort="proveedor">Proveedor</th> }<th erp-sort="codigo">Código</th><th erp-sort="producto">Producto</th><th erp-sort="unidad">U.M.</th><th erp-sort="fecha">Fecha programada</th><th erp-sort="cantidad" erp-numeric="true" class="text-end">Cantidad programada</th><th class="listing-options">Opciones</th></tr></thead><tbody>
+            @if (Model.Items.Count == 0) { <tr><td colspan="@(Model.SinProveedor ? 6 : 7)" class="text-center text-muted py-4">No se encontraron entregas pendientes para los filtros seleccionados.</td></tr> }
+            @foreach (var item in Model.Items)
+            {
+                <tr>@if (!Model.SinProveedor) { <td>@item.Proveedor</td> }<td class="font-monospace text-muted">@item.Codigo</td><td class="fw-semibold">@item.Producto</td><td>@item.Unidad</td><td class="text-nowrap">@(item.Fecha?.ToString("dd/MM/yyyy") ?? "Sin fecha")</td><td class="text-end">@item.Cantidad.ToString("N4")</td><td class="listing-options"><button type="button" class="btn btn-sm btn-outline-primary" data-inv-arrival="@item.Id" title="Consultar entrega y cantidades de la orden"><i class="bi bi-eye"></i></button></td></tr>
+            }
+        </tbody></table></div><partial name="_ListadoPaginacion" model="Model" /></div>
+</div></div>
+<div class="modal fade" id="inventory-arrival-modal" tabindex="-1" aria-labelledby="inventory-arrival-title" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header sticky-top bg-body-tertiary"><h5 class="modal-title" id="inventory-arrival-title">Detalle de la entrega programada</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body" id="inventory-arrival-body"></div><div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+</div></div></div>
+@section Scripts {
+    <script type="application/json" id="inventory-arrival-config">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { sinProveedor = Model.SinProveedor, rows = Model.Items.Select(r => new { id = r.Id, proveedor = r.Proveedor, codigo = r.Codigo, producto = r.Producto, unidad = r.Unidad, fecha = r.Fecha?.ToString("dd/MM/yyyy"), cantidad = r.Cantidad, orden = r.OrdenCompra, ordenada = r.CantidadOrdenada, ingresada = r.CantidadIngresada, pendiente = r.Pendiente }) }))</script>
+    <script src="~/js/inventario-procesos.js" asp-append-version="true"></script>
+}

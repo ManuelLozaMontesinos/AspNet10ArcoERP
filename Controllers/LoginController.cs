@@ -57,15 +57,11 @@ namespace AspNet10ArcoERP.Controllers
             {
                 new(ClaimTypes.NameIdentifier, userSession.UsuarioId.ToString()),
                 new(ClaimTypes.Name, userSession.UsuarioLogon),
-                new(ClaimTypes.GivenName, userSession.NombreCompleto),
-                new("EmpresaId", userSession.EmpresaId.ToString()),
-                new("EmpresaNombre", userSession.EmpresaNombre),
-                new("SedeId", userSession.EmpresaSedeId.ToString()),
-                new("SedeNombre", userSession.SedeNombre),
-                new("PeriodoAnio", userSession.PeriodoAnio)
+                new(ClaimTypes.GivenName, userSession.NombreCompleto)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            UserSessionClaims.UpdateContext(claimsIdentity, userSession);
             var authProperties = new AuthenticationProperties
             {
                 IsPersistent = model.RememberMe,

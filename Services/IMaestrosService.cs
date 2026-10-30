@@ -170,8 +170,7 @@ namespace AspNet10ArcoERP.Services
         Task<List<LookupItemModel>> GetFamiliasCombosLookupAsync(int? grupoId = null, int? claseId = null);
 
         // 10.2 Cuentas bancarias de empresa
-        Task<List<CuentaBancoModel>> GetCuentasBancoAsync(int empresaId, string? search = null, int? bancoId = null, string? estado = null, int top = 25);
-        Task<int> GetCuentasBancoCountAsync(int empresaId, string? search = null, int? bancoId = null, string? estado = null);
+        Task<CuentaBancoPageModel> GetCuentasBancoPageAsync(int empresaId, string? search = null, int? bancoId = null, string? estado = null, int page = 1, int pageSize = 25, string? sort = null, string? dir = null);
         Task<CuentaBancoModel?> GetCuentaBancoByIdAsync(int id, int empresaId);
         Task<List<LookupItemModel>> GetBancosCuentaLookupAsync();
         Task<List<LookupItemModel>> GetMonedasCuentaLookupAsync();

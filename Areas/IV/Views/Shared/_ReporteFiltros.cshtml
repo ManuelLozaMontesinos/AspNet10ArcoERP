@@ -1,0 +1,56 @@
+@model InventarioReporteModel
+@if (Model.Errores.Count > 0)
+{
+    <div class="alert alert-warning" role="alert"><ul class="mb-0">@foreach (var error in Model.Errores) { <li>@error</li> }</ul></div>
+}
+<div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar"><div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0" id="inventory-report-filters">
+        <input type="hidden" name="consultar" value="true" /><input type="hidden" name="top" value="@Model.PageSize" />
+        <input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" />
+        @if (Model.Tipo != "kardex")
+        {
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input id="report-search" name="search" value="@Model.Filtro.Search" maxlength="150" class="form-control border-start-0" placeholder="@(Model.Tipo == "saldos" ? "Buscar por descripción del producto..." : "Producto, detalle u operación...")" aria-label="Buscar en la consulta" /></div>
+        }
+        @if (Model.Tipo == "saldos")
+        {
+            <input type="hidden" name="modo" value="mes" />
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-upc-scan"></i></span><input name="codigo" value="@Model.Filtro.Codigo" class="form-control" maxlength="20" placeholder="Código SKU" aria-label="Código del producto" style="width:140px" /></div>
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-tag"></i></span><input name="referencia" value="@Model.Filtro.Referencia" class="form-control" maxlength="20" placeholder="Código referencial" aria-label="Código referencial" style="width:150px" /></div>
+        }
+        else
+        {
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-building"></i></span><select name="almacenId" class="form-select" aria-label="Almacén" required style="max-width:280px">
+                <option value="">Seleccione almacén</option>@foreach (var item in Model.Almacenes) { <option value="@item.Id" selected="@(item.Id == Model.Filtro.AlmacenId)">@item.Nombre</option> }
+            </select></div>
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar-range"></i></span><select name="modo" id="report-mode" class="form-select" aria-label="Modo de consulta">
+                <option value="mes" selected="@(Model.Filtro.Modo == "mes")">Mensual</option><option value="dia" selected="@(Model.Filtro.Modo == "dia")">@(Model.Tipo == "kardex" ? "Hasta fecha" : "Por día")</option>
+                @if (Model.Tipo == "kardex") { <option value="anual" selected="@(Model.Filtro.Modo == "anual")">Anual</option> }
+            </select></div>
+        }
+        <div class="input-group input-group-sm w-auto" data-report-month><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar-month"></i></span><select name="mes" id="report-month" class="form-select" aria-label="Mes contable">
+            @foreach (var item in Model.Meses) { <option value="@item.Id" selected="@(item.Id == Model.Filtro.Mes)">@item.Nombre</option> }
+        </select></div>
+        @if (Model.Tipo != "saldos")
+        {
+            <div class="input-group input-group-sm w-auto" data-report-date><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar3"></i></span><input type="date" name="fecha" id="report-date" value="@Model.Filtro.Fecha?.ToString("yyyy-MM-dd")" class="form-control" min="1900-01-01" max="9998-12-31" aria-label="Fecha de consulta" /></div>
+        }
+        @if (Model.Tipo == "kardex")
+        {
+            <input type="hidden" name="productoId" id="report-producto-id" value="@Model.Filtro.ProductoId" />
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary"><i class="bi bi-box-seam"></i></span><input id="report-producto-name" class="form-control" value="@Model.ProductoNombre" placeholder="Todos los productos · seleccione uno para anual" readonly aria-label="Producto seleccionado" />
+                <button type="button" class="btn btn-outline-primary" data-report-picker="producto" title="Buscar producto"><i class="bi bi-search"></i></button><button type="button" class="btn btn-outline-secondary" data-report-clear="producto" title="Limpiar producto"><i class="bi bi-x-lg"></i></button></div>
+        }
+        @if (Model.Tipo == "movimientos")
+        {
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-arrow-left-right"></i></span><select name="transaccionId" class="form-select" aria-label="Transacción" required style="max-width:300px"><option value="">Seleccione transacción</option>
+                @foreach (var item in Model.Transacciones) { <option value="@item.Id" selected="@(item.Id == Model.Filtro.TransaccionId)">@item.Nombre</option> }
+            </select></div>
+            <input type="hidden" name="proveedorId" id="report-proveedor-id" value="@Model.Filtro.ProveedorId" />
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary"><i class="bi bi-person-vcard"></i></span><input id="report-proveedor-name" class="form-control" value="@Model.ProveedorNombre" placeholder="Todos los terceros" readonly aria-label="Tercero seleccionado" />
+                <button type="button" class="btn btn-outline-primary" data-report-picker="proveedor" title="Buscar tercero"><i class="bi bi-search"></i></button><button type="button" class="btn btn-outline-secondary" data-report-clear="proveedor" title="Limpiar tercero"><i class="bi bi-x-lg"></i></button></div>
+        }
+        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i>Consultar</button><a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+    </form>
+    <partial name="_ListadoControles" model="Model" />
+</div></div></div>

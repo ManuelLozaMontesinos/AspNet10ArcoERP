@@ -8,12 +8,9 @@ namespace AspNet10ArcoERP.Models
         public string Estado { get; set; } = "A";
     }
 
-    public class PeriodoSistemaPageModel
+    public class PeriodoSistemaPageModel : ListadoPaginadoModel
     {
         public List<PeriodoSistemaModel> Items { get; set; } = new();
-        public int Total { get; set; }
-        public int Page { get; set; }
-        public int PageSize { get; set; }
         public int? SearchYear { get; set; }
     }
 }

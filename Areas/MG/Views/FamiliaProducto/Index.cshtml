@@ -6,25 +6,6 @@
 }
 
 <style>
-    /* Estilos del Modal Extendido */
-    #modal-crud-grupo .modal-content {
-        max-height: 92vh;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    #modal-crud-grupo .modal-body {
-        max-height: calc(92vh - 130px) !important;
-        overflow-y: auto !important;
-        flex: 1 1 auto;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
-        scroll-behavior: smooth;
-    }
-    #modal-crud-grupo .modal-body::-webkit-scrollbar { width: 7px; }
-    #modal-crud-grupo .modal-body::-webkit-scrollbar-track { background: transparent; }
-    #modal-crud-grupo .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
-    #modal-crud-grupo .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
 
     /* Apilamiento ordenado para submodales sobre el modal-xl */
     #modal-sub-clase { z-index: 1065 !important; }
@@ -54,7 +35,7 @@
 <!-- ENCABEZADO DE PÁGINA -->
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-diagram-2-fill text-danger me-2" style="font-size: 1.6rem;"></i>Familias de Producto
@@ -71,22 +52,22 @@
 </div>
 
 <!-- CONTENIDO PRINCIPAL -->
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
 
         <!-- BARRA DE FILTROS EN LÍNEA -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     
                     <!-- Filtros a la izquierda -->
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- 1. Buscador -->
-                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                        <div class="listing-search input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código o nombre de grupo..." onkeyup="aplicarFiltros();" />
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código o nombre de grupo..." onkeyup="aplicarFiltros();" aria-label="Buscar registros" />
                             <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
                         </div>
 
@@ -95,7 +76,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-tag text-primary"></i>
                             </span>
-                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 170px;" onchange="aplicarFiltros();" title="Tipo de Producto">
+                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 170px;" onchange="aplicarFiltros();" title="Tipo de Producto" aria-label="Tipo">
                                 <option value="">Todos los Tipos</option>
                                 @foreach (var tp in tiposProducto)
                                 {
@@ -109,7 +90,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" onchange="aplicarFiltros();" title="Filtrar por Estado">
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" onchange="aplicarFiltros();" title="Filtrar por Estado" aria-label="Estado">
                                 <option value="">Todos los Estados</option>
                                 <option value="A" selected>Activo</option>
                                 <option value="I">Inactivo</option>
@@ -146,8 +127,8 @@
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped align-middle mb-0" id="tabla-grupos">
-                        <thead class="table-light table-header-custom border-bottom">
+                    <table class="table table-hover table-striped align-middle mb-0" id="tabla-grupos" data-erp-grid="main" data-erp-options>
+                        <thead class="table-light table-header-custom border-bottom bg-body-tertiary">
                             <tr>
                                 <th class="ps-3 th-sortable" onclick="ordenarTabla(0)" style="width: 140px;">
                                     Tipo <i class="bi bi-arrow-down-up small text-muted ms-1"></i>
@@ -158,12 +139,12 @@
                                 <th class="th-sortable" onclick="ordenarTabla(2)">
                                     Nombre del Grupo <i class="bi bi-arrow-down-up small text-muted ms-1"></i>
                                 </th>
-                                <th class="text-center" style="width: 220px;">Estructura</th>
-                                <th class="text-center" style="width: 160px;">Configuración</th>
+                                <th class="text-center" style="width: 220px;"><button type="button" data-erp-sort-index="3">Estructura <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-center" style="width: 160px;"><button type="button" data-erp-sort-index="4">Configuración <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
                                 <th class="text-center th-sortable" onclick="ordenarTabla(5)" style="width: 110px;">
                                     Estado <i class="bi bi-arrow-down-up small text-muted ms-1"></i>
                                 </th>
-                                <th class="text-end pe-3" style="width: 110px;">Acciones</th>
+                                <th class="text-end pe-3" style="width: 110px;">Opciones</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-grupos">
@@ -197,7 +178,7 @@
                                     <td class="text-center">
                                         @{
                                             var hasFlags = false;
-                                            if (g.UsarIncrementoFraccion == "S") { hasFlags = true; <span class="badge bg-warning-subtle text-dark border me-1" title="Incrementa precio si es fracción">Fracc.</span> }
+                                            if (g.UsarIncrementoFraccion == "S") { hasFlags = true; <span class="badge bg-warning-subtle text-body border me-1" title="Incrementa precio si es fracción">Fracc.</span> }
                                             if (g.EsCombo == "S") { hasFlags = true; <span class="badge bg-success-subtle text-success border me-1" title="Configurado como Combo">Combo</span> }
                                             if (g.EsInsumo == "S") { hasFlags = true; <span class="badge bg-danger-subtle text-danger border me-1" title="Configurado como Insumo">Insumo</span> }
                                             if (!hasFlags) { <span class="text-muted small">—</span> }
@@ -239,14 +220,9 @@
                     </table>
                 </div>
 
-                <!-- CONTADOR DE REGISTROS -->
-                <div class="d-flex align-items-center justify-content-between p-3 border-top bg-body-tertiary">
-                    <span class="text-muted small" id="contador-registros">Cargando registros...</span>
-                    <div id="paginador-info" class="small text-muted"></div>
-                </div>
-
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
 
     </div>
 </div>
@@ -256,7 +232,7 @@
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-crud-grupo" tabindex="-1" aria-labelledby="modalGrupoLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content shadow border-0 rounded-4 bg-body">
+        <form id="form-grupo" onsubmit="guardarGrupo(event);" class="modal-content shadow border-0 rounded-4 bg-body">
             
             <div class="modal-header sticky-top bg-body-tertiary border-bottom py-3 px-4">
                 <h5 class="modal-title fw-bold" id="modalGrupoLabel">
@@ -274,7 +250,7 @@
                         <span class="badge bg-secondary-subtle text-body-secondary font-monospace" id="lbl-grupo-codigo-badge"></span>
                     </div>
                     <div class="card-body p-3">
-                        <form id="form-grupo" onsubmit="guardarGrupo(event);">
+
                             @Html.AntiForgeryToken()
                             <input type="hidden" id="grupo-id" value="0" />
 
@@ -327,15 +303,11 @@
                                                 </select>
                                             </div>
                                         </div>
-                                        <div>
-                                            <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btn-guardar-grupo">
-                                                <i class="bi bi-save me-1"></i><span id="btn-guardar-grupo-texto">Guardar Grupo</span>
-                                            </button>
-                                        </div>
+
                                     </div>
                                 </div>
                             </div>
-                        </form>
+
                     </div>
                 </div>
 
@@ -456,10 +428,13 @@
             </div>
 
             <div class="modal-footer sticky-bottom bg-body-tertiary border-top py-2 px-4">
-                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Cerrar</button>
+                <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btn-guardar-grupo">
+                    <i class="bi bi-save me-1"></i><span id="btn-guardar-grupo-texto">Guardar Grupo</span>
+                </button>
             </div>
 
-        </div>
+        </form>
     </div>
 </div>
 
@@ -467,10 +442,10 @@
 <!-- SUB-MODAL 1: NUEVA / EDITAR CLASE                         -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-sub-clase" tabindex="-1" aria-labelledby="modalSubClaseLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <form class="modal-content shadow border-0 rounded-4 bg-body" id="form-sub-clase" onsubmit="guardarSubClase(event);">
             @Html.AntiForgeryToken()
-            <div class="modal-header py-2 px-3 border-bottom bg-body-tertiary">
+            <div class="modal-header py-2 px-3 border-bottom bg-body-tertiary sticky-top">
                 <h6 class="modal-title fw-bold" id="modalSubClaseLabel"><i class="bi bi-diagram-3 me-2 text-primary"></i><span id="sub-clase-titulo">Nueva Clase</span></h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
@@ -507,7 +482,7 @@
                     </select>
                 </div>
             </div>
-            <div class="modal-footer py-2 px-3 border-top bg-body-tertiary">
+            <div class="modal-footer py-2 px-3 border-top bg-body-tertiary sticky-bottom">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btn-guardar-sub-clase">Guardar Clase</button>
             </div>
@@ -519,10 +494,10 @@
 <!-- SUB-MODAL 2: NUEVA / EDITAR FAMILIA                       -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modal-sub-familia" tabindex="-1" aria-labelledby="modalSubFamiliaLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <form class="modal-content shadow border-0 rounded-4 bg-body" id="form-sub-familia" onsubmit="guardarSubFamilia(event);">
             @Html.AntiForgeryToken()
-            <div class="modal-header py-2 px-3 border-bottom bg-body-tertiary">
+            <div class="modal-header py-2 px-3 border-bottom bg-body-tertiary sticky-top">
                 <h6 class="modal-title fw-bold" id="modalSubFamiliaLabel"><i class="bi bi-collection me-2 text-info"></i><span id="sub-fam-titulo">Nueva Familia</span></h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
@@ -552,7 +527,7 @@
                     </select>
                 </div>
             </div>
-            <div class="modal-footer py-2 px-3 border-top bg-body-tertiary">
+            <div class="modal-footer py-2 px-3 border-top bg-body-tertiary sticky-bottom">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btn-guardar-sub-fam">Guardar Familia</button>
             </div>
@@ -618,8 +593,6 @@
             $filaVacia.hide();
         }
 
-        $('#contador-registros').text('Mostrando ' + cont + ' de ' + visibles + ' grupo(s)');
-        $('#paginador-info').text(visibles > topActual ? 'Límite alcanzado (' + topActual + '). Ajuste "Mostrando" para ver más.' : '');
     }
 
     function limpiarFiltros() {

@@ -1,14 +1,14 @@
+@addTagHelper *, AspNet10ArcoERP
 @model AspNet10ArcoERP.Models.LeadSourcePageModel
 @{
     ViewData["Title"] = "Origen de prospectos";
-    var pageCount = Math.Max(1, (int)Math.Ceiling(Model.Total / (double)Model.PageSize));
 }
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
         <div class="row align-items-center g-3">
             <div class="col">
-                <h3 class="mb-1"><i class="bi bi-megaphone me-2 text-primary"></i>Origen de prospectos</h3>
+                <h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-megaphone me-2 text-primary"></i>Origen de prospectos</h3>
                 <small class="text-muted">Configura los canales de procedencia utilizados por Marketing y Ventas.</small>
             </div>
             <div class="col-auto">
@@ -20,47 +20,53 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-header bg-body-tertiary py-3">
-                <form method="get" class="d-flex flex-wrap align-items-end gap-3">
-                    <div style="min-width:320px;max-width:440px;flex:1 1 320px">
-                        <label for="search" class="form-label small fw-semibold">Buscar origen</label>
-                        <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Nombre del canal..." />
-                    </div>
-                    <div>
-                        <label for="estado" class="form-label small fw-semibold">Estado</label>
-                        <select id="estado" name="estado" class="form-select">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+<form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0">
+<input type="hidden" name="top" value="@Model.PageSize" />
+<input type="hidden" name="sort" value="@Model.Sort" />
+<input type="hidden" name="dir" value="@Model.Dir" />
+<div class="input-group input-group-sm listing-search">
+<span class="input-group-text bg-body-tertiary border-end-0">
+<i class="bi bi-search text-muted">
+</i>
+</span>
+<input id="search" name="search" value="@Model.Search" class="form-control form-control-sm" placeholder="Nombre del canal..." aria-label="Buscar registros" />
+<button type="submit" class="btn btn-outline-primary">Buscar</button>
+<a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros">
+<i class="bi bi-x-lg">
+</i>
+</a>
+</div>
+<div class="input-group input-group-sm w-auto">
+<span class="input-group-text bg-body-tertiary" title="Estado">
+<i class="bi bi-toggle-on">
+</i>
+<span class="ms-1 small">Estado</span>
+</span>
+<select id="estado" name="estado" class="form-select form-select-sm" aria-label="Estado">
                             <option value="">Todos los estados</option>
                             <option value="A" selected="@(Model.Estado == "A")">Activos</option>
                             <option value="I" selected="@(Model.Estado == "I")">Inactivos</option>
                         </select>
-                    </div>
-                    <div>
-                        <label for="top" class="form-label small fw-semibold">Mostrando</label>
-                        <select id="top" name="top" class="form-select">
-                            @foreach (var size in new[] { 25, 50, 100, 500 })
-                            {
-                                <option value="@size" selected="@(Model.PageSize == size)">@size</option>
-                            }
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Buscar</button>
-                    <a asp-area="MK" asp-controller="LeadSource" asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                    </a>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">@Model.Total origen(es)</span>
-                </form>
-            </div>
+</div>
+</form>
+<partial name="_ListadoControles" model="Model" />
+</div>
+</div>
+</div>
+<div class="card border-0 shadow-sm rounded-3 mb-3">
             <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header">
-                    <thead class="bg-body-tertiary">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" data-erp-grid="main" data-erp-options>
+                    <thead class="bg-body-tertiary table-header-custom border-bottom">
                         <tr>
-                            <th class="text-center" style="width:90px">ID</th>
-                            <th>Nombre del origen</th>
-                            <th class="text-center" style="width:140px">Estado</th>
-                            <th class="text-end" style="width:190px">Acciones</th>
+                            <th class="text-center" style="width:90px" erp-sort="id" erp-numeric="true">ID</th>
+                            <th erp-sort="nombre">Nombre del origen</th>
+                            <th class="text-center" style="width:140px" erp-sort="estado">Estado</th>
+                            <th class="text-end" style="width:190px">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -98,39 +104,13 @@
                     </tbody>
                 </table>
             </div>
-            <div class="card-footer bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <span class="small text-muted">Página @Model.Page de @pageCount · @Model.Total origen(es)</span>
-                <div class="btn-group btn-group-sm">
-                    @if (Model.Page > 1)
-                    {
-                        <a class="btn btn-outline-secondary" asp-area="MK" asp-controller="LeadSource" asp-action="Index"
-                           asp-route-search="@Model.Search" asp-route-estado="@Model.Estado" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page - 1)">
-                            <i class="bi bi-chevron-left me-1"></i>Anterior
-                        </a>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-secondary" disabled><i class="bi bi-chevron-left me-1"></i>Anterior</button>
-                    }
-                    @if (Model.Page < pageCount)
-                    {
-                        <a class="btn btn-outline-secondary" asp-area="MK" asp-controller="LeadSource" asp-action="Index"
-                           asp-route-search="@Model.Search" asp-route-estado="@Model.Estado" asp-route-top="@Model.PageSize" asp-route-page="@(Model.Page + 1)">
-                            Siguiente<i class="bi bi-chevron-right ms-1"></i>
-                        </a>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-secondary" disabled>Siguiente<i class="bi bi-chevron-right ms-1"></i></button>
-                    }
-                </div>
-            </div>
+            <partial name="_ListadoPaginacion" model="Model" />
         </div>
     </div>
 </div>
 
 <div class="modal fade" id="modal-crud-lead-source" tabindex="-1" aria-labelledby="leadSourceModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <form id="leadSourceForm" class="modal-content">
             @Html.AntiForgeryToken()
             <input type="hidden" name="Id" id="leadSourceId" value="0" />
@@ -160,28 +140,7 @@
 </div>
 
 @section Scripts {
-    <style>
-        #modal-crud-lead-source .modal-content {
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
 
-        #modal-crud-lead-source .modal-body {
-            max-height: calc(90vh - 135px) !important;
-            overflow-y: auto !important;
-            flex: 1 1 auto;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(140, 150, 165, 0.4) transparent;
-            scroll-behavior: smooth;
-        }
-
-        #modal-crud-lead-source .modal-body::-webkit-scrollbar { width: 7px; }
-        #modal-crud-lead-source .modal-body::-webkit-scrollbar-track { background: transparent; }
-        #modal-crud-lead-source .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
-        #modal-crud-lead-source .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
-    </style>
     <script>
         (() => {
             const modalElement = document.getElementById('modal-crud-lead-source');
@@ -212,8 +171,7 @@
                 setTimeout(() => document.getElementById('leadSourceName').focus(), 200);
             });
 
-            document.querySelectorAll('.js-edit').forEach(button => {
-                button.addEventListener('click', async () => {
+            window.erpListings.onClick('.js-edit', async (button) => {
                     try {
                         const url = new URL(getUrl, window.location.origin);
                         url.searchParams.set('id', button.dataset.id);
@@ -229,10 +187,8 @@
                         Swal.fire({ icon: 'error', title: 'No se pudo abrir el registro', text: error.message });
                     }
                 });
-            });
 
-            document.querySelectorAll('.js-toggle').forEach(button => {
-                button.addEventListener('click', async () => {
+            window.erpListings.onClick('.js-toggle', async (button) => {
                     const isActive = button.dataset.state === 'A';
                     const confirmation = await Swal.fire({
                         title: isActive ? '¿Desactivar este origen?' : '¿Activar este origen?',
@@ -253,7 +209,6 @@
                         Swal.fire({ icon: 'error', title: 'No se pudo cambiar el estado', text: error.message });
                     }
                 });
-            });
 
             form.addEventListener('submit', async event => {
                 event.preventDefault();

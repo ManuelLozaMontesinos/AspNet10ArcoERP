@@ -32,15 +32,6 @@
         background-color: #1e2227 !important;
         color: #e9ecef !important;
     }
-    [data-bs-theme="dark"] .modal-content {
-        background-color: #1e2227 !important;
-        border: 1px solid #343a40 !important;
-    }
-    [data-bs-theme="dark"] .modal-header,
-    [data-bs-theme="dark"] .modal-footer {
-        background-color: #181b1f !important;
-        border-color: #2b3035 !important;
-    }
     .formula-tag {
         cursor: pointer;
         user-select: none;
@@ -53,7 +44,7 @@
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-list-check text-warning me-2" style="font-size: 1.6rem;"></i>Conceptos Remunerativos
@@ -69,20 +60,20 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <!-- BARRA DE FILTROS -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- Buscador -->
-                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                        <div class="listing-search input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código, nombre o fórmula..." onkeyup="aplicarFiltros();" />
+                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por código, nombre o fórmula..." onkeyup="aplicarFiltros();" aria-label="Buscar registros" />
                             <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
                         </div>
 
@@ -91,7 +82,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-funnel text-primary"></i>
                             </span>
-                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 160px;" onchange="aplicarFiltros();" title="Filtrar por Tipo">
+                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 160px;" onchange="aplicarFiltros();" title="Filtrar por Tipo" aria-label="Tipo">
                                 <option value="">Todos los Tipos</option>
                                 @foreach (var tc in tiposConcepto)
                                 {
@@ -105,7 +96,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado">
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado" aria-label="Estado">
                                 <option value="">Todos los Estados</option>
                                 <option value="A">Solo Activos</option>
                                 <option value="I">Solo Inactivos</option>
@@ -122,15 +113,13 @@
                         <div class="dropdown flex-shrink-0">
                             <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-list-ol"></i>
-                                <span>Mostrar: <strong>@(ViewBag.Top == 0 ? "Todos" : ViewBag.Top.ToString())</strong></span>
+                                <span>Mostrar: <strong>@(ViewBag.Top ?? 25)</strong></span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                <li><a class="dropdown-item @(ViewBag.Top == 25 ? "active" : "")" asp-action="Index" asp-route-top="25" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 25</a></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 50 ? "active" : "")" asp-action="Index" asp-route-top="50" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 50</a></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 100 ? "active" : "")" asp-action="Index" asp-route-top="100" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 100</a></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 500 ? "active" : "")" asp-action="Index" asp-route-top="500" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Top 500</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item @(ViewBag.Top == 0 ? "active" : "")" asp-action="Index" asp-route-top="0" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">Ver Todos</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 25 ? "active" : "")" asp-action="Index" asp-route-top="25" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">25 registros</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 50 ? "active" : "")" asp-action="Index" asp-route-top="50" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">50 registros</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 100 ? "active" : "")" asp-action="Index" asp-route-top="100" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">100 registros</a></li>
+                                <li><a class="dropdown-item @(ViewBag.Top == 500 ? "active" : "")" asp-action="Index" asp-route-top="500" asp-route-search="@ViewBag.Search" asp-route-estado="@ViewBag.Estado">500 registros</a></li>
                             </ul>
                         </div>
                     </div>
@@ -142,10 +131,10 @@
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header" id="tabla-conceptos">
+                    <table class="table table-hover align-middle mb-0 text-nowrap table-fixed-header table-striped" id="tabla-conceptos" data-erp-grid="main" data-erp-options>
                         <thead class="table-header-custom border-bottom bg-body-tertiary">
                             <tr>
-                                <th class="text-center px-3" style="width: 50px;">#</th>
+                                <th class="text-center px-3" style="width: 50px;"><button type="button" data-erp-sort-index="0"># <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
                                 <th class="th-sortable" onclick="ordenarTabla(1)" style="width: 90px;">
                                     CÓDIGO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
                                 </th>
@@ -155,13 +144,13 @@
                                 <th class="th-sortable" onclick="ordenarTabla(3)">
                                     TIPO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
                                 </th>
-                                <th>FÓRMULA / CÁLCULO</th>
-                                <th>CONDICIÓN</th>
-                                <th class="text-center" style="width: 80px;">REG.</th>
+                                <th><button type="button" data-erp-sort-index="4">FÓRMULA / CÁLCULO <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th><button type="button" data-erp-sort-index="5">CONDICIÓN <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
+                                <th class="text-center" style="width: 80px;"><button type="button" data-erp-sort-index="6">REG. <i class="bi bi-arrow-down-up text-muted opacity-50" aria-hidden="true"></i></button></th>
                                 <th class="text-center th-sortable" onclick="ordenarTabla(7)" style="width: 100px;">
                                     ESTADO <i class="bi bi-arrow-down-up text-muted ms-1 small"></i>
                                 </th>
-                                <th class="text-end px-4" style="width: 100px;">ACCIONES</th>
+                                <th class="text-end px-4" style="width: 100px;">Opciones</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-conceptos">
@@ -279,21 +268,22 @@
                     </table>
                 </div>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
     </div>
 </div>
 
 <!-- MODAL CREAR / EDITAR -->
 <div class="modal fade" id="modalConcepto" tabindex="-1" aria-labelledby="modalConceptoLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow border-0">
-            <div class="modal-header border-bottom py-3">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="formConcepto" onsubmit="guardarConcepto(event);" class="modal-content shadow border-0">
+            <div class="modal-header border-bottom py-3 sticky-top bg-body-tertiary">
                 <h5 class="modal-title fw-bold d-flex align-items-center" id="modalConceptoLabel">
                     <i class="bi bi-list-check me-2 text-warning"></i>Nuevo Concepto Remunerativo
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="formConcepto" onsubmit="guardarConcepto(event);">
+
                 <div class="modal-body p-4">
                     <input type="hidden" id="concep-id" name="Id" value="0" />
 
@@ -386,14 +376,14 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top py-2">
+                <div class="modal-footer border-top py-2 sticky-bottom bg-body-tertiary">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary" id="btnGuardarConcepto">
                         <i class="bi bi-save me-1"></i>Guardar Concepto
                     </button>
                 </div>
-            </form>
-        </div>
+
+        </form>
     </div>
 </div>
 

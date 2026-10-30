@@ -1,479 +1,156 @@
-@model List<AspNet10ArcoERP.Models.PlanillaModel>
+@addTagHelper *, AspNet10ArcoERP
+@model AspNet10ArcoERP.Models.PlanillaPageModel
 @{
-    ViewData["Title"] = "Planillas";
-    var tiposTrabajador = ViewBag.TiposTrabajador as List<AspNet10ArcoERP.Models.LookupItemModel> ?? new List<AspNet10ArcoERP.Models.LookupItemModel>();
+    ViewData["Title"]="Planillas";
+    string search=ViewBag.Search as string ?? "";
+    string estado=ViewBag.Estado as string ?? "";
+    bool canWrite=ViewBag.PuedeEscribir is true;
 }
-
-<style>
-    .table-fixed-header {
-        table-layout: auto;
-    }
-    .table-header-custom th {
-        padding-top: 0.45rem !important;
-        padding-bottom: 0.45rem !important;
-        font-size: 0.78rem !important;
-        letter-spacing: 0.5px;
-        white-space: nowrap !important;
-        vertical-align: middle !important;
-        height: 40px !important;
-        line-height: 1.2;
-    }
-    .th-sortable {
-        cursor: pointer;
-        user-select: none;
-        transition: background-color 0.15s ease, color 0.15s ease;
-    }
-    .th-sortable:hover {
-        background-color: var(--bs-tertiary-bg);
-        color: var(--bs-primary);
-    }
-    [data-bs-theme="dark"] .table-header-custom {
-        background-color: #1e2227 !important;
-        color: #e9ecef !important;
-    }
-    [data-bs-theme="dark"] .modal-content {
-        background-color: #1e2227 !important;
-        border: 1px solid #343a40 !important;
-    }
-    [data-bs-theme="dark"] .modal-header,
-    [data-bs-theme="dark"] .modal-footer {
-        background-color: #181b1f !important;
-        border-color: #2b3035 !important;
-    }
-</style>
-
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-sm-6">
-                <h3 class="mb-0 fw-bold d-flex align-items-center">
-                    <i class="bi bi-file-earmark-spreadsheet text-primary me-2" style="font-size: 1.6rem;"></i>Planillas
-                </h3>
-                <small class="text-muted">Estructura y tipos de nóminas de remuneraciones por categoría laboral</small>
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i>Planillas</h3>
+                <small class="text-muted">Tipos de planilla y secuencia de conceptos remunerativos por categoría laboral.</small>
             </div>
-            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
-                <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3" onclick="abrirModalCrear();">
-                    <i class="bi bi-plus-circle-fill me-1"></i>Nueva Planilla
-                </button>
-            </div>
+            @if(canWrite)
+            {
+                <div class="col-auto"><button type="button" id="newPayroll" class="btn btn-primary shadow-sm"><i class="bi bi-plus-circle-fill me-1"></i>Nueva planilla</button></div>
+            }
         </div>
     </div>
 </div>
-
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
-        <!-- BARRA DE FILTROS -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <!-- Buscador -->
-                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
-                            <span class="input-group-text bg-body-tertiary border-end-0">
-                                <i class="bi bi-search text-muted"></i>
-                            </span>
-                            <input type="text" id="filtro-tabla" class="form-control border-start-0 ps-0" placeholder="Buscar por nombre o tipo trabajador..." onkeyup="aplicarFiltros();" />
-                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros();" title="Limpiar"><i class="bi bi-x-lg"></i></button>
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" /><input type="hidden" name="top" value="@Model.PageSize" />
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@search" maxlength="150" class="form-control border-start-0" placeholder="Buscar por nombre o tipo de trabajador..." aria-label="Buscar planilla" />
+                            <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                            <a asp-action="Index" asp-route-top="@Model.PageSize" asp-route-sort="@Model.Sort" asp-route-dir="@Model.Dir" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
                         </div>
-
-                        <!-- Estado -->
-                        <div class="input-group input-group-sm" style="width: auto;">
-                            <span class="input-group-text bg-body-tertiary text-muted border-end-0">
-                                <i class="bi bi-toggle-on text-primary"></i>
-                            </span>
-                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="aplicarFiltros();" title="Filtrar por Estado">
-                                <option value="">Todos los Estados</option>
-                                <option value="A">Solo Activos</option>
-                                <option value="I">Solo Inactivos</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- TOTAL Y MOSTRANDO -->
-                    <div class="d-flex align-items-center gap-3 ms-auto">
-                        <div class="text-muted small text-nowrap">
-                            <span>Total: <strong class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6" id="total-registros">@(Model?.Count ?? 0)</strong> planillas</span>
-                        </div>
-
-                        <div class="dropdown flex-shrink-0">
-                            <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 shadow-sm px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-funnel-fill text-primary"></i>
-                                <span>Mostrando: <strong class="badge bg-primary text-white ms-1" id="lbl-top-actual">25</strong></span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                <li class="dropdown-header text-uppercase small fw-bold">Registros a listar</li>
-                                <li><a class="dropdown-item item-top active" href="javascript:void(0)" onclick="cambiarTop(25)">25 registros</a></li>
-                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(50)">50 registros</a></li>
-                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(100)">100 registros</a></li>
-                                <li><a class="dropdown-item item-top" href="javascript:void(0)" onclick="cambiarTop(500)">500 registros</a></li>
-                            </ul>
-                        </div>
-                    </div>
+                        <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-toggle-on"></i></span><select name="estado" class="form-select form-select-sm" aria-label="Estado de planilla">
+                            <option value="">Todos los estados</option><option value="A" selected="@(estado=="A")">Activas</option><option value="I" selected="@(estado=="I")">Anuladas</option>
+                        </select></div>
+                    </form>
+                    <partial name="_ListadoControles" model="Model" />
                 </div>
             </div>
         </div>
-
-        <!-- TABLA PRINCIPAL -->
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-planillas">
-                    <thead class="table-header-custom border-bottom bg-body-tertiary">
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="table-responsive table-scroll">
+                <table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+                    <thead class="table-header-custom bg-body-tertiary border-bottom">
                         <tr>
-                            <th style="width: 70px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-planillas', 0, true)">
-                                <span>ID</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th class="th-sortable" onclick="ordenarTabla('tabla-planillas', 1, false)">
-                                <span>Nombre de la Planilla</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th class="th-sortable" onclick="ordenarTabla('tabla-planillas', 2, false)">
-                                <span>Tipo de Trabajador</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th style="width: 140px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-planillas', 3, true)">
-                                <span>Proceso Anual</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th style="width: 110px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-planillas', 4, false)">
-                                <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
-                            </th>
-                            <th style="width: 120px;" class="text-center">Acciones</th>
+                            <th erp-sort="id" erp-numeric="true" class="text-center">ID</th>
+                            <th erp-sort="nombre">Nombre de la planilla</th>
+                            <th erp-sort="trabajador">Tipo de trabajador</th>
+                            <th erp-sort="procesos" erp-numeric="true" class="text-center">Procesos anuales</th>
+                            <th erp-sort="estado" class="text-center">Estado</th>
+                            <th class="listing-options">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (Model != null && Model.Count > 0)
+                        @if(Model.Items.Count==0){<tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-inbox d-block fs-1 mb-2"></i>No se encontraron planillas.</td></tr>}
+                        @foreach(var item in Model.Items)
                         {
-                            foreach (var item in Model)
-                            {
-                                <tr id="fila-@item.Id" data-search="@($"{item.Nombre} {item.TipoTrabajadorNombre}".ToLower())" data-estado="@item.Estado">
-                                    <td class="text-center font-monospace text-muted small">@item.Id</td>
-                                    <td>
-                                        <span class="fw-semibold text-body item-nombre">@item.Nombre</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
-                                            <i class="bi bi-person-badge me-1"></i>@item.TipoTrabajadorNombre
-                                        </span>
-                                    </td>
-                                    <td class="text-center font-monospace">
-                                        @item.ProcesoAnual
-                                    </td>
-                                    <td class="text-center col-estado">
-                                        @if (item.Estado == "A")
-                                        {
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Activo</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">Inactivo</span>
-                                        }
-                                    </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-action-edit" title="Editar" onclick="abrirModalEditar(@item.Id);">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm @(item.Estado == "A" ? "btn-outline-danger" : "btn-outline-success") py-0 px-2 ms-1 btn-action-toggle" title="@(item.Estado == "A" ? "Desactivar" : "Activar")" onclick="cambiarEstado(@item.Id, '@item.Estado', '@item.Nombre');">
-                                            <i class="bi @(item.Estado == "A" ? "bi-toggle-on" : "bi-toggle-off")"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr id="fila-vacia">
-                                <td colspan="6" class="text-center text-muted py-5">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
-                                    <span>No se encontraron registros de planillas</span>
+                            <tr>
+                                <td class="text-center font-monospace small text-muted">@item.Id</td>
+                                <td class="fw-semibold">@item.Nombre</td>
+                                <td><span class="badge bg-info-subtle text-info border border-info-subtle">@item.TipoTrabajadorNombre</span></td>
+                                <td class="text-center font-monospace">@item.ProcesoAnual</td>
+                                <td class="text-center"><span class="badge @(item.Estado=="A"?"bg-success-subtle text-success border border-success-subtle":"bg-secondary-subtle text-body-secondary border")">@(item.Estado=="A"?"Activa":"Anulada")</span></td>
+                                <td class="listing-options">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-open-payroll" data-id="@item.Id" title="@(canWrite && item.Estado=="A"?"Editar cabecera y conceptos":"Consultar cabecera y conceptos")"><i class="bi bi-pencil-square"></i></button>
+                                    @if(canWrite && item.Estado=="A"){<button type="button" class="btn btn-sm btn-outline-danger js-cancel-payroll" data-id="@item.Id" data-name="@item.Nombre" title="Anular planilla"><i class="bi bi-x-circle"></i></button>}
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+            <partial name="_ListadoPaginacion" model="Model" />
         </div>
     </div>
 </div>
-
-<!-- MODAL CRUD: PLANILLA -->
-<div class="modal fade" id="modal-crud-planilla" tabindex="-1" aria-labelledby="modalPlanillaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow border-0 rounded-4">
-            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
-                <h5 class="modal-title fw-bold" id="modalPlanillaLabel">
-                    <i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i><span id="modal-titulo">Nueva Planilla</span>
-                </h5>
+<div class="modal fade" id="payrollModal" tabindex="-1" aria-labelledby="payrollTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form id="payrollForm" class="modal-content" novalidate>
+            @Html.AntiForgeryToken()
+            <input name="Id" id="payrollId" type="hidden" value="0" />
+            <div class="modal-header sticky-top bg-body-tertiary">
+                <div><h5 class="modal-title fw-bold" id="payrollTitle">Planilla</h5><small class="text-muted">Cabecera y conceptos remunerativos</small></div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="form-planilla" onsubmit="guardarPlanilla(event);">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="planilla-id" name="Id" value="0" />
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label for="planilla-nombre" class="form-label fw-semibold">Nombre de la Planilla <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="planilla-nombre" name="Nombre" placeholder="Ej: PLANILLA EMPLEADOS (30D)..." maxlength="150" required />
-                    </div>
-                    <div class="mb-3">
-                        <label for="planilla-tipo-trabajador" class="form-label fw-semibold">Tipo de Trabajador <span class="text-danger">*</span></label>
-                        <select class="form-select" id="planilla-tipo-trabajador" name="TipoTrabajadorId" required>
-                            <option value="">-- Seleccione Tipo de Trabajador --</option>
-                            @foreach (var t in tiposTrabajador)
-                            {
-                                <option value="@t.Id">@t.Nombre</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-6">
-                            <label for="planilla-proc-anual" class="form-label fw-semibold">Proceso Anual</label>
-                            <input type="number" class="form-control font-monospace" id="planilla-proc-anual" name="ProcesoAnual" value="1" min="1" max="12" />
-                        </div>
-                        <div class="col-md-6">
-                            <label for="planilla-estado" class="form-label fw-semibold">Estado</label>
-                            <select class="form-select" id="planilla-estado" name="Estado">
-                                <option value="A">Activo</option>
-                                <option value="I">Inactivo</option>
+            <div class="modal-body">
+                <fieldset id="payrollFields">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label for="payrollName" class="form-label">Nombre</label><input id="payrollName" name="Nombre" class="form-control" maxlength="150" required /></div>
+                        <div class="col-md-4">
+                            <label for="payrollWorker" class="form-label">Tipo de trabajador</label>
+                            <select id="payrollWorker" name="TipoTrabajadorId" class="form-select" required>
+                                <option value="">Seleccione...</option>@foreach(var item in Model.TiposTrabajador){<option value="@item.Id">@item.Nombre</option>}
                             </select>
                         </div>
+                        <div class="col-md-2"><label for="payrollProcesses" class="form-label">Procesos anuales</label><input id="payrollProcesses" name="ProcesoAnual" type="number" min="1" max="32767" step="1" value="1" class="form-control" required /></div>
                     </div>
-                </div>
-                <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
-                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-planilla" disabled>
-                        <i class="bi bi-check-circle me-1"></i>Guardar Planilla
-                    </button>
-                </div>
-            </form>
-        </div>
+                </fieldset>
+                <section class="border-top pt-3 erp-listing" aria-labelledby="payrollConceptTitle">
+                    <h6 id="payrollConceptTitle">Conceptos remunerativos</h6>
+                    <p id="payrollConceptHint" class="small text-muted">Guarde la cabecera para habilitar los conceptos.</p>
+                    <fieldset id="conceptFields" disabled class="mb-3">
+                        <input id="conceptId" type="hidden" value="0" />
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-7"><label for="payrollConcept" class="form-label small">Concepto</label>
+                                <select id="payrollConcept" class="form-select">
+                                    <option value="">Seleccione...</option>@foreach(var item in Model.ConceptosDisponibles){<option value="@item.Id">@item.Codigo · @item.Nombre</option>}
+                                </select>
+                            </div>
+                            <div class="col-md-2"><label for="conceptOrder" class="form-label small">Secuencia</label><input id="conceptOrder" class="form-control" type="number" min="-32768" max="32767" step="1" value="0" /></div>
+                            <div class="col-md-3 d-flex gap-2">
+                                <button type="button" id="saveConcept" class="btn btn-outline-primary"><i class="bi bi-check2 me-1"></i>Agregar</button>
+                                <button type="button" id="resetConcept" class="btn btn-outline-secondary" title="Cancelar edición del concepto"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary"><i class="bi bi-search"></i></span><input id="conceptSearch" class="form-control" placeholder="Buscar concepto o tipo..." aria-label="Buscar conceptos" /></div>
+                        <div class="d-flex align-items-center gap-2 ms-auto"><label for="conceptTop" class="small text-muted">Mostrando</label><select id="conceptTop" class="form-select form-select-sm w-auto">@foreach(var size in new[]{25,50,100,500}){<option value="@size">@size</option>}</select></div>
+                    </div>
+                    <div class="table-responsive border rounded table-scroll">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="table-header-custom bg-body-tertiary"><tr>
+                                <th aria-sort="ascending" id="conceptOrderHeader"><button type="button" class="btn btn-sm p-0 fw-semibold text-body js-concept-sort" data-sort="orden">Secuencia <i class="bi bi-sort-numeric-down"></i></button></th>
+                                <th aria-sort="none"><button type="button" class="btn btn-sm p-0 fw-semibold text-body js-concept-sort" data-sort="codigo">Código <i class="bi bi-arrow-down-up"></i></button></th>
+                                <th aria-sort="none"><button type="button" class="btn btn-sm p-0 fw-semibold text-body js-concept-sort" data-sort="nombre">Concepto <i class="bi bi-arrow-down-up"></i></button></th>
+                                <th aria-sort="none"><button type="button" class="btn btn-sm p-0 fw-semibold text-body js-concept-sort" data-sort="tipoNombre">Tipo <i class="bi bi-arrow-down-up"></i></button></th>
+                                <th class="listing-options">Opciones</th>
+                            </tr></thead>
+                            <tbody id="conceptBody"><tr><td colspan="5" class="text-center text-muted py-4">Guarde o seleccione una planilla para consultar sus conceptos.</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
+                        <span id="conceptCount" class="small text-muted" role="status"></span>
+                        <div class="btn-group btn-group-sm"><button id="conceptPrevious" type="button" class="btn btn-outline-secondary" disabled>Anterior</button><button id="conceptNext" type="button" class="btn btn-outline-secondary" disabled>Siguiente</button></div>
+                    </div>
+                </section>
+            </div>
+            <div class="modal-footer sticky-bottom bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="submit" id="savePayroll" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Guardar cabecera</button>
+            </div>
+        </form>
     </div>
 </div>
-
 @section Scripts {
-<script>
-    var topActual = 25;
-    var sortColIdx = -1;
-    var sortAsc = true;
-    var formInitialState = "";
-
-    function sonCamposRequeridosValidos() {
-        var nom = ($('#planilla-nombre').val() || '').trim();
-        var tt = parseInt($('#planilla-tipo-trabajador').val()) || 0;
-        return nom !== '' && tt > 0;
-    }
-
-    function actualizarEstadoBotonGuardar() {
-        var id = parseInt($('#planilla-id').val()) || 0;
-        var valido = sonCamposRequeridosValidos();
-        var $btn = $('#btn-guardar-planilla');
-
-        if (id === 0) {
-            $btn.prop('disabled', !valido);
-        } else {
-            var haCambiado = (formInitialState !== "" && $('#form-planilla').serialize() !== formInitialState);
-            $btn.prop('disabled', !(valido && haCambiado));
-        }
-    }
-
-    $(document).on('input change keyup', '#form-planilla input, #form-planilla select', function () {
-        actualizarEstadoBotonGuardar();
-    });
-
-    function aplicarFiltros() {
-        var query = ($('#filtro-tabla').val() || '').toLowerCase().trim();
-        var estado = ($('#filtro-estado').val() || '').trim();
-        var totalCoincidencias = 0;
-        var mostrados = 0;
-
-        $('#tabla-planillas tbody tr:not(#fila-vacia)').each(function () {
-            var $row = $(this);
-            var searchTxt = $row.data('search') || '';
-            var rowEstado = $row.data('estado') || '';
-
-            var cumpleQuery = (query === '' || searchTxt.indexOf(query) !== -1);
-            var cumpleEstado = (estado === '' || rowEstado === estado);
-
-            if (cumpleQuery && cumpleEstado) {
-                totalCoincidencias++;
-                if (topActual === 0 || mostrados < topActual) {
-                    $row.show();
-                    mostrados++;
-                } else {
-                    $row.hide();
-                }
-            } else {
-                $row.hide();
-            }
-        });
-
-        $('#total-registros').text(totalCoincidencias);
-
-        if (totalCoincidencias === 0) {
-            if ($('#fila-vacia').length === 0) {
-                $('#tabla-planillas tbody').append(
-                    '<tr id="fila-vacia"><td colspan="6" class="text-center text-muted py-5">' +
-                    '<i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>' +
-                    '<span>No se encontraron registros que coincidan con la búsqueda</span></td></tr>'
-                );
-            } else {
-                $('#fila-vacia').show();
-            }
-        } else {
-            $('#fila-vacia').hide();
-        }
-    }
-
-    function limpiarFiltros() {
-        $('#filtro-tabla').val('');
-        $('#filtro-estado').val('');
-        aplicarFiltros();
-    }
-
-    function cambiarTop(nuevoTop) {
-        topActual = nuevoTop;
-        $('#lbl-top-actual').text(nuevoTop === 0 ? 'Todos' : nuevoTop);
-        $('.item-top').removeClass('active');
-        $(event.target).addClass('active');
-        aplicarFiltros();
-    }
-
-    function ordenarTabla(idTabla, colIdx, esNumerico) {
-        var table = document.getElementById(idTabla);
-        var tbody = table.querySelector('tbody');
-        var rows = Array.from(tbody.querySelectorAll('tr:not(#fila-vacia)'));
-
-        if (sortColIdx === colIdx) {
-            sortAsc = !sortAsc;
-        } else {
-            sortColIdx = colIdx;
-            sortAsc = true;
-        }
-
-        $('#' + idTabla + ' .sort-icon').removeClass('bi-arrow-down bi-arrow-up text-primary').addClass('bi-arrow-down-up opacity-50');
-        var th = $('#' + idTabla + ' thead th').eq(colIdx);
-        var icon = th.find('.sort-icon');
-        icon.removeClass('bi-arrow-down-up opacity-50').addClass(sortAsc ? 'bi-arrow-up text-primary' : 'bi-arrow-down text-primary');
-
-        rows.sort(function (a, b) {
-            var valA = a.children[colIdx].innerText.trim();
-            var valB = b.children[colIdx].innerText.trim();
-
-            if (esNumerico) {
-                var numA = parseFloat(valA.replace(/[^0-9.-]/g, '')) || 0;
-                var numB = parseFloat(valB.replace(/[^0-9.-]/g, '')) || 0;
-                return sortAsc ? (numA - numB) : (numB - numA);
-            } else {
-                return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            }
-        });
-
-        rows.forEach(function (r) { tbody.appendChild(r); });
-        aplicarFiltros();
-    }
-
-    function abrirModalCrear() {
-        $('#form-planilla')[0].reset();
-        $('#planilla-id').val(0);
-        $('#modal-titulo').text('Nueva Planilla');
-        $('#planilla-tipo-trabajador').val('');
-        $('#planilla-proc-anual').val(1);
-        $('#planilla-estado').val('A');
-        formInitialState = $('#form-planilla').serialize();
-        actualizarEstadoBotonGuardar();
-        var modal = new bootstrap.Modal(document.getElementById('modal-crud-planilla'));
-        modal.show();
-        setTimeout(function () { $('#planilla-nombre').focus(); }, 400);
-    }
-
-    function abrirModalEditar(id) {
-        $.get('/RH/Planilla/Obtener/' + id, function (res) {
-            if (res.success && res.data) {
-                var d = res.data;
-                $('#planilla-id').val(d.id);
-                $('#planilla-nombre').val(d.nombre);
-                $('#planilla-tipo-trabajador').val(d.tipoTrabajadorId);
-                $('#planilla-proc-anual').val(d.procesoAnual || 1);
-                $('#planilla-estado').val(d.estado);
-                $('#modal-titulo').text('Editar Planilla (' + d.nombre + ')');
-                formInitialState = $('#form-planilla').serialize();
-                actualizarEstadoBotonGuardar();
-                var modal = new bootstrap.Modal(document.getElementById('modal-crud-planilla'));
-                modal.show();
-                setTimeout(function () { $('#planilla-nombre').focus(); }, 400);
-            } else {
-                Swal.fire('Error', res.message || 'No se pudo cargar la información de la planilla.', 'error');
-            }
-        }).fail(function () {
-            Swal.fire('Error', 'Error al comunicar con el servidor.', 'error');
-        });
-    }
-
-    function guardarPlanilla(e) {
-        e.preventDefault();
-        var $btn = $('#btn-guardar-planilla');
-        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Guardando...');
-
-        $.ajax({
-            url: '/RH/Planilla/Guardar',
-            type: 'POST',
-            data: $('#form-planilla').serialize(),
-            success: function (res) {
-                if (res.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('modal-crud-planilla')).hide();
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Éxito',
-                        text: res.message,
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(function () {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire('Atención', res.message, 'warning');
-                    $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Planilla');
-                }
-            },
-            error: function () {
-                Swal.fire('Error', 'Ocurrió un error al guardar la planilla.', 'error');
-                $btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i>Guardar Planilla');
-            }
-        });
-    }
-
-    function cambiarEstado(id, estadoActual, nombre) {
-        var accion = estadoActual === 'A' ? 'desactivar' : 'activar';
-        Swal.fire({
-            title: '¿Confirmar acción?',
-            text: '¿Desea ' + accion + ' la planilla "' + nombre + '"?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: estadoActual === 'A' ? '#dc3545' : '#198754',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, ' + accion,
-            cancelButtonText: 'Cancelar'
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                $.post('/RH/Planilla/CambiarEstado/' + id, function (res) {
-                    if (res.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Actualizado',
-                            text: res.message,
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(function () {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                    }
-                }).fail(function () {
-                    Swal.fire('Error', 'No se pudo cambiar el estado.', 'error');
-                });
-            }
-        });
-    }
-
-    $(document).ready(function () {
-        aplicarFiltros();
-    });
-</script>
+    <style>#payrollModal .table-scroll{max-height:320px;scrollbar-width:thin}</style>
+    <script id="payrollConfig" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+        getUrl=Url.Action("Obtener"), saveUrl=Url.Action("Guardar"), cancelUrl=Url.Action("Anular"),
+        conceptsUrl=Url.Action("Conceptos"), saveConceptUrl=Url.Action("GuardarConcepto"), cancelConceptUrl=Url.Action("AnularConcepto"), canWrite
+    }))</script>
+    <script src="~/js/planilla.js" asp-append-version="true"></script>
 }

@@ -1,0 +1,7 @@
+@model DocumentoReportePageModel
+@{ ViewData["Title"] = Model.Titulo; }
+<partial name="_DocumentoReporte" model="Model" />
+@section Scripts {
+    <script id="ventas-reporte-config" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { columns = Model.Columnas.Select(c => new { campo = c.Campo, titulo = c.Titulo, numero = c.Numero, fecha = c.Fecha }) }))</script>
+    <script src="~/js/ventas-reportes.js" asp-append-version="true"></script>
+}

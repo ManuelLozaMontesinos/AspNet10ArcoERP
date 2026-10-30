@@ -1,0 +1,111 @@
+@model AlmacenPageModel
+@{
+    ViewData["Title"] = "Almacenes";
+    bool canWrite = ViewBag.PuedeEscribir is true;
+    string search = ViewBag.Search as string ?? "";
+    int? sede = ViewBag.SedeId as int?;
+    string state = ViewBag.Estado as string ?? "";
+}
+<div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3">
+    <div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-buildings text-primary me-2"></i>Almacenes</h3><small class="text-muted">Sedes, direcciones, transacciones habilitadas y series de documentos.</small></div>
+    @if (canWrite) { <div class="col-auto"><button type="button" id="inv-new" class="btn btn-primary shadow-sm"><i class="bi bi-plus-circle-fill me-1"></i>Nuevo almacén</button></div> }
+</div></div></div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar"><div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2 m-0">
+            <input type="hidden" name="top" value="@Model.PageSize" /><input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" />
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input name="search" value="@search" maxlength="100" class="form-control border-start-0" placeholder="Buscar por nombre, abreviatura o vía..." aria-label="Buscar almacenes" />
+                <button type="submit" class="btn btn-outline-primary">Buscar</button><a asp-action="Index" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a></div>
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-building"></i></span><select name="sedeId" class="form-select" aria-label="Sede">
+                <option value="">Todas las sedes</option>@foreach (var item in Model.Sedes) { <option value="@item.Id" selected="@(sede == item.Id)">@item.Nombre</option> }
+            </select></div>
+            <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary"><i class="bi bi-toggle-on"></i></span><select name="estado" class="form-select" aria-label="Estado"><option value="">Todos los estados</option><option value="A" selected="@(state == "A")">Activos</option><option value="I" selected="@(state == "I")">Anulados</option></select></div>
+        </form>
+        <partial name="_ListadoControles" model="Model" />
+    </div></div></div>
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="table-responsive table-scroll"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+        <thead class="table-header-custom bg-body-tertiary border-bottom"><tr><th erp-sort="sede">Sede</th><th erp-sort="nombre">Nombre</th><th erp-sort="abreviatura">Nombre corto</th><th erp-sort="direccion">Dirección</th><th erp-sort="venta">Venta</th><th erp-sort="estado">Estado</th><th class="listing-options">Opciones</th></tr></thead>
+        <tbody>
+            @if (Model.Items.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-4">No se encontraron almacenes.</td></tr> }
+            @foreach (var item in Model.Items)
+            {
+                <tr><td>@item.SedeNombre</td><td class="fw-semibold">@item.Nombre</td><td>@item.Abreviatura</td><td>@item.Direccion</td><td>@(item.EsVenta ? "Sí" : "No")</td>
+                    <td><span class="badge @(item.Estado == "A" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-body-secondary border")">@(item.Estado == "A" ? "Activo" : "Anulado")</span></td>
+                    <td class="listing-options"><button type="button" class="btn btn-sm btn-outline-primary js-inv-edit" data-id="@item.Id" title="@(canWrite && item.Estado == "A" ? "Editar almacén y detalles" : "Consultar almacén y detalles")"><i class="bi @(canWrite && item.Estado == "A" ? "bi-pencil" : "bi-eye")"></i></button>
+                        @if (canWrite && item.Estado == "A") { <button type="button" class="btn btn-sm btn-outline-danger js-inv-cancel" data-id="@item.Id" title="Anular almacén"><i class="bi bi-trash"></i></button> }
+                    </td></tr>
+            }
+        </tbody>
+    </table></div><partial name="_ListadoPaginacion" model="Model" /></div>
+</div></div>
+<div class="modal fade" id="inv-modal" tabindex="-1" aria-labelledby="inv-modal-title" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><form id="inv-form" class="modal-content">
+        @Html.AntiForgeryToken()
+        <div class="modal-header sticky-top bg-body-tertiary"><div><h5 class="modal-title" id="inv-modal-title">Almacén</h5><small class="text-muted">Datos generales y configuración del almacén</small></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body">
+            <input type="hidden" id="inv-id" name="Id" value="0" />
+            <div class="row g-3 mb-4">
+                <div class="col-md-4"><label for="inv-sede" class="form-label">Sede <span class="text-danger">*</span></label><select id="inv-sede" name="EmpresaSedeId" class="form-select" required><option value="">Seleccione</option>@foreach (var item in Model.Sedes) { <option value="@item.Id">@item.Nombre</option> }</select><div class="form-text">Se conserva después del alta.</div></div>
+                <div class="col-md-5"><label for="inv-name" class="form-label">Nombre <span class="text-danger">*</span></label><input id="inv-name" name="Nombre" class="form-control" maxlength="100" required /></div>
+                <div class="col-md-3"><label for="inv-short" class="form-label">Nombre corto <span class="text-danger">*</span></label><input id="inv-short" name="Abreviatura" class="form-control" maxlength="20" required /></div>
+                <div class="col-md-3"><label for="inv-via" class="form-label">Tipo de vía <span class="text-danger">*</span></label><select id="inv-via" name="TipoViaId" class="form-select" required><option value="">Seleccione</option>@foreach (var item in Model.TiposVia) { <option value="@item.Id">@item.Nombre</option> }</select></div>
+                <div class="col-md-5"><label for="inv-via-name" class="form-label">Nombre de vía</label><input id="inv-via-name" name="NombreVia" class="form-control" maxlength="50" /></div>
+                <div class="col-md-2"><label for="inv-number" class="form-label">Número</label><input id="inv-number" name="NumeroVia" class="form-control" maxlength="10" /></div>
+                <div class="col-md-2"><label for="inv-interior" class="form-label">Interior</label><input id="inv-interior" name="Interior" class="form-control" maxlength="10" /></div>
+                @foreach (var field in new[] { ("DepartamentoInterior", "Dpto. interior"), ("Manzana", "Manzana"), ("Lote", "Lote"), ("Kilometro", "Kilómetro"), ("Block", "Block"), ("Etapa", "Etapa") })
+                {
+                    <div class="col-6 col-md-2"><label for="inv-@field.Item1" class="form-label">@field.Item2</label><input id="inv-@field.Item1" name="@field.Item1" class="form-control" maxlength="10" /></div>
+                }
+                <div class="col-md-3"><label for="inv-zone" class="form-label">Tipo de zona <span class="text-danger">*</span></label><select id="inv-zone" name="TipoZonaId" class="form-select" required><option value="">Seleccione</option>@foreach (var item in Model.TiposZona) { <option value="@item.Id">@item.Nombre</option> }</select></div>
+                <div class="col-md-5"><label for="inv-zone-name" class="form-label">Nombre de zona</label><input id="inv-zone-name" name="NombreZona" class="form-control" maxlength="25" /></div>
+                <div class="col-md-4"><label for="inv-department" class="form-label">Departamento <span class="text-danger">*</span></label><select id="inv-department" class="form-select" required><option value="">Seleccione</option>@foreach (var item in Model.Departamentos) { <option value="@item.Id">@item.Nombre</option> }</select></div>
+                <div class="col-md-4"><label for="inv-province" class="form-label">Provincia <span class="text-danger">*</span></label><select id="inv-province" class="form-select" required><option value="">Seleccione departamento</option></select></div>
+                <div class="col-md-4"><label for="inv-district" class="form-label">Distrito <span class="text-danger">*</span></label><select id="inv-district" name="DistritoId" class="form-select" required><option value="">Seleccione provincia</option></select></div>
+                <div class="col-md-2"><label for="inv-sunat" class="form-label">Código SUNAT</label><input id="inv-sunat" name="CodigoSunat" class="form-control" maxlength="4" /></div>
+                <div class="col-md-6"><label for="inv-printer" class="form-label">Servidor de impresión</label><input id="inv-printer" name="ServidorImpresion" class="form-control" maxlength="50" /></div>
+                <div class="col-md-4 d-flex align-items-center"><div class="form-check form-switch"><input id="inv-sale" name="EsVenta" value="true" type="checkbox" class="form-check-input" /><label for="inv-sale" class="form-check-label">Almacén de ventas</label></div></div>
+            </div>
+            <div id="inv-new-notice" class="alert alert-info small">Guarde el almacén para habilitar sus transacciones, configuración y series.</div>
+            <div id="inv-details" hidden>
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#inv-transactions-tab" role="tab">Transacciones</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#inv-config-tab" role="tab">Configuración</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#inv-series-tab" role="tab">Series</button></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="inv-transactions-tab" role="tabpanel">
+                        <div class="d-flex flex-wrap gap-2 mb-3"><input type="hidden" id="inv-relation-id" value="0" /><select id="inv-transaction" class="form-select form-select-sm w-auto" aria-label="Transacción a vincular"></select>
+                            @if (canWrite) { <button type="button" id="inv-link" class="btn btn-sm btn-primary" data-inv-write><i class="bi bi-link-45deg me-1"></i>Guardar vínculo</button><button type="button" id="inv-link-reset" class="btn btn-sm btn-outline-secondary" data-inv-write>Limpiar</button> }
+                        </div>
+                        <div class="table-responsive border rounded"><table class="table table-sm table-striped table-hover align-middle mb-0"><thead><tr><th><button type="button" class="btn btn-sm text-body p-0" data-inv-sort="0">Código <i class="bi bi-arrow-down-up"></i></button></th><th><button type="button" class="btn btn-sm text-body p-0" data-inv-sort="1">Transacción <i class="bi bi-arrow-down-up"></i></button></th><th><button type="button" class="btn btn-sm text-body p-0" data-inv-sort="2">Movimiento <i class="bi bi-arrow-down-up"></i></button></th><th class="text-center">Opciones</th></tr></thead><tbody id="inv-transactions-body"></tbody></table></div>
+                        <small class="text-muted" id="inv-transactions-count" role="status"></small>
+                    </div>
+                    <div class="tab-pane fade" id="inv-config-tab" role="tabpanel">
+                        <label for="inv-config-transaction" class="form-label">Transacción vinculada</label><select id="inv-config-transaction" class="form-select form-select-sm mb-3"></select>
+                        <div class="table-responsive border rounded"><table class="table table-sm table-striped table-hover align-middle mb-0"><thead><tr><th><button type="button" class="btn btn-sm text-body p-0" data-inv-sort="0">Campo <i class="bi bi-arrow-down-up"></i></button></th><th class="text-center">Visible</th><th class="text-center">Requerido</th><th class="text-center">Opciones</th></tr></thead><tbody id="inv-config-body"></tbody></table></div>
+                    </div>
+                    <div class="tab-pane fade" id="inv-series-tab" role="tabpanel">
+                        <div class="d-flex flex-wrap gap-2 mb-3"><select id="inv-series" class="form-select form-select-sm w-auto" aria-label="Serie a vincular"></select>
+                            @if (canWrite) { <button type="button" id="inv-series-add" class="btn btn-sm btn-primary" data-inv-write><i class="bi bi-plus-lg me-1"></i>Vincular serie</button> }
+                        </div>
+                        <div class="table-responsive border rounded"><table class="table table-sm table-striped table-hover align-middle mb-0"><thead><tr><th><button type="button" class="btn btn-sm text-body p-0" data-inv-sort="0">Documento <i class="bi bi-arrow-down-up"></i></button></th><th><button type="button" class="btn btn-sm text-body p-0" data-inv-sort="1">Serie <i class="bi bi-arrow-down-up"></i></button></th><th><button type="button" class="btn btn-sm text-body p-0" data-inv-sort="2">Correlativo <i class="bi bi-arrow-down-up"></i></button></th><th class="text-center">Opciones</th></tr></thead><tbody id="inv-series-body"></tbody></table></div>
+                        <small class="text-muted" id="inv-series-count" role="status"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+            @if (canWrite) { <button type="submit" class="btn btn-sm btn-primary" id="inv-save"><i class="bi bi-save me-1"></i>Guardar almacén</button> }
+        </div>
+    </form></div>
+</div>
+@section Scripts {
+    <script id="inventario-config" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+        kind = "almacen", canWrite,
+        urls = new { obtener = Url.Action("Obtener"), guardar = Url.Action("Guardar"), anular = Url.Action("Anular"), detalle = Url.Action("Detalle"), configuracion = Url.Action("Configuracion"),
+            provincias = Url.Action("Provincias"), distritos = Url.Action("Distritos"), guardarTransaccion = Url.Action("GuardarTransaccion"), anularTransaccion = Url.Action("AnularTransaccion"),
+            guardarConfiguracion = Url.Action("GuardarConfiguracion"), agregarSerie = Url.Action("AgregarSerie"), anularSerie = Url.Action("AnularSerie") }
+    }))</script>
+    <script src="~/js/inventario.js" asp-append-version="true"></script>
+}

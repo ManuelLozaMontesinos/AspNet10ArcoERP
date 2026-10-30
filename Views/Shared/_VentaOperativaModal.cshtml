@@ -1,0 +1,46 @@
+@model string
+@{ bool canWrite = ViewBag.PuedeEscribir is true; }
+<div class="modal fade" id="vo-modal" tabindex="-1" aria-labelledby="vo-title" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><form id="vo-form" class="modal-content">
+        @Html.AntiForgeryToken()
+        <div class="modal-header sticky-top bg-body-tertiary"><div><h5 class="modal-title" id="vo-title">Datos generales</h5><small class="text-muted">Datos y asignaciones del registro</small></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+        <div class="modal-body">
+            <input type="hidden" name="Datos.Id" value="0" /><input type="hidden" name="Revision" /><input type="hidden" name="ContextoId" value="@ViewBag.ContextoId" />
+            <fieldset id="vo-fields"><div class="row g-3 mb-4">
+            @if(Model == "caja")
+            {
+                <div class="col-md-4"><label for="vo-site" class="form-label">Sede</label><input id="vo-site" class="form-control" value="@ViewBag.SedeNombre" readonly /></div>
+                <div class="col-md-8"><label for="vo-name" class="form-label">Nombre <span class="text-danger">*</span></label><input id="vo-name" name="Datos.Nombre" class="form-control" maxlength="100" required /></div>
+            }
+            else
+            {
+                <input type="hidden" name="Datos.ProveedorId" value="0" />
+                <div class="col-md-3"><label for="vo-code" class="form-label">Código</label><input id="vo-code" name="Datos.Codigo" class="form-control" readonly placeholder="Automático" /></div>
+                <div class="col-md-9"><label for="vo-person" class="form-label">Apellidos y nombres <span class="text-danger">*</span></label><div class="input-group"><input id="vo-person" name="Datos.Nombre" class="form-control" readonly placeholder="Seleccione personal" /><button id="vo-choose" type="button" class="btn btn-outline-primary"><i class="bi bi-search me-1"></i>Seleccionar</button></div></div>
+                <div class="col-md-4"><label for="vo-short" class="form-label">Nombre corto</label><input id="vo-short" name="Datos.Abreviatura" class="form-control" maxlength="30" /></div>
+                <div class="col-md-8"><label for="vo-printer" class="form-label">Servidor de impresión de formatos</label><input id="vo-printer" name="Datos.ServidorImpresion" class="form-control" maxlength="50" /></div>
+                <div class="col-12"><small class="text-muted">Código y persona se conservan después del alta.</small></div>
+            }
+            </div></fieldset>
+            <section id="vo-details" class="border-top pt-3" aria-labelledby="vo-detail-title">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><h6 id="vo-detail-title" class="fw-bold mb-0">Asignaciones</h6><div class="d-flex flex-wrap gap-2">
+                    @if(canWrite){<button id="vo-add-mode" type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle me-1"></i>Agregar</button>}
+                    <button id="vo-back" type="button" class="btn btn-sm btn-outline-secondary d-none">Volver</button>
+                </div></div>
+                <div id="vo-tabs" class="nav nav-tabs mb-3" role="group" aria-label="Tipo de asignación">
+                @if(Model == "caja") { <button type="button" class="nav-link active" data-vo-tab="personal">Personal</button> }
+                else { <button type="button" class="nav-link active" data-vo-tab="series">Series de documentos</button><button type="button" class="nav-link" data-vo-tab="listas">Listas de precios</button> }
+                </div>
+                <p id="vo-note" class="small text-muted" role="status">Guarde la cabecera para administrar las asignaciones.</p>
+                <div id="vo-panel" class="d-none">
+                    <div class="d-flex flex-wrap align-items-center gap-2 erp-filter-bar mb-3"><div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary"><i class="bi bi-search"></i></span><input id="vo-search" class="form-control" maxlength="150" placeholder="Buscar..." aria-label="Buscar asignaciones" /><button id="vo-find" type="button" class="btn btn-outline-primary">Buscar</button><button id="vo-clear" type="button" class="btn btn-outline-secondary" title="Limpiar búsqueda"><i class="bi bi-x-lg"></i></button></div><div class="d-flex align-items-center gap-2 ms-auto"><label for="vo-size" class="small text-muted">Mostrar</label><select id="vo-size" class="form-select form-select-sm w-auto">@foreach(var size in new[]{25,50,100,500}){<option value="@size">@size registros</option>}</select></div></div>
+                    <div class="d-flex flex-wrap gap-2 mb-3"><select id="vo-filter-site" class="form-select form-select-sm w-auto" aria-label="Filtrar por sede"><option value="">Todas las sedes</option></select><select id="vo-filter-type" class="form-select form-select-sm w-auto" aria-label="Filtrar por tipo de documento"><option value="">Todos los documentos</option></select><select id="vo-filter-currency" class="form-select form-select-sm w-auto" aria-label="Filtrar por moneda"><option value="">Todas las monedas</option></select></div>
+                    <div id="vo-selection" class="d-none d-flex flex-wrap align-items-center gap-2 mb-3"><span id="vo-selected" class="small text-muted" aria-live="polite">0 seleccionados</span><button type="button" id="vo-add-selected" class="btn btn-sm btn-primary">Agregar seleccionados</button><button type="button" id="vo-clear-selected" class="btn btn-sm btn-outline-secondary">Limpiar selección</button><small class="text-muted w-100">La selección se conserva al cambiar de página o filtros.</small></div>
+                    <div class="table-responsive table-scroll border rounded-3"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="assignments" data-erp-options><thead id="vo-head" class="table-header-custom bg-body-tertiary"></thead><tbody id="vo-rows"></tbody></table></div>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3"><small id="vo-range" class="text-muted" aria-live="polite"></small><nav aria-label="Páginas de asignaciones"><div class="btn-group btn-group-sm"><button id="vo-prev" type="button" class="btn btn-outline-secondary">Anterior</button><button id="vo-next" type="button" class="btn btn-outline-secondary">Siguiente</button></div></nav></div>
+                </div>
+            </section>
+        </div>
+        <div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>@if(canWrite){<button id="vo-save" type="submit" class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i>Guardar cabecera</button>}</div>
+    </form></div>
+</div>

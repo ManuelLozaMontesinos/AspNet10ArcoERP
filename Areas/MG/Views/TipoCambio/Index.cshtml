@@ -12,18 +12,6 @@
 }
 
 <style>
-    #modal-crud-tc .modal-content { max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
-    #modal-crud-tc .modal-body { max-height: calc(90vh - 135px) !important; overflow-y: auto !important; flex: 1 1 auto; scrollbar-width: thin; scrollbar-color: rgba(140, 150, 165, 0.4) transparent; scroll-behavior: smooth; }
-    #modal-crud-tc .modal-body::-webkit-scrollbar { width: 7px; }
-    #modal-crud-tc .modal-body::-webkit-scrollbar-track { background: transparent; }
-    #modal-crud-tc .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
-    #modal-crud-tc .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
-    #modal-tipo-cambio-maestro .modal-content { max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
-    #modal-tipo-cambio-maestro .modal-body { max-height: calc(90vh - 135px) !important; overflow-y: auto !important; flex: 1 1 auto; scrollbar-width: thin; scrollbar-color: rgba(140, 150, 165, 0.4) transparent; scroll-behavior: smooth; }
-    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar { width: 7px; }
-    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar-track { background: transparent; }
-    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar-thumb { background: rgba(140, 150, 165, 0.45); border-radius: 4px; }
-    #modal-tipo-cambio-maestro .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(140, 150, 165, 0.75); }
     /* Estabilidad y altura fija compacta en cabecera de la tabla */
     .table-fixed-header {
         table-layout: auto;
@@ -51,7 +39,7 @@
 
 <div class="app-content-header py-3 border-bottom">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        <div class="row align-items-center g-3">
             <div class="col-sm-6">
                 <h3 class="mb-0 fw-bold d-flex align-items-center">
                     <i class="bi bi-currency-exchange text-success me-2" style="font-size: 1.6rem;"></i>Tipos de Cambio Diarios
@@ -70,17 +58,17 @@
     </div>
 </div>
 
-<div class="app-content py-4">
+<div class="app-content py-4 erp-listing">
     <div class="container-fluid">
         <!-- BARRA DE FILTROS EN LÍNEA: BUSCADOR - TIPO - ESTADO - MOSTRANDO (POR DEFECTO 25) -->
         <div class="card border-0 shadow-sm rounded-3 mb-3">
-            <div class="card-body py-2 px-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     
                     <!-- CONTENEDOR DE FILTROS EN LÍNEA -->
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <!-- 1. Buscador con soporte de búsqueda en servidor (Enter / botón) y filtro en vivo -->
-                        <div class="input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
+                        <div class="listing-search input-group input-group-sm" style="min-width: 320px; max-width: 440px;">
                             <span class="input-group-text bg-body-tertiary border-end-0">
                                 <i class="bi bi-search text-muted"></i>
                             </span>
@@ -88,7 +76,7 @@
                                    placeholder="Buscar por fecha (dd/mm/aaaa) o monto..." 
                                    value="@currentSearch"
                                    onkeypress="if(event.keyCode==13){ buscarEnServidor(); }"
-                                   onkeyup="aplicarFiltrosLocal();" />
+                                   onkeyup="aplicarFiltrosLocal();" aria-label="Buscar registros" />
                             <button type="button" class="btn btn-outline-primary" onclick="buscarEnServidor();" title="Buscar en Base de Datos">
                                 <i class="bi bi-search"></i>
                             </button>
@@ -100,7 +88,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-tag text-primary"></i>
                             </span>
-                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="buscarEnServidor();" title="Filtrar por Tipo">
+                            <select id="filtro-tipo" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="buscarEnServidor();" title="Filtrar por Tipo" aria-label="Tipo">
                                 <option value="">Todos los Tipos</option>
                                 @foreach (var tc in tiposCatalogo)
                                 {
@@ -114,7 +102,7 @@
                             <span class="input-group-text bg-body-tertiary text-muted border-end-0">
                                 <i class="bi bi-toggle-on text-primary"></i>
                             </span>
-                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="buscarEnServidor();" title="Filtrar por Estado">
+                            <select id="filtro-estado" class="form-select form-select-sm border-start-0" style="min-width: 140px;" onchange="buscarEnServidor();" title="Filtrar por Estado" aria-label="Estado">
                                 <option value="" selected="@(string.IsNullOrEmpty(currentEstado) ? "selected" : null)">Todos los Estados</option>
                                 <option value="A" selected="@(currentEstado == "A" ? "selected" : null)">Solo Activos</option>
                                 <option value="I" selected="@(currentEstado == "I" ? "selected" : null)">Solo Inactivos</option>
@@ -150,7 +138,7 @@
 
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-tipocambio">
+                <table class="table table-striped table-hover align-middle mb-0 table-fixed-header" id="tabla-tipocambio" data-erp-grid="main" data-erp-options>
                     <thead class="table-header-custom border-bottom bg-body-tertiary">
                         <tr>
                             <th style="width: 70px; min-width: 70px;" class="text-center th-sortable" onclick="ordenarTabla('tabla-tipocambio', 0, true)">
@@ -175,7 +163,7 @@
                                 <span>Estado</span> <i class="bi bi-arrow-down-up text-muted opacity-50 ms-1 sort-icon"></i>
                             </th>
                             <!-- COLUMNA ACCIONES AMPLIA Y CÓMODA -->
-                            <th style="width: 120px; min-width: 120px;" class="text-center">Acciones</th>
+                            <th style="width: 120px; min-width: 120px;" class="text-center">Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -254,7 +242,8 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            <partial name="_ListadoResumenLocal" model="@(Model?.Count ?? 0)" />
+</div>
         <div class="card border-0 shadow-sm rounded-3 mt-4" id="tipo-cambio-catalogo">
             <div class="card-header bg-body py-3 px-4">
                 <div class="d-flex justify-content-between align-items-center w-100">
@@ -403,11 +392,11 @@
 </div>
 
 <div class="modal fade" id="modal-tipo-cambio-maestro" tabindex="-1" aria-labelledby="tipoCambioMaestroLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <form class="modal-content border-0 shadow-lg rounded-4" id="form-tipo-cambio-maestro" onsubmit="guardarTipoCambioMaestro(event);">
             @Html.AntiForgeryToken()
             <input type="hidden" id="tipo-maestro-id" name="Id" value="0" />
-            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary">
+            <div class="modal-header border-bottom py-3 px-4 bg-body-tertiary sticky-top">
                 <h5 class="modal-title fw-bold" id="tipoCambioMaestroLabel">
                     <i class="bi bi-gear-wide-connected text-primary me-2"></i><span id="tipo-maestro-titulo">Nuevo Tipo de Cambio</span>
                 </h5>
@@ -431,7 +420,7 @@
                     </select>
                 </div>
             </div>
-            <div class="modal-footer border-top py-3 px-4 bg-body-tertiary">
+            <div class="modal-footer border-top py-3 px-4 bg-body-tertiary sticky-bottom">
                 <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-guardar-tipo-maestro">
                     <i class="bi bi-check-circle me-1"></i>Guardar Tipo
@@ -443,7 +432,7 @@
 
 @section Scripts {
 <script>
-    var currentTop = @currentTop;
+
     var sortColIdx = -1;
     var sortAsc = true;
     var formInitialState = "";
@@ -481,8 +470,8 @@
             + '?search=' + encodeURIComponent(search) 
             + '&tipo=' + tipo 
             + '&estado=' + estado 
-            + '&top=' + currentTop;
-        window.location.href = url;
+            + '&top=' + (Number(document.getElementById('lbl-top-actual')?.textContent) || 25);
+        void window.erpListings.load(url);
     }
 
     function aplicarFiltrosLocal() {
@@ -507,7 +496,7 @@
     }
 
     function limpiarFiltros() {
-        window.location.href = '@Url.Action("Index", "TipoCambio", new { area = "MG", top = 25 })';
+        void window.erpListings.load('@Url.Action("Index", "TipoCambio", new { area = "MG", top = 25 })');
     }
 
     function ordenarTabla(tablaId, colIndex, isNumeric) {

@@ -6,6 +6,9 @@
     var empresaNombre = User.FindFirst("EmpresaNombre")?.Value ?? "ARCO";
     var sedeNombre = User.FindFirst("SedeNombre")?.Value ?? "Sede Principal";
     var periodoAnio = User.FindFirst("PeriodoAnio")?.Value ?? "2026";
+    var erpModule = !string.IsNullOrEmpty(ViewContext.RouteData.Values["area"]?.ToString()) &&
+        !(string.Equals(ViewContext.RouteData.Values["area"]?.ToString(), "MG", StringComparison.OrdinalIgnoreCase) &&
+          string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "TablaGeneral", StringComparison.OrdinalIgnoreCase));
 }
 <!DOCTYPE html>
 <html lang="es" data-bs-theme="light">
@@ -31,6 +34,10 @@
     
     <!-- Custom ERP CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @if (erpModule)
+    {
+        <link rel="stylesheet" href="~/css/listados.css" asp-append-version="true" />
+    }
 
     <!-- Script de inicialización de tema oscuro para evitar flash blanco -->
     <script>
@@ -40,7 +47,7 @@
         })();
     </script>
 </head>
-<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary@(erpModule ? " erp-module" : "")">
     <div class="app-wrapper">
         
         <!-- Header Navbar -->
@@ -203,7 +210,39 @@
                                         <p>Períodos contables</p>
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a asp-area="AS" asp-controller="DocuComSerie" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "DocuComSerie" ? "active" : "")">
+                                        <i class="nav-icon bi bi-receipt"></i><p>Series de documentos</p>
+                                    </a>
+                                </li>
                             </ul>
+                        </li>
+
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "VT" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "VT" ? "active" : "")"><i class="nav-icon bi bi-cart-check text-success"></i><p>Ventas<i class="nav-arrow bi bi-chevron-right"></i></p></a>
+                            <ul class="nav nav-treeview ps-2">
+                                <li class="nav-item"><a asp-area="VT" asp-controller="MedioPago" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MedioPago" ? "active" : "")"><i class="nav-icon bi bi-credit-card"></i><p>Medios de pago</p></a></li>
+                                <li class="nav-item"><a asp-area="VT" asp-controller="GrupoCliente" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "GrupoCliente" ? "active" : "")"><i class="nav-icon bi bi-people"></i><p>Grupos de clientes</p></a></li>
+                                <li class="nav-item"><a asp-area="VT" asp-controller="Caja" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Caja" ? "active" : "")"><i class="nav-icon bi bi-safe"></i><p>Cajas</p></a></li>
+                                <li class="nav-item"><a asp-area="VT" asp-controller="Vendedor" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Vendedor" ? "active" : "")"><i class="nav-icon bi bi-person-badge"></i><p>Vendedores</p></a></li>
+                                <li class="nav-item"><a asp-area="VT" asp-controller="Detraccion" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "VT" && ViewContext.RouteData.Values["controller"]?.ToString() == "Detraccion" ? "active" : "")"><i class="nav-icon bi bi-bank"></i><p>Detracciones</p></a></li>
+                                <li class="nav-item"><a asp-area="VT" asp-controller="RepoDocuTemporal" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RepoDocuTemporal" ? "active" : "")"><i class="nav-icon bi bi-receipt-cutoff"></i><p>Documentos temporales</p></a></li>
+                                <li class="nav-item"><a asp-area="VT" asp-controller="RepoDocuReserva" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RepoDocuReserva" ? "active" : "")"><i class="nav-icon bi bi-box-seam"></i><p>Documentos con reserva</p></a></li>
+                                <li class="nav-item"><a asp-area="VT" asp-controller="RepoPedidoProd" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RepoPedidoProd" ? "active" : "")"><i class="nav-icon bi bi-card-list"></i><p>Pedidos por producto</p></a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "CM" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "CM" ? "active" : "")"><i class="nav-icon bi bi-bag-check text-info"></i><p>Compras<i class="nav-arrow bi bi-chevron-right"></i></p></a>
+                            <ul class="nav nav-treeview ps-2">
+                                <li class="nav-item"><a asp-area="CM" asp-controller="RepoValorizaComprob" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "CM" && ViewContext.RouteData.Values["controller"]?.ToString() == "RepoValorizaComprob" ? "active" : "")"><i class="nav-icon bi bi-receipt"></i><p>Valorización de comprobantes</p></a></li>
+                                <li class="nav-item"><a asp-area="CM" asp-controller="PuntoPedido" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "CM" && ViewContext.RouteData.Values["controller"]?.ToString() == "PuntoPedido" ? "active" : "")"><i class="nav-icon bi bi-cart-plus"></i><p>Punto de pedido</p></a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "PD" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "PD" ? "active" : "")"><i class="nav-icon bi bi-gear text-info"></i><p>Producción<i class="nav-arrow bi bi-chevron-right"></i></p></a>
+                            <ul class="nav nav-treeview ps-2"><li class="nav-item"><a asp-area="PD" asp-controller="ProceProduccion" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "PD" && ViewContext.RouteData.Values["controller"]?.ToString() == "ProceProduccion" ? "active" : "")"><i class="nav-icon bi bi-diagram-3"></i><p>Procesos de producción</p></a></li></ul>
                         </li>
 
                         <!-- MENÚ MAESTROS (Mantenimientos Generales) -->
@@ -317,6 +356,26 @@
                                         <p>Tablas Generales</p>
                                     </a>
                                 </li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" ? "menu-open" : "")">
+                            <a href="#" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" ? "active" : "")">
+                                <i class="nav-icon bi bi-boxes text-info"></i><p>Inventario<i class="nav-arrow bi bi-chevron-right"></i></p>
+                            </a>
+                            <ul class="nav nav-treeview ps-2">
+                                <li class="nav-item"><a asp-area="IV" asp-controller="Almacen" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "Almacen" ? "active" : "")"><i class="nav-icon bi bi-buildings"></i><p>Almacenes</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="Transaccion" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "Transaccion" ? "active" : "")"><i class="nav-icon bi bi-arrow-left-right"></i><p>Transacciones</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="VolumenExisten" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "VolumenExisten" ? "active" : "")"><i class="nav-icon bi bi-box-arrow-in-down"></i><p>Volumen de existencias</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="ApeCierre" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "ApeCierre" ? "active" : "")"><i class="nav-icon bi bi-calendar-check"></i><p>Apertura y cierre</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="Reproceso" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "Reproceso" ? "active" : "")"><i class="nav-icon bi bi-arrow-repeat"></i><p>Reproceso de inventario</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="ConsultaLlegada" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "ConsultaLlegada" ? "active" : "")"><i class="nav-icon bi bi-truck"></i><p>Consulta de llegadas</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="ConsultaSaldo" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "ConsultaSaldo" ? "active" : "")"><i class="nav-icon bi bi-boxes"></i><p>Consulta de saldos</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="RepoSaldo" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "RepoSaldo" ? "active" : "")"><i class="nav-icon bi bi-box-seam"></i><p>Saldo de unidades</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="RepoSaldoVal" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "RepoSaldoVal" ? "active" : "")"><i class="nav-icon bi bi-cash-stack"></i><p>Saldo valorizado</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="RepoKardex" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "RepoKardex" ? "active" : "")"><i class="nav-icon bi bi-journal-text"></i><p>Kardex de unidades</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="RepoMoviAlma" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "RepoMoviAlma" ? "active" : "")"><i class="nav-icon bi bi-list-columns"></i><p>Reporte de movimientos</p></a></li>
+                                <li class="nav-item"><a asp-area="IV" asp-controller="RepoGuiaRemi" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["area"]?.ToString() == "IV" && ViewContext.RouteData.Values["controller"]?.ToString() == "RepoGuiaRemi" ? "active" : "")"><i class="nav-icon bi bi-truck"></i><p>Reporte de guías de remisión</p></a></li>
                             </ul>
                         </li>
 
@@ -607,6 +666,14 @@
         });
     </script>
 
+    @if (erpModule)
+    {
+        <script src="~/js/erp-listings.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
+    @if (erpModule)
+    {
+        <script src="~/js/erp-module-ui.js" asp-append-version="true"></script>
+    }
 </body>
 </html>

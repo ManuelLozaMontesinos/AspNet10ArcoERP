@@ -27,6 +27,7 @@ namespace AspNet10ArcoERP.Models
 
     public class PerfilAccesoViewModel
     {
+        public string? ReturnUrl { get; set; }
         public int PeriodoId { get; set; }
         public int EmpresaId { get; set; }
         public int EmpresaSedeId { get; set; }

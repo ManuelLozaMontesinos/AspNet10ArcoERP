@@ -16,6 +16,11 @@ builder.Services.AddScoped<IAdministracionService, AdministracionService>();
 builder.Services.AddScoped<IMaestrosService, MaestrosService>();
 builder.Services.AddScoped<IMKService, MKService>();
 builder.Services.AddScoped<IRHService, RHService>();
+builder.Services.AddScoped<IInventarioService, InventarioService>();
+builder.Services.AddScoped<IVentasService, VentasService>();
+builder.Services.AddScoped<IReporteDocumentosService, ReporteDocumentosService>();
+builder.Services.AddScoped<IComprasService, ComprasService>();
+builder.Services.AddScoped<IProduccionService, ProduccionService>();
 
 // Authentication & Cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

@@ -10,6 +10,11 @@ namespace AspNet10ArcoERP.Models
         public string Nombre { get; set; } = string.Empty;
     }
 
+    public class CuentaBancoPageModel : ListadoPaginadoModel
+    {
+        public List<CuentaBancoModel> Items { get; set; } = new();
+    }
+
     public class CuentaBancoModel
     {
         public int Id { get; set; }
