@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace AspNet10ArcoERP.Areas.RH.Controllers;
 
 [Area("RH")]
-public class PlanillaController(IRHService rhService, ILogger<PlanillaController> logger)
-    : RHContextController(rhService, logger, "planilla/index")
+public class PlanillaController(IRHService rhService, IAuthService auth, ILogger<PlanillaController> logger)
+    : RHContextController(rhService, auth, logger, "planilla/index")
 {
     [HttpGet]
     public async Task<IActionResult> Index(string? search=null, string? estado=null, int page=1, int top=25, string? sort=null, string? dir=null)

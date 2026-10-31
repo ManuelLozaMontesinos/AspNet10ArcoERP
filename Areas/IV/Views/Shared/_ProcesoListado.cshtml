@@ -1,7 +1,7 @@
 @model InventarioProcesoPageModel
 @{ bool write = ViewBag.PuedeEscribir == true; }
 <div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3">
-    <div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi @(Model.Tipo == "reproceso" ? "bi-arrow-repeat" : "bi-calendar-check") text-primary me-2"></i>@Model.Titulo</h3><small class="text-muted" data-erp-list-summary>@Model.Resumen</small></div>
+    <div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi @(Model.Tipo == "reproceso" ? "bi-arrow-repeat" : (Model.Tipo == "valorizacion" ? "bi-calculator" : "bi-calendar-check")) text-primary me-2"></i>@Model.Titulo</h3><small class="text-muted" data-erp-list-summary>@Model.Resumen</small></div>
     <div class="col-auto" data-erp-list-actions>
         @if (write && Model.Tipo == "reproceso")
         { <button type="button" class="btn btn-primary shadow-sm" data-inv-process="anual" disabled="@(!Model.AlmacenId.HasValue || Model.Errores.Count > 0)"><i class="bi bi-calendar-range me-1"></i>Reproceso anual</button> }
@@ -32,6 +32,7 @@
                     @if (write)
                     {
                         if (Model.Tipo == "reproceso") { <button type="button" class="btn btn-sm btn-outline-primary" data-inv-process="reproceso" data-month="@item.MesContableId" disabled="@(!item.AdmiteReproceso)" title="@(item.AdmiteReproceso ? "Preparar reproceso mensual" : "El mes de cierre anual (13) no está disponible para este proceso")"><i class="bi bi-arrow-repeat"></i></button> }
+                        else if (Model.Tipo == "valorizacion") { <button type="button" class="btn btn-sm btn-outline-primary" data-inv-process="valorizar" data-month="@item.MesContableId" disabled="@(!item.AdmiteReproceso)" title="@(item.AdmiteReproceso ? "Preparar valorización mensual" : "El mes de cierre anual (13) no está disponible para este proceso")"><i class="bi bi-calculator"></i></button> }
                         else if (item.Estado != "A") { <button type="button" class="btn btn-sm btn-outline-success" data-inv-process="apertura" data-month="@item.MesContableId" title="Preparar apertura"><i class="bi bi-unlock"></i></button> }
                         else { <button type="button" class="btn btn-sm btn-outline-primary" data-inv-process="cierre" data-month="@item.MesContableId" disabled="@(!item.AdmiteReproceso)" title="@(item.AdmiteReproceso ? "Preparar cierre mensual" : "El mes de cierre anual (13) no está disponible para este proceso")"><i class="bi bi-lock"></i></button> }
                     }</td>

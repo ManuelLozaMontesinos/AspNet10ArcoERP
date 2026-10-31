@@ -148,11 +148,11 @@
                             </tr>
                         </thead>
                         <tbody id="tbody-grupos">
-                            @foreach (var g in Model)
+                            @foreach (var g in Model ?? new List<AspNet10ArcoERP.Models.GrupoProductoModel>())
                             {
                                 <tr data-tipo="@g.TipoProductoNombre" data-codigo="@g.Codigo" data-nombre="@g.Nombre" data-estado="@g.Estado">
                                     <td class="ps-3">
-                                        @if (g.TipoProductoNombre.Contains("SERVICIO", StringComparison.OrdinalIgnoreCase))
+                                        @if (g.TipoProductoNombre?.Contains("SERVICIO", StringComparison.OrdinalIgnoreCase) == true)
                                         {
                                             <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-gear me-1"></i>SERVICIO</span>
                                         }

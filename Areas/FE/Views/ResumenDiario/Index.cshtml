@@ -1,0 +1,133 @@
+@model ResumenDiarioPageModel
+@{
+    ViewData["Title"] = "Resumen Diario de Boletas (SUNAT BETA)";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-calendar-check text-info me-2"></i>Resumen Diario de Boletas de Venta
+                </h1>
+            </div>
+            <div class="col-sm-6 text-end">
+                <span class="badge bg-info-subtle text-info border border-info px-3 py-2">
+                    <i class="bi bi-clock-history me-1"></i> Envío Masivo Diario SUNAT BETA
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <div class="card card-outline card-info shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Fecha de Emisión de Boletas</label>
+                        <input type="date" name="fecha" id="resumen_fecha" class="form-control form-control-sm" value="@(Model.Fecha.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-sm btn-info text-white w-100">
+                            <i class="bi bi-search me-1"></i> Consultar Boletas del Día
+                        </button>
+                    </div>
+                    <div class="col-md-5 text-end">
+                        <button type="button" class="btn btn-sm btn-success" onclick="generarResumen()">
+                            <i class="bi bi-cloud-upload me-1"></i> Generar y Enviar Resumen SUNAT BETA
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">N° Ticket SUNAT</th>
+                            <th>Fecha Emisión</th>
+                            <th>Fecha Generación</th>
+                            <th class="text-center">Cant. Boletas</th>
+                            <th class="text-end">Total Gravado</th>
+                            <th class="text-end">Total IGV</th>
+                            <th class="text-end">Total General</th>
+                            <th class="text-center pe-3">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items == null || Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No hay resumen generado para esta fecha o no existen boletas emitidas pendientes.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var r in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-primary">@r.Ticket</td>
+                                    <td>@r.FechaEmision.ToString("dd/MM/yyyy")</td>
+                                    <td>@r.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="text-center"><span class="badge bg-secondary">@r.CantidadDocumentos</span></td>
+                                    <td class="text-end">S/ @r.TotalGravado.ToString("N2")</td>
+                                    <td class="text-end">S/ @r.TotalIgv.ToString("N2")</td>
+                                    <td class="text-end fw-bold">S/ @r.TotalGeneral.ToString("N2")</td>
+                                    <td class="text-center pe-3">
+                                        <span class="badge bg-success-subtle text-success border border-success">
+                                            <i class="bi bi-check-circle-fill me-1"></i> @r.Estado
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function generarResumen() {
+            const fecha = document.getElementById('resumen_fecha').value;
+            const confirm = await Swal.fire({
+                title: '¿Generar Resumen Diario?',
+                text: `Se agruparán las boletas emitidas con fecha ${fecha} y se enviará el resumen a SUNAT BETA.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, generar y enviar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            try {
+                Swal.fire({ title: 'Generando resumen diario...', didOpen: () => Swal.showLoading() });
+                const resp = await fetch('/FE/ResumenDiario/GenerarEnviar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fecha: fecha })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    Swal.fire('Resumen Procesado', res.sunatDescripcion || `Ticket: ${res.sunatNumeroTicket}`, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', res.error || 'No se pudo generar el resumen.', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Fallo de red.', 'error');
+            }
+        }
+    </script>
+}
+

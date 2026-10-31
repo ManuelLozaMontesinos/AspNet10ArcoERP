@@ -21,7 +21,7 @@ public abstract class VentaReporteController(IVentasService service,IRHService c
         var model=await service.GetReporteVentaAsync(EmpresaId,PeriodoEmpresaSedeId,tipo,filtro,sort:sort,dir:dir,exportar:true);
         if(model.Errores.Count>0)return BadRequest(new{success=false,message=string.Join(" ",model.Errores)});
         var columns=model.Columnas.Select(c=>(c.Titulo,c.Valor)).ToList();
-        return File(InformeExcel.Crear(model.Titulo,model.Contexto.Empresa,model.Resumen,model.Items,columns,preservarDecimales:true),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","ventas-"+tipo+".xlsx");
+        return File(InformeExcel.Crear(model.Titulo,model.Contexto.Empresa,model.ResumenSalida,model.Items,columns,preservarDecimales:true),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","ventas-"+tipo+".xlsx");
     }
     [HttpGet]
     public async Task<IActionResult> Imprimir([FromQuery] VentaReporteFiltro filtro,string? sort=null,string? dir=null)
@@ -31,7 +31,7 @@ public abstract class VentaReporteController(IVentasService service,IRHService c
         if(model.Errores.Count>0)return BadRequest(new{success=false,message=string.Join(" ",model.Errores)});
         // Reuse the existing report-only print renderer; the report contains no inventory-specific UI.
         var columns=model.Columnas;
-        var print=new InventarioImpresionModel{Titulo=model.Titulo,Empresa=model.Contexto.Empresa,Resumen=model.Resumen,Columnas=columns.Select(c=>c.Titulo).ToList(),
+        var print=new InventarioImpresionModel{Titulo=model.Titulo,Empresa=model.Contexto.Empresa,Resumen=model.ResumenSalida,Columnas=columns.Select(c=>c.Titulo).ToList(),
             Filas=model.Items.Select(row=>columns.Select(c=>VentaReporteColumnas.Format(c,row)).ToList()).ToList()};
         return View("~/Areas/IV/Views/Shared/InformeImprimir.cshtml",print);
     }

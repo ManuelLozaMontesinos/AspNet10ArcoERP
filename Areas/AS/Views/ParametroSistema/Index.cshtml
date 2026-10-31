@@ -1,0 +1,36 @@
+@model ParametroSistemaPageModel
+@{ViewData["Title"]="Parámetros del sistema";bool canWrite=ViewBag.PuedeEscribir==true;}
+<div class="app-content-header py-3 border-bottom"><div class="container-fluid"><div class="row align-items-center g-3"><div class="col"><h3 class="mb-0 fw-bold d-flex align-items-center"><i class="bi bi-sliders text-primary me-2"></i>Parámetros del sistema</h3><small class="text-muted">Configuración global compartida · Solo se editan los parámetros habilitados para mantenimiento</small></div></div></div></div>
+<div class="app-content py-4 erp-listing"><div class="container-fluid">
+    @if(Model.Errores.Count>0){<div class="alert alert-warning" role="alert"><ul class="mb-0">@foreach(var error in Model.Errores){<li>@error</li>}</ul></div>}
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="card-body py-2 px-3 erp-filter-bar"><div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <form method="get" id="ps-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+            <input type="hidden" name="top" value="@Model.PageSize" /><input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" />
+            <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span><input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="Código, nombre o grupo..." aria-label="Buscar parámetro" /></div>
+            <select name="grupoId" class="form-select form-select-sm w-auto" aria-label="Grupo"><option value="">Todos los grupos</option>@foreach(var item in Model.Grupos){<option value="@item.Id" selected="@(Model.GrupoId==item.Id)">@item.Nombre</option>}</select>
+            <select name="estado" class="form-select form-select-sm w-auto" aria-label="Estado"><option value="">Todos los estados</option><option value="A" selected="@(Model.Estado=="A")">Activos</option><option value="I" selected="@(Model.Estado=="I")">Inactivos</option></select>
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i>Buscar</button><a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+        </form><partial name="_ListadoControles" model="Model" />
+    </div></div></div>
+    <div class="card border-0 shadow-sm rounded-3 mb-3"><div class="table-responsive table-scroll"><table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+        <thead class="table-header-custom bg-body-tertiary border-bottom"><tr><th erp-sort="grupo">Grupo</th><th erp-sort="codigo">Código</th><th erp-sort="nombre">Nombre</th><th erp-sort="tipo">Tipo</th><th erp-sort="valor">Valor</th><th erp-sort="estado">Estado</th><th class="listing-options">Opciones</th></tr></thead>
+        <tbody>@if(Model.Items.Count==0){<tr><td colspan="7" class="text-center text-muted py-4">No se encontraron registros.</td></tr>}
+        @foreach(var item in Model.Items){<tr><td>@item.Grupo</td><td>@item.Codigo</td><td>@item.Nombre</td><td>@item.TipoNombre</td><td class="text-break">@item.Valor</td><td><span class="badge @(item.Estado=="A"?"bg-success-subtle text-success":"bg-secondary-subtle text-body-secondary")">@(item.Estado=="A"?"Activo":"Inactivo")</span></td><td class="listing-options"><button type="button" class="btn btn-sm btn-outline-primary js-ps-open" data-id="@item.Id" title="Consultar" aria-label="Consultar"><i class="bi bi-eye"></i></button>@if(canWrite&&item.Editable){<button type="button" class="btn btn-sm btn-outline-primary js-ps-open" data-id="@item.Id" data-edit="true" title="Editar" aria-label="Editar"><i class="bi bi-pencil-square"></i></button>}</td></tr>}
+        </tbody></table></div><partial name="_ListadoPaginacion" model="Model" /></div>
+</div></div>
+<div class="modal fade" id="ps-modal" tabindex="-1" aria-labelledby="ps-title" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><form id="ps-form" class="modal-content" method="post" asp-action="Guardar" autocomplete="off">
+    <div class="modal-header sticky-top bg-body-tertiary"><h5 class="modal-title" id="ps-title">Parámetro del sistema</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body">@Html.AntiForgeryToken()<input type="hidden" name="ContextoId" value="@ViewBag.ContextoId" /><input type="hidden" name="Id" /><input type="hidden" name="Revision" />
+        <div class="alert alert-info small">Este valor se comparte entre empresas y sedes. Los valores ocultos se muestran protegidos y solo se sustituyen al indicar un nuevo valor.</div>
+        <dl class="row"><dt class="col-sm-3">Grupo</dt><dd id="ps-group" class="col-sm-9"></dd><dt class="col-sm-3">Código</dt><dd id="ps-code" class="col-sm-9"></dd><dt class="col-sm-3">Nombre</dt><dd id="ps-name" class="col-sm-9"></dd><dt class="col-sm-3">Tipo</dt><dd id="ps-type" class="col-sm-9"></dd><dt class="col-sm-3">Valor actual</dt><dd id="ps-current" class="col-sm-9 text-break"></dd></dl>
+        <p id="ps-readonly" class="small text-muted">Este parámetro es de solo consulta.</p>
+        <div data-ps-kind="01" hidden><label for="ps-text" class="form-label">Valor</label><input id="ps-text" name="Cadena" class="form-control" maxlength="100" disabled /></div>
+        <div data-ps-kind="07" hidden><div class="form-check mb-2"><input id="ps-replace" name="CambiarSecreto" type="checkbox" value="true" class="form-check-input" disabled /><label for="ps-replace" class="form-check-label">Reemplazar valor oculto</label></div><label for="ps-secret" class="form-label">Nuevo valor</label><input id="ps-secret" name="Cadena" type="password" class="form-control" maxlength="50" autocomplete="new-password" disabled /></div>
+        <div data-ps-kind="02 03" hidden><label for="ps-number" class="form-label">Valor</label><input id="ps-number" name="Numero" type="number" step="0.0001" class="form-control" disabled /></div>
+        <div data-ps-kind="08" class="row g-3" hidden><div class="col-md-6"><label for="ps-from" class="form-label">Desde</label><input id="ps-from" name="Desde" type="time" step="60" class="form-control" disabled /></div><div class="col-md-6"><label for="ps-until" class="form-label">Hasta</label><input id="ps-until" name="Hasta" type="time" step="60" class="form-control" disabled /></div></div>
+    </div><div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>@if(canWrite){<button type="submit" id="ps-save" class="btn btn-sm btn-primary" hidden>Guardar</button>}</div>
+</form></div></div>
+@section Scripts {
+    <script id="parametros-config" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new{canWrite,contextoId=(int)ViewBag.ContextoId,obtener=Url.Action("Obtener"),guardar=Url.Action("Guardar")}))</script>
+    <script src="~/js/parametros-sistema.js" asp-append-version="true"></script>
+}

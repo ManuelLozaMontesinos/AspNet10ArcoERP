@@ -21,7 +21,7 @@ public abstract class InventarioProcesoController(IInventarioService service, IR
     public async Task<IActionResult> Preparar(string operacion, int almacenId, int? mesContableId = null)
     {
         if (!ModelState.IsValid || almacenId <= 0 || mesContableId is <= 0 ||
-            (tipo == "cierre" ? operacion is not ("apertura" or "cierre") : operacion is not ("reproceso" or "anual"))) return InvalidInput();
+            (tipo == "cierre" ? operacion is not ("apertura" or "cierre") : (tipo == "valorizacion" ? operacion != "valorizar" : operacion is not ("reproceso" or "anual")))) return InvalidInput();
         var model = await ProcessService.GetPreparacionProcesoAsync(EmpresaId, PeriodoEmpresaSedeId, UsuarioId, operacion, almacenId, mesContableId);
         return model.Errores.Count > 0 ? BadRequest(new { success = false, message = string.Join(" ", model.Errores) }) : Json(new { success = true, data = model });
     }

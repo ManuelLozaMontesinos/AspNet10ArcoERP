@@ -2,7 +2,7 @@
 (() => {
     "use strict";
     /** @typedef {{campo:string,titulo:string,numero:boolean,fecha:boolean}} Column */
-    /** @type {{columns:Column[]}} */ const config = window.erpListings.config("ventas-reporte-config");
+    /** @type {{columns:Column[],nota?:string}} */ const config = window.erpListings.config("ventas-reporte-config");
     const modalNode = document.getElementById("vr-modal"), detail = document.getElementById("vr-detail");
     if (!modalNode || !detail) return;
     const modal = new bootstrap.Modal(modalNode);
@@ -16,11 +16,14 @@
         try {
             /** @type {Record<string,string>} */ const row = JSON.parse(button.dataset.row || "{}");
             detail.replaceChildren();
+            const note = document.getElementById("vr-note");
+            if (note) note.textContent = config.nota || "";
             config.columns.forEach(column => {
                 const label = document.createElement("dt"), value = document.createElement("dd");
                 label.className = "col-sm-4 text-muted"; value.className = "col-sm-8 text-break"; label.textContent = column.titulo;
                 const raw = row[column.campo] || "";
-                value.textContent = column.numero ? decimal(raw) : column.fecha && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw.split("-").reverse().join("/") : raw;
+                const date = column.fecha ? raw.match(/^(\d{4})-(\d{2})-(\d{2})([ T]\d{2}:\d{2}(?::\d{2})?)?$/) : null;
+                value.textContent = column.numero ? decimal(raw) : date ? date[3] + "/" + date[2] + "/" + date[1] + (date[4] || "").replace("T", " ") : raw;
                 detail.append(label, value);
             }); modal.show();
         } catch { void Swal.fire({ icon: "error", title: "No se pudo consultar el registro", text: "Actualice el listado e intente nuevamente." }); }

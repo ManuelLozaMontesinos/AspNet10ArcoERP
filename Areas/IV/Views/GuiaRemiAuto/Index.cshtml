@@ -1,0 +1,251 @@
+@model GuiaRemiAutoPageModel
+@{
+    ViewData["Title"] = "Autorización de guías de remisión";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-shield-check text-primary me-2"></i>Autorización de guías de remisión
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Bandeja de revisión y autorización de guías de remisión para su emisión oficial</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="IV" asp-controller="GuiaRemi" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-truck me-1"></i>Guías de Remisión
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="guia-auto-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="Destinatario, RUC, transportista..." aria-label="Buscar" />
+                        </div>
+
+                        <input name="codigo" value="@Model.Codigo" class="form-control form-control-sm w-auto font-monospace" maxlength="30" placeholder="Serie o número..." />
+
+                        <select name="almacenId" class="form-select form-select-sm w-auto">
+                            <option value="">Todos los almacenes</option>
+                            @foreach (var alm in Model.Almacenes)
+                            {
+                                <option value="@alm.Id" selected="@(Model.AlmacenId == alm.Id)">@alm.Descripcion</option>
+                            }
+                        </select>
+
+                        <select name="motivoTrasladoId" class="form-select form-select-sm w-auto">
+                            <option value="">Todos los motivos</option>
+                            @foreach (var mt in Model.MotivosTraslado)
+                            {
+                                <option value="@mt.Id" selected="@(Model.MotivoTrasladoId == mt.Id)">@mt.Descripcion</option>
+                            }
+                        </select>
+
+                        <input type="date" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm w-auto" title="Fecha desde" />
+                        <input type="date" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm w-auto" title="Fecha hasta" />
+
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Buscar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 erp-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 140px;">Serie - Número</th>
+                                <th style="width: 100px;">Fecha</th>
+                                <th style="width: 100px;">Fec. Traslado</th>
+                                <th>Almacén</th>
+                                <th>Destinatario</th>
+                                <th style="width: 150px;">Motivo</th>
+                                <th>Transportista</th>
+                                <th class="text-end" style="width: 90px;">Peso (kg)</th>
+                                <th style="width: 100px;">Estado</th>
+                                <th class="text-end" style="width: 140px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="10" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle fs-2 d-block mb-1 text-success"></i>
+                                        No hay guías de remisión pendientes de autorización.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td class="fw-bold font-monospace text-primary">@item.SerieNumero</td>
+                                    <td><small>@item.FechaTexto</small></td>
+                                    <td><small class="text-secondary">@item.FechaInicioTrasladoTexto</small></td>
+                                    <td><span class="fw-semibold">@item.AlmacenNombre</span></td>
+                                    <td>
+                                        <div class="fw-semibold">@item.Destinatario</div>
+                                        <small class="text-muted">@item.DestinatarioDocumento</small>
+                                    </td>
+                                    <td><small class="badge bg-light text-dark border">@item.MotivoTraslado</small></td>
+                                    <td><small class="text-secondary">@(string.IsNullOrEmpty(item.Transportista) ? "TRANSPORTE PROPIO" : item.Transportista)</small></td>
+                                    <td class="text-end font-monospace">@item.PesoBrutoTotal.ToString("N2")</td>
+                                    <td>
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                            Pendiente
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            @if (canWrite)
+                                            {
+                                                <button type="button" class="btn btn-outline-success js-auto-aprobar" data-id="@item.Id" data-rev="@item.Revision" title="Aprobar y Emitir">
+                                                    <i class="bi bi-check2-circle"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger js-auto-rechazar" data-id="@item.Id" data-rev="@item.Revision" title="Rechazar guía">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-white border-top py-2 px-3">
+                    <partial name="_Paginacion" model="Model" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Aprobar
+            document.querySelectorAll('.js-auto-aprobar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = parseInt(this.dataset.id);
+                    const rev = this.dataset.rev;
+                    Swal.fire({
+                        title: '¿Aprobar y Emitir Guía?',
+                        text: 'La guía quedará aprobada y emitida oficialmente para su traslado.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, aprobar',
+                        cancelButtonText: 'Cancelar'
+                    }).then(async r => {
+                        if (r.isConfirmed) {
+                            try {
+                                const res = await fetch('/IV/GuiaRemiAuto/Aprobar', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: id, revision: rev })
+                                });
+                                const json = await res.json();
+                                if (json.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Aprobada',
+                                        text: json.message,
+                                        timer: 1200,
+                                        showConfirmButton: false
+                                    }).then(() => window.location.reload());
+                                } else {
+                                    Swal.fire('Error', json.message, 'error');
+                                }
+                            } catch (e) {
+                                console.error('Error aprobando guía:', e);
+                            }
+                        }
+                    });
+                });
+            });
+
+            // Rechazar
+            document.querySelectorAll('.js-auto-rechazar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = parseInt(this.dataset.id);
+                    const rev = this.dataset.rev;
+                    Swal.fire({
+                        title: 'Rechazar Guía de Remisión',
+                        text: 'Ingrese el motivo por el cual se rechaza la guía:',
+                        input: 'text',
+                        inputPlaceholder: 'Motivo de rechazo...',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Rechazar',
+                        confirmButtonColor: '#d33',
+                        cancelButtonText: 'Cancelar',
+                        inputValidator: (val) => {
+                            if (!val || val.trim().length < 5) {
+                                return 'Debe ingresar un motivo de al menos 5 caracteres.';
+                            }
+                        }
+                    }).then(async r => {
+                        if (r.isConfirmed && r.value) {
+                            try {
+                                const res = await fetch('/IV/GuiaRemiAuto/Desaprobar', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: id, motivo: r.value.trim(), revision: rev })
+                                });
+                                const json = await res.json();
+                                if (json.success) {
+                                    Swal.fire({
+                                        icon: 'info',
+                                        title: 'Rechazada',
+                                        text: json.message,
+                                        timer: 1200,
+                                        showConfirmButton: false
+                                    }).then(() => window.location.reload());
+                                } else {
+                                    Swal.fire('Error', json.message, 'error');
+                                }
+                            } catch (e) {
+                                console.error('Error rechazando guía:', e);
+                            }
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}
+

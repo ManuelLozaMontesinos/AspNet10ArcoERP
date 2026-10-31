@@ -12,8 +12,8 @@ namespace AspNet10ArcoERP.Areas.RH.Controllers
     {
 
 
-        public PlanillaProcesoController(IRHService rhService, ILogger<PlanillaProcesoController> logger)
-            : base(rhService, logger, "planillaProceso/index")
+        public PlanillaProcesoController(IRHService rhService, IAuthService auth, ILogger<PlanillaProcesoController> logger)
+            : base(rhService, auth, logger, "planillaProceso/index")
         {
 
         }

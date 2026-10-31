@@ -14,7 +14,13 @@
         <form method="get" id="vr-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
             <input type="hidden" name="consultar" value="true" /><input type="hidden" name="top" value="@Model.PageSize" /><input type="hidden" name="sort" value="@Model.Sort" /><input type="hidden" name="dir" value="@Model.Dir" />
             <div class="input-group input-group-sm listing-search"><span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span><input class="form-control border-start-0" name="search" value="@Model.Filtro.Search" maxlength="150" placeholder="Documento, producto o cliente..." aria-label="Buscar en el reporte" /></div>
-            @if(Model.Tipo=="reservas")
+            @if(Model.Tipo=="caja")
+            {
+                <input type="hidden" name="modo" value="dia" />
+                <select name="cajaId" class="form-select form-select-sm w-auto" required aria-label="Caja"><option value="">Seleccione una caja</option>@foreach(var item in Model.Cajas){<option value="@item.Id" selected="@(Model.Filtro.CajaId==item.Id)">@item.Nombre</option>}</select>
+                <div class="input-group input-group-sm w-auto"><span class="input-group-text bg-body-tertiary">Fecha</span><input type="date" name="fecha" class="form-control" value="@Model.Filtro.Fecha?.ToString("yyyy-MM-dd")" min="1900-01-01" max="9998-12-31" required aria-label="Fecha de liquidación" /></div>
+            }
+            else if(Model.Tipo=="reservas")
             {
                 <input type="hidden" name="modo" value="actual" />
                 <select id="vr-group" name="agrupar" class="form-select form-select-sm w-auto" aria-label="Vista de agrupación"><option value="producto" selected="@(Model.Filtro.Agrupar=="producto")">Por producto / servicio</option><option value="documento" selected="@(Model.Filtro.Agrupar=="documento")">Por documento</option></select>
@@ -22,10 +28,10 @@
             }
             else
             {
-                @if(Model.Tipo=="temporales") { <select id="vr-mode" name="modo" class="form-select form-select-sm w-auto" aria-label="Período de consulta"><option value="mes" selected="@(Model.Filtro.Modo=="mes")">Mensual</option><option value="rango" selected="@(Model.Filtro.Modo=="rango")">Rango de fechas</option><option value="anual" selected="@(Model.Filtro.Modo=="anual")">Todo el ejercicio</option></select> }
+                @if(Model.Tipo is "temporales" or "canjes") { <select id="vr-mode" name="modo" class="form-select form-select-sm w-auto" aria-label="Período de consulta"><option value="mes" selected="@(Model.Filtro.Modo=="mes")">Mensual</option><option value="rango" selected="@(Model.Filtro.Modo=="rango")">Rango de fechas</option>@if(Model.Tipo=="temporales"){<option value="anual" selected="@(Model.Filtro.Modo=="anual")">Todo el ejercicio</option>}</select> }
                 else { <input type="hidden" name="modo" value="mes" /> }
-                <div class="input-group input-group-sm w-auto" data-vr-month hidden="@(Model.Filtro.Modo is "rango" or "anual")"><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar-month"></i></span><select id="vr-month" name="mes" class="form-select" aria-label="Mes contable" required disabled="@(Model.Filtro.Modo is "rango" or "anual")">@foreach(var item in Model.Meses){<option value="@item.Id" selected="@(Model.Filtro.Mes==item.Id)">@item.Nombre</option>}</select></div>
-                @if(Model.Tipo=="temporales")
+                <div class="input-group input-group-sm w-auto" data-vr-month hidden="@(Model.Filtro.Modo is "rango" or "anual")"><span class="input-group-text bg-body-tertiary"><i class="bi bi-calendar-month"></i></span><select id="vr-month" name="mes" class="form-select" aria-label="@(Model.Tipo=="canjes"?"Mes calendario":"Mes contable")" required disabled="@(Model.Filtro.Modo is "rango" or "anual")">@foreach(var item in Model.Meses){<option value="@item.Id" selected="@(Model.Filtro.Mes==item.Id)">@item.Nombre</option>}</select></div>
+                @if(Model.Tipo is "temporales" or "canjes")
                 {
                     <div class="input-group input-group-sm w-auto" data-vr-dates hidden="@(Model.Filtro.Modo!="rango")"><span class="input-group-text bg-body-tertiary">Desde</span><input type="date" name="desde" class="form-control" value="@Model.Filtro.Desde?.ToString("yyyy-MM-dd")" min="1900-01-01" max="9998-12-31" required disabled="@(Model.Filtro.Modo!="rango")" aria-label="Fecha inicial" /></div>
                     <div class="input-group input-group-sm w-auto" data-vr-dates hidden="@(Model.Filtro.Modo!="rango")"><span class="input-group-text bg-body-tertiary">Hasta</span><input type="date" name="hasta" class="form-control" value="@Model.Filtro.Hasta?.ToString("yyyy-MM-dd")" min="1900-01-01" max="9998-12-31" required disabled="@(Model.Filtro.Modo!="rango")" aria-label="Fecha final" /></div>
@@ -35,7 +41,8 @@
         </form><partial name="_ListadoControles" model="Model" />
     </div></div></div>
     <div class="small text-muted mb-3" data-erp-list-summary>
-        @if(Model.Tipo=="reservas"){<span>La reserva de referencia se repite por documento y almacén. No se suma entre filas. La cantidad pendiente conserva los signos del registro.</span>}
+        @if(Model.Tipo is "canjes" or "caja"){<span>@Model.Nota</span>}
+        else if(Model.Tipo=="reservas"){<span>La reserva de referencia se repite por documento y almacén. No se suma entre filas. La cantidad pendiente conserva los signos del registro.</span>}
         else if(Model.Tipo=="pedidos"){<span>Importes en la moneda de cada pedido; se muestran sin sumar monedas diferentes. El filtro utiliza el mes contable registrado.</span>}
         else {<span>Importes convertidos a moneda local con el T/C del documento. Total de los resultados filtrados: <strong>@Model.TotalLocal.ToString("N4")</strong>.</span>}
     </div>
@@ -52,5 +59,5 @@
 </div></div>
 <div class="modal fade" id="vr-modal" tabindex="-1" aria-labelledby="vr-title" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
     <div class="modal-header sticky-top bg-body-tertiary"><h5 class="modal-title" id="vr-title">Consulta del registro</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
-    <div class="modal-body"><dl id="vr-detail" class="row mb-0"></dl></div><div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+    <div class="modal-body">@if(Model.Tipo is "canjes" or "caja"){<p id="vr-note" class="small text-muted"></p>}<dl id="vr-detail" class="row mb-0"></dl></div><div class="modal-footer sticky-bottom bg-body-tertiary"><button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></div>
 </div></div></div>

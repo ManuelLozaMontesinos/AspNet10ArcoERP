@@ -1,0 +1,166 @@
+@model CanjeDocuPageModel
+@{
+    ViewData["Title"] = "Canje de Documentos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-arrow-left-right text-success me-2"></i>Canje de Documentos
+                </h1>
+            </div>
+            <div class="col-sm-6 text-end">
+                <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">
+                    Transformación de Documentos Temporales / Notas a Factura / Boleta
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light py-2">
+                <h3 class="card-title text-secondary fw-bold mb-0">Documentos Pendientes de Canje</h3>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">Tipo Origen</th>
+                            <th>N° Documento</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th class="text-end">Monto Total</th>
+                            <th class="text-center pe-3">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items == null || Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No hay documentos pendientes de canje.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var d in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-3"><span class="badge bg-secondary">@d.TipoDocumentoComercial</span></td>
+                                    <td class="fw-bold">@d.SerieNumero</td>
+                                    <td>@d.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@d.ClienteRazonSocial</td>
+                                    <td class="text-end fw-bold">@d.Moneda @d.MontoTotal.ToString("N2")</td>
+                                    <td class="text-center pe-3">
+                                        <button type="button" class="btn btn-sm btn-outline-success" onclick="iniciarCanje(@d.ComprobanteId, '@d.SerieNumero', @d.MontoTotal)">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Canjear a Factura/Boleta
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Canje -->
+<div class="modal fade" id="modalCanje" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold"><i class="bi bi-arrow-left-right me-2"></i> Procesar Canje de Comprobante</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="canje_compId" />
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Documento Original:</label>
+                    <div id="canje_txtDoc" class="fw-bold text-dark fs-6"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nuevo Tipo de Comprobante *</label>
+                    <select id="canje_tipoDoc" class="form-select form-select-sm" onchange="actualizarSerieCanje()">
+                        @foreach (var td in Model.TiposDocumentoDestino)
+                        {
+                            <option value="@td.Id">@td.Descripcion</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Serie de Destino *</label>
+                    <select id="canje_serie" class="form-select form-select-sm">
+                        <option value="F001">F001 (Factura)</option>
+                        <option value="B001">B001 (Boleta)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="procesarCanje()">
+                    <i class="bi bi-check-lg me-1"></i> Confirmar Canje
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function iniciarCanje(id, doc, total) {
+            document.getElementById('canje_compId').value = id;
+            document.getElementById('canje_txtDoc').textContent = `${doc} (Total: S/ ${parseFloat(total).toFixed(2)})`;
+            actualizarSerieCanje();
+            const modal = new bootstrap.Modal(document.getElementById('modalCanje'));
+            modal.show();
+        }
+
+        function actualizarSerieCanje() {
+            const tipoId = document.getElementById('canje_tipoDoc').value;
+            const selSerie = document.getElementById('canje_serie');
+            if (tipoId === '1') {
+                selSerie.innerHTML = '<option value="F001">F001</option>';
+            } else {
+                selSerie.innerHTML = '<option value="B001">B001</option>';
+            }
+        }
+
+        async function procesarCanje() {
+            const compId = parseInt(document.getElementById('canje_compId').value);
+            const tipoDocId = parseInt(document.getElementById('canje_tipoDoc').value);
+            const serie = document.getElementById('canje_serie').value;
+
+            try {
+                Swal.fire({ title: 'Procesando canje...', didOpen: () => Swal.showLoading() });
+                const resp = await fetch('/VT/CanjeDocu/Procesar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        comprobanteId: compId,
+                        nuevoTipoDocComId: tipoDocId,
+                        nuevaSerie: serie
+                    })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    Swal.fire('Canjeado', res.message, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Fallo de red.', 'error');
+            }
+        }
+    </script>
+}
+

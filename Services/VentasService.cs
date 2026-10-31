@@ -6,7 +6,7 @@ using static AspNet10ArcoERP.Services.MaestroEmpresaSql;
 
 namespace AspNet10ArcoERP.Services;
 
-public partial class VentasService(IDbConnectionFactory factory) : IVentasService
+public partial class VentasService(IDbConnectionFactory factory, IFacturacionElectronicaService feService) : IVentasService
 {
     private const string MedioSelect=@"SELECT mp.medio_pago_id Id,RTRIM(mp.medio_pago) Codigo,mp.nombre Nombre,mp.abrev Abreviatura,
         mp.porcen_tarj PorcentajeTarjeta,mp.estado Estado,COALESCE(mp.fecha_modifica,mp.fecha_creacion) FechaRevision FROM medio_pago mp ";

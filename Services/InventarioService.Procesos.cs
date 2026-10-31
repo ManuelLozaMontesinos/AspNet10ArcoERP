@@ -51,7 +51,7 @@ public partial class InventarioService
     }
 
     private static bool ValidProcessInput(int empresaId, int scopeId, int userId, string operation, int warehouse, int? month)
-        => empresaId > 0 && scopeId > 0 && userId > 0 && warehouse > 0 && operation is "apertura" or "cierre" or "reproceso" or "anual"
+        => empresaId > 0 && scopeId > 0 && userId > 0 && warehouse > 0 && operation is "apertura" or "cierre" or "reproceso" or "anual" or "valorizar"
             && (operation == "anual" ? !month.HasValue : month is > 0);
 
     private static async Task<InventarioProcesoPreparacionModel> PrepareProcessAsync(IDbConnection conn, IDbTransaction? tx, int empresaId, int scopeId, int userId, string operation, int warehouseId, int? monthId)
@@ -110,16 +110,23 @@ public partial class InventarioService
         }
         foreach (var month in plan.Meses)
         {
-            if (operacion != "apertura")
-                await conn.ExecuteAsync("sp_mov_alm_cierre_reprocesar", new { periodoEmpresaSedeId = scopeId, almacenId = plan.AlmacenId, mesContableId = month.MesContableId }, tx, commandTimeout: 180, commandType: CommandType.StoredProcedure);
-            // Annual mode matches the legacy annual operation: no additional reservation recalculation.
-            if (operacion == "reproceso" && plan.EsVenta)
-                await conn.ExecuteAsync("sp_mov_alm_saldo_reprocesarCantidadReserva", new { periodoEmpresaSedeId = scopeId, mesContableId = month.MesContableId }, tx, commandTimeout: 180, commandType: CommandType.StoredProcedure);
-            if (stateId.HasValue)
-                await conn.ExecuteAsync("sp_mov_alm_cierre_actualizar", new { movimientoAlmacenCierreId = month.Id, estadoAperturaCierreId = stateId.Value,
-                    fechaCierre = operacion == "cierre" ? DateTime.Today : (DateTime?)null, tieneMovimientoPostCierre = "N", usuarioAccionId = userId }, tx, commandType: CommandType.StoredProcedure);
+            if (operacion == "valorizar")
+            {
+                await conn.ExecuteAsync("sp_mov_alm_s_con_cerrarMes", new { periodoEmpresaSedeId = scopeId, almacenId = plan.AlmacenId, mesContableId = month.MesContableId }, tx, commandTimeout: 300, commandType: CommandType.StoredProcedure);
+            }
+            else
+            {
+                if (operacion != "apertura")
+                    await conn.ExecuteAsync("sp_mov_alm_cierre_reprocesar", new { periodoEmpresaSedeId = scopeId, almacenId = plan.AlmacenId, mesContableId = month.MesContableId }, tx, commandTimeout: 180, commandType: CommandType.StoredProcedure);
+                // Annual mode matches the legacy annual operation: no additional reservation recalculation.
+                if (operacion == "reproceso" && plan.EsVenta)
+                    await conn.ExecuteAsync("sp_mov_alm_saldo_reprocesarCantidadReserva", new { periodoEmpresaSedeId = scopeId, mesContableId = month.MesContableId }, tx, commandTimeout: 180, commandType: CommandType.StoredProcedure);
+                if (stateId.HasValue)
+                    await conn.ExecuteAsync("sp_mov_alm_cierre_actualizar", new { movimientoAlmacenCierreId = month.Id, estadoAperturaCierreId = stateId.Value,
+                        fechaCierre = operacion == "cierre" ? DateTime.Today : (DateTime?)null, tieneMovimientoPostCierre = "N", usuarioAccionId = userId }, tx, commandType: CommandType.StoredProcedure);
+            }
         }
         tx.Commit();
-        return (true, operacion switch { "apertura" => "Mes abierto correctamente.", "cierre" => "Mes cerrado correctamente.", "anual" => "Reproceso de enero al mes actual completado.", _ => "Mes reprocesado correctamente." }, plan.Meses[0].Id);
+        return (true, operacion switch { "apertura" => "Mes abierto correctamente.", "cierre" => "Mes cerrado correctamente.", "anual" => "Reproceso de enero al mes actual completado.", "valorizar" => "Mes valorizado correctamente.", _ => "Mes reprocesado correctamente." }, plan.Meses[0].Id);
     }
 }

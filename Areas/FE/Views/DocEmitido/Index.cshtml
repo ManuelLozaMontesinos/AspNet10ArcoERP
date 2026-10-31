@@ -1,0 +1,211 @@
+@model DocEmitidoPageModel
+@{
+    ViewData["Title"] = "Documentos Emitidos (SUNAT BETA)";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-cloud-arrow-up text-primary me-2"></i>Documentos Emitidos (Control SUNAT)
+                </h1>
+            </div>
+            <div class="col-sm-6 text-end">
+                <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+                    <i class="bi bi-hdd-network me-1"></i> Modo: @Model.Opciones.Ambiente (Simulador Local / BETA)
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Banner Informativo -->
+        <div class="alert alert-primary border-primary d-flex align-items-center mb-3 py-2" role="alert">
+            <i class="bi bi-cpu-fill fs-3 me-3 text-primary"></i>
+            <div>
+                <strong>Bandeja de Facturación Electrónica SUNAT:</strong> En este módulo puede inspeccionar el estado tributario de comprobantes emitidos, generar/regenerar el XML UBL 2.1, actualizar la Constancia de Recepción (CDR) y descargar los archivos digitales.
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card card-outline card-primary shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Tipo Documento</label>
+                        <select name="tipoDocId" class="form-select form-select-sm">
+                            <option value="">-- Todos --</option>
+                            @foreach (var td in Model.TiposDocumento)
+                            {
+                                <option value="@td.Id" selected="@(Model.TipoDocumentoComercialId == td.Id)">@td.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Estado</label>
+                        <select name="estadoDoc" class="form-select form-select-sm">
+                            <option value="">-- Todos --</option>
+                            <option value="A" selected="@(Model.EstadoDocumento == "A")">Aprobado / Aceptado</option>
+                            <option value="P" selected="@(Model.EstadoDocumento == "P")">Pendiente de Envío</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Desde</label>
+                        <input type="date" name="fechaDesde" class="form-control form-control-sm" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Hasta</label>
+                        <input type="date" name="fechaHasta" class="form-control form-control-sm" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Buscar cliente o N°</label>
+                        <input type="text" name="search" class="form-control form-control-sm" placeholder="RUC, razón, serie-número..." value="@Model.Search" />
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="card shadow-sm">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">Tipo</th>
+                            <th>Serie - Número</th>
+                            <th>Fecha</th>
+                            <th>Receptor (Cliente)</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Estado SUNAT</th>
+                            <th>Código Hash (UBL)</th>
+                            <th class="text-center pe-3">Operaciones CPE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items == null || Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No se encontraron comprobantes emitidos con los criterios especificados.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var doc in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="badge @(doc.TipoDocumentoComercial == "01" ? "bg-primary" : (doc.TipoDocumentoComercial == "03" ? "bg-info" : "bg-danger"))">
+                                            @doc.TipoDocumentoNombre
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold">@doc.SerieNumero</td>
+                                    <td>@doc.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div class="fw-semibold text-truncate" style="max-width: 250px;">@doc.ClienteNombre</div>
+                                        <small class="text-muted">@doc.ClienteRuc</small>
+                                    </td>
+                                    <td class="text-end fw-bold">@doc.Moneda @doc.MontoTotal.ToString("N2")</td>
+                                    <td class="text-center">
+                                        @if (doc.EstadoSunat == "4")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Aceptado (BETA)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning border border-warning">
+                                                <i class="bi bi-clock-history me-1"></i> @doc.EstadoSunatNombre
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(doc.CodigoHash))
+                                        {
+                                            <small class="font-monospace text-muted text-truncate d-inline-block" style="max-width: 140px;" title="@doc.CodigoHash">
+                                                @doc.CodigoHash
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted">Pendiente</small>
+                                        }
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary" title="Enviar / Reenviar a SUNAT Beta" onclick="enviarSunat(@doc.ComprobanteId, '@doc.TipoDocumentoComercial')">
+                                                <i class="bi bi-send"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info" title="Actualizar / Consultar CDR" onclick="actualizarCdr(@doc.ComprobanteId, '@doc.TipoDocumentoComercial')">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                            <a href="/FE/DocEmitido/DescargarXml/@doc.ComprobanteId?tipoDoc=@doc.TipoDocumentoComercial" class="btn btn-outline-secondary" title="Descargar XML UBL">
+                                                <i class="bi bi-filetype-xml"></i> XML
+                                            </a>
+                                            <a href="/FE/DocEmitido/DescargarCdr/@doc.ComprobanteId?tipoDoc=@doc.TipoDocumentoComercial" class="btn btn-outline-success" title="Descargar Constancia CDR">
+                                                <i class="bi bi-shield-check"></i> CDR
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function enviarSunat(id, tipoDoc) {
+            try {
+                Swal.fire({ title: 'Enviando a SUNAT BETA...', didOpen: () => Swal.showLoading() });
+                const resp = await fetch('/FE/DocEmitido/Enviar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comprobanteId: id, tipoDocumento: tipoDoc, envioEnLinea: 'S' })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    Swal.fire('Respuesta SUNAT BETA', res.sunatDescripcion || 'Comprobante procesado con éxito.', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', res.error || 'Ocurrió un error al enviar.', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Fallo de conexión.', 'error');
+            }
+        }
+
+        async function actualizarCdr(id, tipoDoc) {
+            try {
+                Swal.fire({ title: 'Consultando CDR...', didOpen: () => Swal.showLoading() });
+                const resp = await fetch('/FE/DocEmitido/ActualizarCdr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comprobanteId: id, tipoDocumento: tipoDoc })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    Swal.fire('CDR Actualizado', res.sunatDescripcion || 'Constancia actualizada.', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', res.error || 'No se pudo obtener el CDR.', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Fallo de red.', 'error');
+            }
+        }
+    </script>
+}
+

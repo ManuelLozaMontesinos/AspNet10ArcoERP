@@ -5,7 +5,7 @@ namespace AspNet10ArcoERP.Services;
 
 public static class InformeExcel
 {
-    public static byte[] Crear<T>(string titulo,string empresa,string resumen,IEnumerable<T> rows,List<(string Label,Func<T,object?> Value)> columns,ISet<int>? precisionOcho=null,bool preservarDecimales=false)
+    public static byte[] Crear<T>(string titulo,string empresa,string resumen,IEnumerable<T> rows,List<(string Label,Func<T,object?> Value)> columns,ISet<int>? precisionOcho=null,bool preservarDecimales=false,ISet<int>? fechasConHora=null)
     {
         using var workbook=new XLWorkbook();var sheet=workbook.Worksheets.Add("Consulta");
         sheet.Cell(1,1).Value=titulo;sheet.Cell(2,1).Value=empresa;sheet.Cell(3,1).Value=resumen;
@@ -18,7 +18,7 @@ public static class InformeExcel
                 var cell=sheet.Cell(rowNumber,i+1);var value=columns[i].Value(item);
                 switch(value)
                 {
-                    case DateTime date:cell.Value=date;cell.Style.DateFormat.Format="dd/mm/yyyy";break;
+                    case DateTime date:cell.Value=date;cell.Style.DateFormat.Format=fechasConHora?.Contains(i+1)==true?"dd/mm/yyyy hh:mm:ss":"dd/mm/yyyy";break;
                     case decimal amount:
                         bool eight=precisionOcho?.Contains(i+1)==true;
                         if((eight||preservarDecimales)&&amount.ToString("G29",CultureInfo.InvariantCulture).Replace(".","").TrimStart('-','0').Length>15)

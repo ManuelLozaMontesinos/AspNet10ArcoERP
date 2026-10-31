@@ -1,0 +1,229 @@
+<!-- Modal de Edición de Guía de Remisión -->
+<div class="modal fade" id="modalGuia" tabindex="-1" aria-labelledby="modalGuiaLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light py-2">
+                <h5 class="modal-title fw-bold" id="modalGuiaLabel">
+                    <i class="bi bi-truck me-1 text-primary"></i> <span id="modalGuiaTitle">Guía de Remisión</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs px-3 pt-2 bg-light border-bottom" id="guiaTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-semibold" id="tab-datos-btn" data-bs-toggle="tab" data-bs-target="#tab-datos" type="button" role="tab">
+                            <i class="bi bi-info-circle me-1"></i> Datos del Traslado
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="tab-prods-btn" data-bs-toggle="tab" data-bs-target="#tab-prods" type="button" role="tab">
+                            <i class="bi bi-boxes me-1"></i> Bienes a Trasladar <span class="badge bg-primary ms-1" id="badgeTotalItems">0</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <form id="formGuia">
+                    <input type="hidden" id="guiaId" value="0" />
+                    <input type="hidden" id="guiaEsInterno" value="S" />
+                    <input type="hidden" id="movimientoAlmacenId" value="" />
+                    <input type="hidden" id="proveedorDestinoId" value="" />
+
+                    <div class="tab-content p-3" id="guiaTabsContent">
+                        <!-- Tab 1: Datos de Traslado -->
+                        <div class="tab-pane fade show active" id="tab-datos" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Almacén Origen <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="guiaAlmacenId" required></select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Serie <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm font-monospace" id="guiaSerie" required></select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Número</label>
+                                    <input type="text" class="form-control form-control-sm font-monospace bg-light" id="guiaNumero" placeholder="Autogenerado" readonly />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Fecha Emisión <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control form-control-sm" id="guiaFecha" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Fecha Inicio Traslado <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control form-control-sm" id="guiaFechaInicioTraslado" required />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Motivo de Traslado <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="guiaMotivoTrasladoId" required></select>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label small fw-semibold">Vincular Movimiento de Almacén (Opcional)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control form-control-sm bg-light" id="guiaMovimientoTexto" placeholder="Seleccione un movimiento para importar ítems..." readonly />
+                                        <button type="button" class="btn btn-outline-primary" id="btnBuscarMovimiento">
+                                            <i class="bi bi-search me-1"></i> Buscar Movimiento
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" id="btnLimpiarMovimiento" title="Quitar vínculo">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Destinatario / Cliente / Proveedor <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="guiaDestinatarioNombre" placeholder="Razón social del destinatario..." required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">RUC / Doc. Identidad</label>
+                                    <input type="text" class="form-control form-control-sm font-monospace" id="guiaDestinatarioDoc" placeholder="20000000000" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Costo Flete (S/)</label>
+                                    <input type="number" step="0.01" class="form-control form-control-sm text-end" id="guiaCostoFlete" value="0.00" />
+                                </div>
+
+                                <div class="col-12"><hr class="my-1" /><span class="text-muted small fw-bold text-uppercase">Datos del Transporte</span></div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Empresa Transportista</label>
+                                    <select class="form-select form-select-sm" id="guiaTransportistaId"></select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Conductor</label>
+                                    <select class="form-select form-select-sm" id="guiaConductorId"></select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Vehículo / Placa</label>
+                                    <select class="form-select form-select-sm" id="guiaUnidadId"></select>
+                                </div>
+
+                                <div class="col-12"><hr class="my-1" /><span class="text-muted small fw-bold text-uppercase">Punto de Partida y Llegada</span></div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Partida: Departamento <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="partidaDepId" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Provincia <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="partidaProvId" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Distrito <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="partidaDistId" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Cód. SUNAT Partida</label>
+                                    <input type="text" class="form-control form-control-sm font-monospace" id="partidaCodSunat" maxlength="4" value="0000" />
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-semibold">Dirección de Partida <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="partidaDireccion" maxlength="100" required />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Llegada: Departamento <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="llegadaDepId" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Provincia <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="llegadaProvId" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Distrito <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="llegadaDistId" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Cód. SUNAT Llegada</label>
+                                    <input type="text" class="form-control form-control-sm font-monospace" id="llegadaCodSunat" maxlength="4" value="0000" />
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-semibold">Dirección de Llegada <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="llegadaDireccion" maxlength="100" required />
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-semibold">Observaciones</label>
+                                    <input type="text" class="form-control form-control-sm" id="guiaObservacion" maxlength="200" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Bienes a Trasladar -->
+                        <div class="tab-pane fade" id="tab-prods" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small fw-semibold text-muted">Detalle de bienes y mercancías a transportar</span>
+                                <button type="button" class="btn btn-outline-primary btn-sm js-add-item">
+                                    <i class="bi bi-plus-lg me-1"></i>Agregar Ítem
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered align-middle mb-0" id="tablaItems">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 140px;">Código</th>
+                                            <th>Descripción</th>
+                                            <th style="width: 80px;">Unidad</th>
+                                            <th class="text-end" style="width: 100px;">Cantidad</th>
+                                            <th class="text-end" style="width: 110px;">P. Neto (kg)</th>
+                                            <th class="text-end" style="width: 110px;">P. Bruto (kg)</th>
+                                            <th class="text-center" style="width: 60px;">Quitar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Filas dinámicas -->
+                                    </tbody>
+                                    <tfoot class="table-light fw-bold">
+                                        <tr>
+                                            <td colspan="5" class="text-end">Peso Bruto Total (kg):</td>
+                                            <td class="text-end font-monospace" id="totalPesoBruto">0.00</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary btn-sm" id="btnGuardarGuia">
+                            <i class="bi bi-save me-1"></i> Guardar Guía
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Selector de Movimiento de Almacén -->
+<div class="modal fade" id="modalBuscarMovimiento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header py-2 bg-light">
+                <h6 class="modal-title fw-bold"><i class="bi bi-search me-1"></i> Seleccionar Movimiento de Almacén</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="input-group input-group-sm mb-3">
+                    <input type="text" class="form-control" id="searchMovimientoInput" placeholder="Buscar por código de movimiento o destinatario..." />
+                    <button type="button" class="btn btn-primary" id="btnEjecutarBuscarMovimiento">Buscar</button>
+                </div>
+                <div class="table-responsive" style="max-height: 350px;">
+                    <table class="table table-sm table-hover border" id="tablaBuscarMovimientos">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Fecha / Proveedor</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

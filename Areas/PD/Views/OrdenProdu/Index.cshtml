@@ -1,0 +1,566 @@
+@model OrdenProduccionPageModel
+@{
+    ViewData["Title"] = "Órdenes de producción";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-gear-wide-connected text-primary me-2"></i>Órdenes de producción
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Gestión técnica, seguimiento de productos y subprocesos operativos · @ViewBag.SedeNombre</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="PD" asp-controller="RutaProduccion" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm" title="Configurar rutas de producción">
+                    <i class="bi bi-signpost-split me-1"></i>Rutas de Producción
+                </a>
+                @if (canWrite)
+                {
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm js-op-new">
+                        <i class="bi bi-plus-lg me-1"></i>Nueva Orden
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="op-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="N° OP, Cotización, Cliente..." aria-label="Buscar orden" />
+                        </div>
+
+                        <div class="input-group input-group-sm w-auto">
+                            <span class="input-group-text bg-body-tertiary">Desde</span>
+                            <input type="date" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" class="form-control" />
+                        </div>
+
+                        <div class="input-group input-group-sm w-auto">
+                            <span class="input-group-text bg-body-tertiary">Hasta</span>
+                            <input type="date" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" class="form-control" />
+                        </div>
+
+                        <select name="estadoOrdenProduccionId" class="form-select form-select-sm w-auto" aria-label="Estado Orden">
+                            <option value="">Todos los estados</option>
+                            @foreach (var est in Model.Estados)
+                            {
+                                <option value="@est.Id" selected="@(Model.EstadoOrdenProduccionId == est.Id)">@est.Descripcion</option>
+                            }
+                        </select>
+
+                        <div class="form-check form-check-inline form-switch ms-1 mb-0">
+                            <input class="form-check-input" type="checkbox" name="mostrarAnulados" value="true" id="chk-anulados" @(Model.MostrarAnulados ? "checked" : "") onchange="this.form.submit()" />
+                            <label class="form-check-label small" for="chk-anulados">Ver anulados</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Buscar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 erp-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 90px;">
+                                    <a asp-action="Index"
+                                       asp-route-sort="codigo"
+                                       asp-route-dir="@(Model.Sort == "codigo" && Model.Dir == "asc" ? "desc" : "asc")"
+                                       asp-route-search="@Model.Search"
+                                       asp-route-fechaDesde="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))"
+                                       asp-route-fechaHasta="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))"
+                                       asp-route-estadoOrdenProduccionId="@Model.EstadoOrdenProduccionId"
+                                       asp-route-mostrarAnulados="@Model.MostrarAnulados"
+                                       asp-route-top="@Model.PageSize"
+                                       class="text-decoration-none text-dark">
+                                        N° OP
+                                        @if (Model.Sort == "codigo") { <i class="bi bi-arrow-@(Model.Dir == "asc" ? "up" : "down")"></i> }
+                                    </a>
+                                </th>
+                                <th style="width: 100px;">
+                                    <a asp-action="Index"
+                                       asp-route-sort="fecha"
+                                       asp-route-dir="@(Model.Sort == "fecha" && Model.Dir == "asc" ? "desc" : "asc")"
+                                       asp-route-search="@Model.Search"
+                                       asp-route-fechaDesde="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))"
+                                       asp-route-fechaHasta="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))"
+                                       asp-route-estadoOrdenProduccionId="@Model.EstadoOrdenProduccionId"
+                                       asp-route-mostrarAnulados="@Model.MostrarAnulados"
+                                       asp-route-top="@Model.PageSize"
+                                       class="text-decoration-none text-dark">
+                                        Fecha
+                                        @if (Model.Sort == "fecha") { <i class="bi bi-arrow-@(Model.Dir == "asc" ? "up" : "down")"></i> }
+                                    </a>
+                                </th>
+                                <th style="width: 90px;">#Pedido</th>
+                                <th>Cliente</th>
+                                <th>Vendedor</th>
+                                <th style="width: 110px;">Fecha Entr.</th>
+                                <th>Planos</th>
+                                <th>Estado Insumo</th>
+                                <th class="text-center" style="width: 60px;">#Mod.</th>
+                                <th style="width: 110px;">Estado</th>
+                                <th class="text-end" style="width: 140px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="11" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                        No se encontraron órdenes de producción con los filtros seleccionados.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in Model.Items)
+                            {
+                                bool isAnulado = item.Estado == "I";
+                                <tr class="@(isAnulado ? "table-danger text-muted" : "")">
+                                    <td class="fw-bold font-monospace">@item.Codigo</td>
+                                    <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.CotizacionCodigo))
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary font-monospace">@item.CotizacionCodigo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-truncate" style="max-width: 240px;" title="@item.ClienteRazonSocial">@item.ClienteRazonSocial</div>
+                                        <small class="text-muted">@item.ClienteDocumento</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-truncate d-inline-block" style="max-width: 140px;" title="@item.VendedorNombre">@(item.VendedorNombre ?? "-")</small>
+                                    </td>
+                                    <td>
+                                        @if (item.FechaEntrega.HasValue)
+                                        {
+                                            <span>@item.FechaEntrega.Value.ToString("dd/MM/yy HH:mm")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            @if (!string.IsNullOrEmpty(item.EstadoPlanoMelNombre))
+                                            {
+                                                <span class="badge bg-info-subtle text-info me-1" title="Plano Melamina">Mel: @item.EstadoPlanoMelNombre</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.EstadoPlanoMdfNombre))
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning" title="Plano MDF">MDF: @item.EstadoPlanoMdfNombre</span>
+                                            }
+                                            @if (string.IsNullOrEmpty(item.EstadoPlanoMelNombre) && string.IsNullOrEmpty(item.EstadoPlanoMdfNombre))
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">@(item.EstadoDespachoNombre ?? "PENDIENTE")</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill bg-body-secondary text-body">@item.Modificaciones</span>
+                                    </td>
+                                    <td>
+                                        @if (isAnulado)
+                                        {
+                                            <span class="badge bg-danger">ANULADA</span>
+                                        }
+                                        else
+                                        {
+                                            string badgeBg = item.EstadoOrdenProduccionId switch
+                                            {
+                                                1 => "bg-warning text-dark",
+                                                2 => "bg-primary",
+                                                3 => "bg-success",
+                                                _ => "bg-secondary"
+                                            };
+                                            <span class="badge @badgeBg">@item.EstadoOrdenProduccionNombre</span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-outline-primary btn-sm js-op-edit" data-id="@item.Id" title="Ver / Editar Orden">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-info btn-sm js-op-status" data-id="@item.Id" data-mel="@item.EstadoPlanoMelId" data-mdf="@item.EstadoPlanoMdfId" data-com="@item.Comentarios" data-mod="@item.Modificaciones" title="Cambiar Estado Planos">
+                                            <i class="bi bi-sliders"></i>
+                                        </button>
+                                        @if (canWrite && !isAnulado)
+                                        {
+                                            <button type="button" class="btn btn-outline-danger btn-sm js-op-delete" data-id="@item.Id" data-codigo="@item.Codigo" title="Anular Orden">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-transparent py-2 px-3 border-top">
+                    <partial name="_ListadoPaginacion" model="Model" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Principal: Edición / Detalle de Orden de Producción -->
+<div class="modal fade" id="modal-op" tabindex="-1" aria-labelledby="modalOpLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalOpLabel">
+                    <i class="bi bi-gear-fill text-primary me-2"></i><span id="modal-op-title">Orden de Producción</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <form id="form-op-header">
+                    <input type="hidden" id="op-id" name="id" value="0" />
+                    <input type="hidden" id="op-contexto" name="contextoId" value="@ViewBag.PeriodoEmpresaSedeId" />
+                    <input type="hidden" id="op-revision" name="revision" value="" />
+
+                    <!-- Tabs de la Orden -->
+                    <ul class="nav nav-tabs px-3 pt-3 bg-light border-bottom" id="opTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="op-general-tab" data-bs-toggle="tab" data-bs-target="#op-general-pane" type="button" role="tab">
+                                <i class="bi bi-card-heading me-1"></i>General
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="op-productos-tab" data-bs-toggle="tab" data-bs-target="#op-productos-pane" type="button" role="tab">
+                                <i class="bi bi-box-seam me-1"></i>Productos / Servicios <span class="badge bg-secondary rounded-pill ms-1" id="badge-prod-count">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="op-procesos-tab" data-bs-toggle="tab" data-bs-target="#op-procesos-pane" type="button" role="tab">
+                                <i class="bi bi-diagram-3 me-1"></i>Subprocesos / Ruta <span class="badge bg-secondary rounded-pill ms-1" id="badge-proc-count">0</span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content p-3" id="opTabsContent">
+                        <!-- Pestaña General -->
+                        <div class="tab-pane fade show active" id="op-general-pane" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Código OP</label>
+                                    <input type="text" id="op-codigo" class="form-control form-control-sm font-monospace fw-bold" readonly placeholder="Autogenerado" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Fecha de Registro</label>
+                                    <input type="date" id="op-fecha" name="fecha" class="form-control form-control-sm" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Fecha / Hora Entrega</label>
+                                    <input type="datetime-local" id="op-fecha-entrega" name="fechaEntrega" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Almacén</label>
+                                    <select id="op-almacen" name="almacenId" class="form-select form-select-sm" required></select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Cliente / Proveedor</label>
+                                    <select id="op-proveedor" name="proveedorId" class="form-select form-select-sm" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Ruta de Producción</label>
+                                    <select id="op-ruta" name="rutaProduccionId" class="form-select form-select-sm">
+                                        <option value="">(Sin ruta predeterminada)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Estado Actual</label>
+                                    <input type="text" id="op-estado-nombre" class="form-control form-control-sm" readonly />
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold">Observaciones Generales</label>
+                                    <textarea id="op-observacion" name="observacion" rows="2" maxlength="400" class="form-control form-control-sm" placeholder="Instrucciones o detalles de producción..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pestaña Productos -->
+                        <div class="tab-pane fade" id="op-productos-pane" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small text-muted">Items producidos y consumidos en la orden</span>
+                                <button type="button" class="btn btn-outline-primary btn-sm js-prod-add" id="btn-add-prod">
+                                    <i class="bi bi-plus-circle me-1"></i>Agregar Producto
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered align-middle" id="table-op-productos">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Descripción</th>
+                                            <th>Nota Detalle</th>
+                                            <th class="text-end" style="width: 100px;">Cantidad</th>
+                                            <th class="text-end" style="width: 100px;">Entregado</th>
+                                            <th class="text-center" style="width: 70px;">U.M.</th>
+                                            <th style="width: 100px;">Insumo</th>
+                                            <th class="text-end" style="width: 80px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-op-productos">
+                                        <tr><td colspan="8" class="text-center text-muted py-3">No hay productos registrados.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Pestaña Subprocesos -->
+                        <div class="tab-pane fade" id="op-procesos-pane" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small text-muted">Secuencia y asignación técnica de operaciones</span>
+                                <button type="button" class="btn btn-outline-primary btn-sm js-subp-add" id="btn-add-subp">
+                                    <i class="bi bi-plus-circle me-1"></i>Agregar Subproceso
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered align-middle" id="table-op-subprocesos">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-center" style="width: 50px;">#</th>
+                                            <th>Subproceso</th>
+                                            <th>Operador / Personal</th>
+                                            <th>Máquina</th>
+                                            <th style="width: 120px;">Inicio</th>
+                                            <th style="width: 120px;">Fin</th>
+                                            <th style="width: 110px;">Estado</th>
+                                            <th class="text-end" style="width: 80px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-op-subprocesos">
+                                        <tr><td colspan="8" class="text-center text-muted py-3">No hay subprocesos asignados.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary btn-sm js-op-save" id="btn-save-op">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Orden
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cambiar Estado / Planos -->
+<div class="modal fade" id="modal-op-estado" tabindex="-1" aria-labelledby="modalOpEstadoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalOpEstadoLabel">
+                    <i class="bi bi-sliders text-info me-2"></i>Actualizar Estado y Planos
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-op-estado">
+                    <input type="hidden" id="estado-op-id" name="ordenProduccionId" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Estado Plano Melamina</label>
+                        <select id="estado-plano-mel" name="estadoPlanoMelId" class="form-select form-select-sm"></select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Estado Plano MDF</label>
+                        <select id="estado-plano-mdf" name="estadoPlanoMdfId" class="form-select form-select-sm"></select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">N° Modificaciones</label>
+                        <input type="number" id="estado-modificaciones" name="modificaciones" min="0" class="form-control form-control-sm" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Comentarios Técnicos</label>
+                        <textarea id="estado-comentarios" name="comentarios" rows="3" maxlength="150" class="form-control form-control-sm" placeholder="Observaciones de planos o modificaciones..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-info btn-sm text-white js-save-estado" id="btn-save-estado">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar / Editar Producto en OP -->
+<div class="modal fade" id="modal-op-item-prod" tabindex="-1" aria-labelledby="modalOpProdLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold" id="modalOpProdLabel">
+                    <i class="bi bi-box-seam text-primary me-2"></i>Producto de Orden
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-op-item-prod">
+                    <input type="hidden" id="prod-item-id" name="id" value="0" />
+                    <input type="hidden" id="prod-item-op-id" name="ordenProduccionId" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Producto ID</label>
+                        <input type="number" id="prod-item-producto-id" name="productoId" class="form-control form-control-sm" required />
+                        <small class="text-muted">Ingrese el ID del producto maestro a incorporar.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Descripción / Detalle</label>
+                        <input type="text" id="prod-item-desc" name="descripcion" maxlength="150" class="form-control form-control-sm" />
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Cantidad</label>
+                            <input type="number" id="prod-item-cant" name="cantidad" step="0.0001" min="0.0001" class="form-control form-control-sm" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Entregado</label>
+                            <input type="number" id="prod-item-entregado" name="cantidadEntregada" step="0.0001" min="0" value="0" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Entregado A</label>
+                        <input type="text" id="prod-item-entrega-a" name="entregadoA" maxlength="100" class="form-control form-control-sm" />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm js-save-item-prod" id="btn-save-item-prod">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Item
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar / Editar Subproceso en OP -->
+<div class="modal fade" id="modal-op-item-subp" tabindex="-1" aria-labelledby="modalOpSubpLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold" id="modalOpSubpLabel">
+                    <i class="bi bi-diagram-3 text-primary me-2"></i>Subproceso de Producción
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-op-item-subp">
+                    <input type="hidden" id="subp-item-id" name="id" value="0" />
+                    <input type="hidden" id="subp-item-op-id" name="ordenProduccionId" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Subproceso ID</label>
+                        <input type="number" id="subp-item-subproceso-id" name="subProcesoProduccionId" class="form-control form-control-sm" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Operador / Personal</label>
+                        <select id="subp-item-personal" name="personalId" class="form-select form-select-sm">
+                            <option value="">(Sin asignar)</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Máquina Programada</label>
+                            <select id="subp-item-maquina" name="maquinaId" class="form-select form-select-sm">
+                                <option value="">(Sin asignar)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Máquina Real</label>
+                            <select id="subp-item-maquina-real" name="maquinaRealId" class="form-select form-select-sm">
+                                <option value="">(Sin asignar)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Fecha / Hora Inicio</label>
+                            <input type="datetime-local" id="subp-item-inicio" name="fechaInicio" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Fecha / Hora Fin</label>
+                            <input type="datetime-local" id="subp-item-fin" name="fechaFin" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Observaciones</label>
+                        <textarea id="subp-item-obs" name="observacion" rows="2" maxlength="400" class="form-control form-control-sm"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm js-save-item-subp" id="btn-save-item-subp">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Subproceso
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/orden-produccion.js" asp-append-version="true"></script>
+}

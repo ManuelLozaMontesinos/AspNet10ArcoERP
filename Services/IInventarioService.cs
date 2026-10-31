@@ -37,4 +37,66 @@ public interface IInventarioService
     Task<(bool success, string message, int id)> SaveConfiguracionAsync(int almacenId, AlmacenConfiguracionModel model, int empresaId, int userId);
     Task<(bool success, string message, int id)> AgregarSerieAsync(int almacenId, int documentoSerieId, int empresaId, int userId);
     Task<(bool success, string message, int id)> AnularSerieAsync(int almacenId, int id, int empresaId, int userId);
+    Task<MovAlmacenPageModel> GetMovimientosAlmacenAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, int? tipoMovimientoAlmacenId = null, int? transaccionAlmacenId = null, int? estadoMovimientoAlmacenId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<MovAlmacenDetalleModel?> GetMovimientoAlmacenDetalleAsync(int empresaId, int contextoId, int id);
+    Task<List<LookupItemModel>> GetTransaccionesPorAlmacenTipoAsync(int empresaId, int almacenId, int tipoMovimientoId);
+    Task<List<LookupItemModel>> BuscarProductosAlmacenAsync(int empresaId, string? search);
+    Task<List<LookupItemModel>> BuscarProveedoresAlmacenAsync(int empresaId, string? search);
+    Task<(bool success, string message, int id)> SaveMovimientoAlmacenAsync(int empresaId, int contextoId, int userId, MovAlmacenGuardarSolicitud model);
+    Task<(bool success, string message, int id)> AnularMovimientoAlmacenAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<List<MovAlmacenProductoItemModel>> GetMovimientoAlmacenProductosAsync(int empresaId, int movimientoAlmacenId);
+    Task<(bool success, string message, int id)> SaveMovimientoAlmacenProductoAsync(int empresaId, int contextoId, int userId, MovAlmacenProductoGuardarSolicitud model);
+    Task<(bool success, string message, int id)> EliminarMovimientoAlmacenProductoAsync(int empresaId, int contextoId, int userId, int id);
+    Task<(string Titulo, byte[] Contenido)> ExportarMovimientoAlmacenExcelAsync(int empresaId, int movimientoAlmacenId);
+    Task<TransfeSalidaPageModel> GetTransferenciasSalidaAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, int? almacenDestinoId = null, int? estadoMovimientoAlmacenId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<MovAlmacenDetalleModel?> GetTransferenciaSalidaDetalleAsync(int empresaId, int contextoId, int id);
+    Task<(bool success, string message, int id)> SaveTransferenciaSalidaAsync(int empresaId, int contextoId, int userId, TransfeSalidaGuardarSolicitud model);
+    Task<(bool success, string message, int id)> AnularTransferenciaSalidaAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<TransfeIngresoPageModel> GetTransferenciasIngresoAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenOrigenId = null, int? estadoMovimientoAlmacenId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<(bool success, string message, int id)> RecepcionarTransferenciaAsync(int empresaId, int contextoId, int userId, RecepcionarTransferenciaSolicitud model);
+    Task<ConsumoIntPageModel> GetConsumosInternosAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, int? centroCostoId = null, int? personalId = null, int? estadoAprobacionId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<MovAlmacenDetalleModel?> GetConsumoInternoDetalleAsync(int empresaId, int contextoId, int id);
+    Task<(bool success, string message, int id)> SaveConsumoInternoAsync(int empresaId, int contextoId, int userId, ConsumoIntGuardarSolicitud model);
+    Task<(bool success, string message, int id)> AnularConsumoInternoAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<(bool success, string message, int id)> SolicitarAprobacionConsumoInternoAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<ConsumoIntAutoPageModel> GetConsumosInternosAutoAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, int? centroCostoId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<(bool success, string message, int id)> AprobarConsumoInternoAsync(int empresaId, int contextoId, int userId, AprobarConsumoIntSolicitud model);
+    Task<(bool success, string message, int id)> DesaprobarConsumoInternoAsync(int empresaId, int contextoId, int userId, DesaprobarConsumoIntSolicitud model);
+    Task<List<LookupItemModel>> BuscarPersonalAlmacenAsync(int empresaId, string? search);
+
+    Task<ControlMermaPageModel> GetControlMermasAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, int? tipoMovimientoAlmacenId = null, int? estadoAprobacionId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<MovAlmacenDetalleModel?> GetControlMermaDetalleAsync(int empresaId, int contextoId, int id);
+    Task<(bool success, string message, int id)> SaveControlMermaAsync(int empresaId, int contextoId, int userId, ControlMermaGuardarSolicitud model);
+    Task<(bool success, string message, int id)> AnularControlMermaAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<(bool success, string message, int id)> SolicitarAprobacionControlMermaAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<ControlMermaAutoPageModel> GetControlMermasAutoAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, int? tipoMovimientoAlmacenId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<(bool success, string message, int id)> AprobarControlMermaAsync(int empresaId, int contextoId, int userId, AprobarControlMermaSolicitud model);
+    Task<(bool success, string message, int id)> DesaprobarControlMermaAsync(int empresaId, int contextoId, int userId, DesaprobarControlMermaSolicitud model);
+
+    Task<ReclasItemPageModel> GetReclasItemsAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, int? estadoId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<ReclasItemDetalleModel?> GetReclasItemDetalleAsync(int empresaId, int contextoId, int id);
+    Task<List<LookupItemModel>> BuscarMovimientosParaReclasificarAsync(int empresaId, int contextoId, int almacenId, string? search = null);
+    Task<(bool success, string message, int id)> SaveReclasItemAsync(int empresaId, int contextoId, int userId, ReclasItemGuardarSolicitud model);
+    Task<(bool success, string message, int id)> AnularReclasItemAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<(bool success, string message, int id)> SolicitarAprobacionReclasItemAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<List<ReclasItemProductoModel>> GetReclasItemProductosAsync(int empresaId, int movimientoAlmacenId);
+    Task<(bool success, string message, int id)> SaveReclasItemProductoAsync(int empresaId, int contextoId, int userId, ReclasItemProductoGuardarSolicitud model);
+    Task<ReclasItemAutoPageModel> GetReclasItemsAutoAsync(int empresaId, int contextoId, string? search = null, string? codigo = null, int? almacenId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<(bool success, string message, int id)> AprobarReclasItemAsync(int empresaId, int contextoId, int userId, AprobarReclasItemSolicitud model);
+    Task<(bool success, string message, int id)> DesaprobarReclasItemAsync(int empresaId, int contextoId, int userId, DesaprobarReclasItemSolicitud model);
+
+    // Guías de Remisión de Inventario
+    Task<GuiaRemiPageModel> GetGuiasRemisionAsync(int empresaId, int contextoId, int? almacenId = null, string? codigo = null, string? search = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? estadoGuiaId = null, int? estadoAprobacionId = null, int? motivoTrasladoId = null, bool esInterno = true, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<GuiaRemiDetalleModel?> GetGuiaRemisionDetalleAsync(int empresaId, int contextoId, int id, bool esInterno = true);
+    Task<List<LookupItemModel>> GetSeriesGuiaPorAlmacenAsync(int almacenId);
+    Task<List<LookupItemModel>> GetConductoresPorTransportistaAsync(int transportistaId);
+    Task<List<LookupItemModel>> GetUnidadesPorTransportistaAsync(int transportistaId);
+    Task<List<LookupItemModel>> BuscarMovimientosParaGuiaAsync(int empresaId, int contextoId, int almacenId, string? search = null);
+    Task<List<GuiaRemiProductoModel>> GetProductosDeMovimientoParaGuiaAsync(int movimientoAlmacenId);
+    Task<(bool success, string message, int id)> SaveGuiaRemisionAsync(int empresaId, int contextoId, int userId, GuiaRemiGuardarSolicitud model);
+    Task<(bool success, string message, int id)> AnularGuiaRemisionAsync(int empresaId, int contextoId, int userId, GuiaRemiAnularSolicitud model);
+    Task<(bool success, string message, int id)> SolicitarAprobacionGuiaRemisionAsync(int empresaId, int contextoId, int userId, int id, string revision);
+    Task<GuiaRemiAutoPageModel> GetGuiasRemisionAutoAsync(int empresaId, int contextoId, int? almacenId = null, string? codigo = null, string? search = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? motivoTrasladoId = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<(bool success, string message, int id)> AprobarGuiaRemisionAsync(int empresaId, int contextoId, int userId, AprobarGuiaRemiSolicitud model);
+    Task<(bool success, string message, int id)> DesaprobarGuiaRemisionAsync(int empresaId, int contextoId, int userId, DesaprobarGuiaRemiSolicitud model);
 }

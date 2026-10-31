@@ -1,0 +1,22 @@
+@model AspNet10ArcoERP.Models.SidebarNavigationItem
+@{
+    bool folder = Model.Children.Count > 0;
+    bool active = Model.IsActive(ViewContext.RouteData.Values["area"]?.ToString(), ViewContext.RouteData.Values["controller"]?.ToString());
+}
+<li class="nav-item @(folder && active ? "menu-open" : "")">
+    @if(folder)
+    {
+        <a href="#" class="nav-link @(active ? "active" : "")">
+            <i class="nav-icon bi @Model.Icon"></i><p>@Model.Title<i class="nav-arrow bi bi-chevron-right"></i></p>
+        </a>
+        <ul class="nav nav-treeview @(Model.IsArea ? "ps-2" : "ps-3")">
+            @foreach(var child in Model.Children){<partial name="_SidebarNavigationItem" model="child" />}
+        </ul>
+    }
+    else
+    {
+        <a asp-area="@Model.Area" asp-controller="@Model.Controller" asp-action="Index" class="nav-link @(active ? "active" : "")" aria-current="@(active ? "page" : null)">
+            <i class="nav-icon bi @Model.Icon"></i><p>@Model.Title</p>
+        </a>
+    }
+</li>

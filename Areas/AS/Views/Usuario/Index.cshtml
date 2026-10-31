@@ -1,0 +1,270 @@
+@model UsuarioPageModel
+@{
+    ViewData["Title"] = "Usuarios";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-people-fill text-primary me-2"></i>Usuarios
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Administración de cuentas, accesos y credenciales de usuario</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="AS" asp-controller="Rol" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-shield-lock me-1"></i>Roles y Permisos
+                </a>
+                @if (canWrite)
+                {
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm js-user-new">
+                        <i class="bi bi-plus-lg me-1"></i>Nuevo Usuario
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="user-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="Login, nombre, email..." aria-label="Buscar usuario" />
+                        </div>
+
+                        <select name="estado" class="form-select form-select-sm w-auto" aria-label="Estado">
+                            <option value="">Todos los estados</option>
+                            <option value="A" selected="@(Model.Estado == "A")">Activos</option>
+                            <option value="I" selected="@(Model.Estado == "I")">Inactivos</option>
+                        </select>
+
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Buscar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 erp-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 140px;">Usuario / Login</th>
+                                <th>Nombre Completo</th>
+                                <th>Email</th>
+                                <th class="text-center" style="width: 80px;">Roles</th>
+                                <th style="width: 110px;">Estado</th>
+                                <th class="text-end" style="width: 150px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                        No se encontraron usuarios registrados.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in Model.Items)
+                            {
+                                bool isActivo = item.Estado == "A";
+                                <tr class="@(isActivo ? "" : "table-secondary text-muted")">
+                                    <td class="fw-bold font-monospace">@item.UsuarioLogon</td>
+                                    <td class="fw-semibold">@item.NombreCompleto</td>
+                                    <td>
+                                        <a href="mailto:@item.Email" class="text-decoration-none">@item.Email</a>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill bg-body-secondary text-body">@item.CantidadRoles</span>
+                                    </td>
+                                    <td>
+                                        @if (isActivo)
+                                        {
+                                            <span class="badge bg-success">ACTIVO</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">INACTIVO</span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-outline-primary btn-sm js-user-edit" data-id="@item.Id" title="Editar Usuario">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-warning btn-sm js-user-psw" data-id="@item.Id" data-logon="@item.UsuarioLogon" title="Cambiar Contraseña">
+                                            <i class="bi bi-key"></i>
+                                        </button>
+                                        @if (canWrite)
+                                        {
+                                            @if (isActivo)
+                                            {
+                                                <button type="button" class="btn btn-outline-danger btn-sm js-user-toggle" data-id="@item.Id" data-estado="I" data-logon="@item.UsuarioLogon" title="Deshabilitar Usuario">
+                                                    <i class="bi bi-person-x"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-outline-success btn-sm js-user-toggle" data-id="@item.Id" data-estado="A" data-logon="@item.UsuarioLogon" title="Habilitar Usuario">
+                                                    <i class="bi bi-person-check"></i>
+                                                </button>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-transparent py-2 px-3 border-top">
+                    <partial name="_ListadoPaginacion" model="Model" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edición / Alta de Usuario -->
+<div class="modal fade" id="modal-user" tabindex="-1" aria-labelledby="modalUserLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalUserLabel">
+                    <i class="bi bi-person-fill text-primary me-2"></i><span id="modal-user-title">Usuario</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-user">
+                    <input type="hidden" id="user-id" name="id" value="0" />
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Usuario / Login</label>
+                            <input type="text" id="user-logon" name="usuarioLogon" maxlength="30" class="form-control form-control-sm font-monospace" required />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">Nombre Completo</label>
+                            <input type="text" id="user-nombre" name="nombreCompleto" maxlength="100" class="form-control form-control-sm" required />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Correo Electrónico</label>
+                            <input type="email" id="user-email" name="email" maxlength="50" class="form-control form-control-sm" required />
+                        </div>
+                        <div class="col-md-6" id="div-user-psw">
+                            <label class="form-label small fw-bold">Contraseña Inicial</label>
+                            <input type="password" id="user-password" name="password" maxlength="100" class="form-control form-control-sm" placeholder="Mínimo 6 caracteres" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="user-cambiar-psw" name="cambiarPswProximo" value="true" />
+                                <label class="form-check-label small" for="user-cambiar-psw">Debe cambiar contraseña al iniciar</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="user-no-expira" name="noExpira" value="true" checked />
+                                <label class="form-check-label small" for="user-no-expira">La contraseña nunca expira</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Roles y Perfiles de Acceso</label>
+                        <div id="roles-checkboxes" class="row g-2 p-2 border rounded bg-light" style="max-height: 180px; overflow-y: auto;">
+                            <!-- Dinámico -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm js-btn-save-user" id="btn-save-user">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Usuario
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cambiar Contraseña -->
+<div class="modal fade" id="modal-psw" tabindex="-1" aria-labelledby="modalPswLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalPswLabel">
+                    <i class="bi bi-key-fill text-warning me-2"></i>Cambiar Contraseña
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-psw">
+                    <input type="hidden" id="psw-user-id" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Usuario</label>
+                        <input type="text" id="psw-user-logon" class="form-control form-control-sm font-monospace fw-bold" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nueva Contraseña</label>
+                        <input type="password" id="psw-nueva" class="form-control form-control-sm" required minlength="4" maxlength="100" placeholder="Ingrese nueva contraseña..." />
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="psw-forzar" checked />
+                        <label class="form-check-label small" for="psw-forzar">Exigir cambio de contraseña en próximo inicio de sesión</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning btn-sm text-dark js-btn-save-psw" id="btn-save-psw">
+                    <i class="bi bi-check-lg me-1"></i>Actualizar Contraseña
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/as-usuario.js" asp-append-version="true"></script>
+}
+

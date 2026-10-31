@@ -1,0 +1,379 @@
+@model ReclasItemPageModel
+@{
+    ViewData["Title"] = "Reclasificación de items";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-arrow-repeat text-primary me-2"></i>Reclasificación de Items
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Conversión y reclasificación de productos sobre despachos o movimientos existentes · @ViewBag.SedeNombre</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="IV" asp-controller="ReclasItemAuto" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm" title="Ir a autorización de reclasificación">
+                    <i class="bi bi-shield-check me-1"></i>Autorizaciones
+                </a>
+                @if (canWrite)
+                {
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm js-recla-new">
+                        <i class="bi bi-plus-lg me-1"></i>Nueva Reclasificación
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="recla-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="N° Reclasif, movimiento, cliente..." aria-label="Buscar reclasificación" />
+                        </div>
+
+                        <select name="almacenId" class="form-select form-select-sm w-auto" aria-label="Almacén">
+                            <option value="">Almacén: Todos</option>
+                            @foreach (var alm in Model.Almacenes)
+                            {
+                                <option value="@alm.Id" selected="@(Model.AlmacenId == alm.Id)">@alm.Nombre</option>
+                            }
+                        </select>
+
+                        <select name="estadoId" class="form-select form-select-sm w-auto" aria-label="Estado">
+                            <option value="">Estado: Todos</option>
+                            @foreach (var est in Model.Estados)
+                            {
+                                <option value="@est.Id" selected="@(Model.EstadoId == est.Id)">@est.Nombre</option>
+                            }
+                        </select>
+
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="small text-muted">Desde:</span>
+                            <input type="date" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm w-auto" />
+                            <span class="small text-muted">Hasta:</span>
+                            <input type="date" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm w-auto" />
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i>Buscar</button>
+                        <a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="table-responsive table-scroll">
+                <table class="table table-striped table-hover align-middle mb-0" data-erp-grid="main" data-erp-options>
+                    <thead class="table-header-custom bg-body-tertiary border-bottom">
+                        <tr>
+                            <th erp-sort="codigo" style="width: 120px;">N° Reclasif.</th>
+                            <th erp-sort="fecha" style="width: 105px;">Fecha</th>
+                            <th erp-sort="almacen" style="width: 160px;">Almacén</th>
+                            <th erp-sort="movimiento" style="width: 130px;">Movimiento</th>
+                            <th erp-sort="cliente">Cliente / Proveedor</th>
+                            <th class="text-center" style="width: 70px;">Items</th>
+                            <th erp-sort="estado" class="text-center" style="width: 140px;">Estado</th>
+                            <th class="listing-options">Opciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">No se encontraron reclasificaciones con los filtros aplicados.</td>
+                            </tr>
+                        }
+                        @foreach (var row in Model.Items)
+                        {
+                            <tr class="@(row.EsAnulado ? "text-decoration-line-through text-muted" : "")">
+                                <td class="font-monospace fw-bold text-primary">
+                                    <i class="bi bi-tag me-1"></i>@row.Codigo
+                                </td>
+                                <td>@row.FechaTexto</td>
+                                <td>
+                                    <div class="fw-semibold">@row.AlmacenNombre</div>
+                                </td>
+                                <td>
+                                    <span class="font-monospace fw-bold text-secondary">
+                                        <i class="bi bi-box-arrow-right me-1"></i>@row.MovimientoAlmacenCodigo
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="small fw-medium">@row.ClienteProveedorNombre</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill bg-body-secondary text-body fw-bold">@row.CantidadItems</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (row.EsBorrador)
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border">MOVIMIENTO</span>
+                                    }
+                                    else if (row.EsPendienteAprobacion)
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                            <i class="bi bi-clock me-1"></i>PENDIENTE
+                                        </span>
+                                    }
+                                    else if (row.EsAprobado)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-check2 me-1"></i>APROBADO
+                                        </span>
+                                    }
+                                    else if (row.EsDesaprobado)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                            <i class="bi bi-x-circle me-1"></i>DESAPROBADO
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-dark-subtle text-dark border">@row.EstadoMovimientoReclasificacionNombre</span>
+                                    }
+                                </td>
+                                <td class="listing-options">
+                                    <div class="btn-group btn-group-sm">
+                                        @if (canWrite && !row.EsAprobado && !row.EsAnulado)
+                                        {
+                                            <button type="button" class="btn btn-outline-primary js-recla-edit" data-id="@row.Id" title="Editar / Asignar items">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning js-recla-solicitar" data-id="@row.Id" data-codigo="@row.Codigo" data-revision="@row.Revision" data-contexto="@row.PeriodoEmpresaSedeId" title="Solicitar aprobación">
+                                                <i class="bi bi-send"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger js-recla-anular" data-id="@row.Id" data-codigo="@row.Codigo" data-revision="@row.Revision" data-contexto="@row.PeriodoEmpresaSedeId" title="Anular reclasificación">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-outline-secondary js-recla-view" data-id="@row.Id" title="Ver detalle">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <partial name="_ListadoPaginacion" model="Model" />
+        </div>
+    </div>
+</div>
+
+<!-- Modal Principal Reclasificación -->
+<div class="modal fade" id="recla-modal" tabindex="-1" aria-labelledby="recla-modal-title" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-body-tertiary">
+                <div>
+                    <h5 class="modal-title fw-bold" id="recla-modal-title">Reclasificación de Items</h5>
+                    <small id="recla-modal-subtitle" class="text-muted"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs px-3 pt-2 bg-body-tertiary border-bottom" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-semibold" id="tab-recla-hdr" data-bs-toggle="tab" data-bs-target="#panel-recla-hdr" type="button" role="tab">
+                            <i class="bi bi-info-circle me-1"></i>Datos de Reclasificación
+                        </button>
+                    </li>
+                    <li class="nav-item js-recla-tab-detail" role="presentation">
+                        <button class="nav-link fw-semibold" id="tab-recla-items" data-bs-toggle="tab" data-bs-target="#panel-recla-items" type="button" role="tab">
+                            <i class="bi bi-boxes me-1"></i>Items y Productos Destino
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-3">
+                    <!-- Panel 1: Cabecera -->
+                    <div class="tab-pane fade show active" id="panel-recla-hdr" role="tabpanel">
+                        <form id="recla-form" class="row g-3">
+                            <input type="hidden" name="Id" id="recla-id" value="0" />
+                            <input type="hidden" name="ContextoId" id="recla-contexto-id" value="@ViewBag.PeriodoEmpresaSedeId" />
+                            <input type="hidden" name="Revision" id="recla-revision" value="" />
+                            <input type="hidden" name="MovimientoAlmacenId" id="recla-mov-id" value="" />
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">N° Reclasificación</label>
+                                <input type="text" id="recla-codigo" class="form-control form-control-sm font-monospace fw-bold bg-body-tertiary" readonly placeholder="[Autogenerado]" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold required">Fecha</label>
+                                <input type="date" name="Fecha" id="recla-fecha" class="form-control form-control-sm" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold required">Almacén</label>
+                                <select name="AlmacenId" id="recla-almacen-id" class="form-select form-select-sm" required>
+                                    <option value="">-- Seleccionar almacén --</option>
+                                    @foreach (var alm in Model.Almacenes)
+                                    {
+                                        <option value="@alm.Id">@alm.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12 position-relative">
+                                <label class="form-label small fw-semibold required">Movimiento de Almacén a Reclasificar</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-body-tertiary"><i class="bi bi-box-arrow-right"></i></span>
+                                    <input type="text" id="recla-mov-search" class="form-control form-control-sm" placeholder="Buscar por N° movimiento o cliente/proveedor..." autocomplete="off" />
+                                </div>
+                                <div id="recla-mov-results" class="list-group position-absolute shadow-lg d-none mt-1" style="z-index: 1055; width: 95%; max-height: 200px; overflow-y: auto;"></div>
+                                <div id="recla-mov-selected" class="mt-1 p-2 bg-body-tertiary border rounded d-none">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="badge bg-primary font-monospace me-1" id="recla-mov-selected-code"></span>
+                                            <span class="small fw-semibold" id="recla-mov-selected-name"></span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0 js-recla-clear-mov" title="Quitar">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Observación / Justificación</label>
+                                <textarea name="Observacion" id="recla-obs" class="form-control form-control-sm" rows="3" maxlength="400" placeholder="Motivo o justificación de la reclasificación..."></textarea>
+                            </div>
+
+                            <div class="col-12 text-end pt-2 border-top">
+                                <button type="button" class="btn btn-outline-secondary btn-sm me-2" data-bs-dismiss="modal">Cerrar</button>
+                                @if (canWrite)
+                                {
+                                    <button type="submit" class="btn btn-primary btn-sm shadow-sm" id="btn-save-recla-hdr">
+                                        <i class="bi bi-save me-1"></i>Guardar y Asignar Productos
+                                    </button>
+                                }
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Panel 2: Detalle de Productos -->
+                    <div class="tab-pane fade" id="panel-recla-items" role="tabpanel">
+                        <div class="alert alert-info py-2 px-3 small mb-3">
+                            <i class="bi bi-info-circle me-1"></i>Para cada material original, configure el producto de reclasificación de destino y la cantidad correspondiente.
+                        </div>
+
+                        <div class="table-responsive border rounded-3 mb-2" style="max-height: 380px;">
+                            <table class="table table-sm table-hover align-middle mb-0" id="recla-items-table">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 110px;">Cód. Original</th>
+                                        <th>Producto Original</th>
+                                        <th class="text-center" style="width: 65px;">U.M.</th>
+                                        <th class="text-end" style="width: 100px;">Cant. Orig.</th>
+                                        <th style="width: 120px;">Cód. Reclasif.</th>
+                                        <th>Producto Destino</th>
+                                        <th class="text-center" style="width: 65px;">U.M.</th>
+                                        <th class="text-end" style="width: 105px;">Cant. Recl.</th>
+                                        <th class="text-center" style="width: 70px;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recla-items-tbody">
+                                    <tr><td colspan="9" class="text-center text-muted py-3">Seleccione un movimiento en la cabecera.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-body-tertiary">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Asignar Producto Destino -->
+<div class="modal fade" id="recla-item-modal" tabindex="-1" aria-labelledby="recla-item-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-body-tertiary">
+                <h6 class="modal-title fw-bold" id="recla-item-modal-title">Configurar Producto de Reclasificación</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="recla-item-modal-form" class="row g-3">
+                    <input type="hidden" id="recla-item-map-id" value="0" />
+                    <input type="hidden" id="recla-item-dest-id" value="" />
+
+                    <div class="col-12 p-2 bg-light rounded border">
+                        <small class="text-muted d-block">Producto Original</small>
+                        <strong id="recla-item-orig-name"></strong>
+                        <div class="small text-muted font-monospace" id="recla-item-orig-cant"></div>
+                    </div>
+
+                    <div class="col-12 position-relative">
+                        <label class="form-label small fw-semibold required">Producto Destino</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                            <input type="text" id="recla-item-dest-search" class="form-control" placeholder="Buscar código o descripción..." autocomplete="off" />
+                        </div>
+                        <div id="recla-item-dest-results" class="list-group position-absolute shadow-lg d-none mt-1" style="z-index: 1070; width: 100%; max-height: 220px; overflow-y: auto;"></div>
+                        <div id="recla-item-dest-selected" class="mt-1 p-2 bg-white border rounded d-none">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="badge bg-secondary font-monospace me-1" id="recla-item-dest-badge"></span>
+                                    <strong class="small" id="recla-item-dest-name-label"></strong>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 js-recla-clear-dest">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold required">Cantidad a Reclasificar</label>
+                        <input type="number" step="0.01" min="0.01" id="recla-item-dest-cant" class="form-control form-control-sm text-end fw-bold" placeholder="0.00" required />
+                    </div>
+
+                    <div class="col-12 text-end pt-2 border-top">
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-2" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-sm shadow-sm" id="btn-save-recla-dest">
+                            <i class="bi bi-check2 me-1"></i>Asignar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/reclas-item.js" asp-append-version="true"></script>
+}
+

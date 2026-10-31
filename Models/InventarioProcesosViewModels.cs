@@ -13,7 +13,7 @@ public class InventarioProcesoPageModel : ListadoPaginadoModel
     public List<LookupItemModel> Almacenes { get; set; } = new();
     public List<InventarioCierreRowModel> Items { get; set; } = new();
     public List<string> Errores { get; set; } = new();
-    public string Titulo => Tipo == "reproceso" ? "Reproceso de inventario" : "Apertura y cierre de almacenes";
+    public string Titulo => Tipo == "reproceso" ? "Reproceso de inventario" : (Tipo == "valorizacion" ? "Valorización de inventarios" : "Apertura y cierre de almacenes");
     public string Resumen => $"Ejercicio {Contexto.Anio} · {Contexto.Sede}";
 }
 

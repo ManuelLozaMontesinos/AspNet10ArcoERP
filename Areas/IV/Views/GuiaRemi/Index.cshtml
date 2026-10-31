@@ -1,0 +1,208 @@
+@model GuiaRemiPageModel
+@{
+    ViewData["Title"] = "Guías de remisión remitente";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-truck text-primary me-2"></i>Guías de remisión remitente
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Emisión y control de guías de remisión para traslados entre establecimientos y almacenes</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="IV" asp-controller="GuiaRemiAuto" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-shield-check me-1"></i>Autorizaciones
+                </a>
+                <a asp-area="IV" asp-controller="GuiaRemOtro" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Otros Motivos
+                </a>
+                <a asp-area="IV" asp-controller="RepoGuiaRemi" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-file-earmark-bar-graph me-1"></i>Reporte
+                </a>
+                @if (canWrite)
+                {
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm js-guia-new">
+                        <i class="bi bi-plus-lg me-1"></i>Nueva Guía
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="guia-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="Destinatario, RUC, transportista..." aria-label="Buscar guía" />
+                        </div>
+
+                        <input name="codigo" value="@Model.Codigo" class="form-control form-control-sm w-auto font-monospace" maxlength="30" placeholder="Serie o número..." />
+
+                        <select name="almacenId" class="form-select form-select-sm w-auto">
+                            <option value="">Todos los almacenes</option>
+                            @foreach (var alm in Model.Almacenes)
+                            {
+                                <option value="@alm.Id" selected="@(Model.AlmacenId == alm.Id)">@alm.Descripcion</option>
+                            }
+                        </select>
+
+                        <select name="motivoTrasladoId" class="form-select form-select-sm w-auto">
+                            <option value="">Todos los motivos</option>
+                            @foreach (var mt in Model.MotivosTraslado)
+                            {
+                                <option value="@mt.Id" selected="@(Model.MotivoTrasladoId == mt.Id)">@mt.Descripcion</option>
+                            }
+                        </select>
+
+                        <select name="estadoGuiaId" class="form-select form-select-sm w-auto">
+                            <option value="">Todos los estados</option>
+                            @foreach (var eg in Model.EstadosGuia)
+                            {
+                                <option value="@eg.Id" selected="@(Model.EstadoGuiaId == eg.Id)">@eg.Descripcion</option>
+                            }
+                        </select>
+
+                        <input type="date" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm w-auto" title="Fecha desde" />
+                        <input type="date" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm w-auto" title="Fecha hasta" />
+
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Buscar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 erp-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 130px;">Serie - Número</th>
+                                <th style="width: 95px;">Fecha</th>
+                                <th style="width: 95px;">Fec. Traslado</th>
+                                <th>Almacén / Movimiento</th>
+                                <th>Destinatario</th>
+                                <th style="width: 140px;">Motivo</th>
+                                <th>Transportista</th>
+                                <th class="text-end" style="width: 90px;">Peso (kg)</th>
+                                <th style="width: 100px;">Estado</th>
+                                <th style="width: 105px;">Aprobación</th>
+                                <th class="text-end" style="width: 125px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="11" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                        No se encontraron guías de remisión.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in Model.Items)
+                            {
+                                bool isActivo = item.Estado == "A";
+                                bool isEdicion = item.EstadoGuiaRemisionId == 1;
+                                <tr class="@(isActivo ? "" : "table-secondary text-muted")">
+                                    <td class="fw-bold font-monospace text-primary">@item.SerieNumero</td>
+                                    <td><small>@item.FechaTexto</small></td>
+                                    <td><small class="text-secondary">@item.FechaInicioTrasladoTexto</small></td>
+                                    <td>
+                                        <div class="fw-semibold">@item.AlmacenNombre</div>
+                                        @if (!string.IsNullOrWhiteSpace(item.MovimientoAlmacenCodigo))
+                                        {
+                                            <small class="text-muted"><i class="bi bi-box-seam me-1"></i>Mov: @item.MovimientoAlmacenCodigo</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@item.Destinatario</div>
+                                        <small class="text-muted">@item.DestinatarioDocumento</small>
+                                    </td>
+                                    <td><small class="badge bg-light text-dark border">@item.MotivoTraslado</small></td>
+                                    <td><small class="text-secondary">@(string.IsNullOrEmpty(item.Transportista) ? "TRANSPORTE PROPIO" : item.Transportista)</small></td>
+                                    <td class="text-end font-monospace">@item.PesoBrutoTotal.ToString("N2")</td>
+                                    <td>
+                                        <span class="badge @(item.EstadoGuiaRemisionId == 2 ? "bg-success-subtle text-success border border-success-subtle" : item.EstadoGuiaRemisionId == 4 ? "bg-danger-subtle text-danger border border-danger-subtle" : "bg-warning-subtle text-warning-emphasis border border-warning-subtle")">
+                                            @item.EstadoGuiaRemisionNombre
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (item.EstadoAprobacionId == 2)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check2 me-1"></i>Aprobada</span>
+                                        }
+                                        else if (item.EstadoAprobacionId == 3)
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-x me-1"></i>Rechazada</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-clock me-1"></i>Pendiente</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary js-guia-edit" data-id="@item.Id" title="Ver / Editar guía">
+                                                <i class="bi @(isEdicion ? "bi-pencil" : "bi-eye")"></i>
+                                            </button>
+                                            @if (canWrite && isEdicion && isActivo)
+                                            {
+                                                <button type="button" class="btn btn-outline-success js-guia-enviar-aproba" data-id="@item.Id" data-rev="@item.Revision" title="Enviar a aprobación">
+                                                    <i class="bi bi-send"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger js-guia-anular" data-id="@item.Id" data-rev="@item.Revision" title="Anular guía">
+                                                    <i class="bi bi-slash-circle"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-white border-top py-2 px-3">
+                    <partial name="_Paginacion" model="Model" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<partial name="_GuiaRemiModal" />
+
+@section Scripts {
+    <script src="~/js/guia-remi.js" asp-append-version="true"></script>
+}

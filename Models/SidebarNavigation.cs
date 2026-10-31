@@ -1,0 +1,112 @@
+namespace AspNet10ArcoERP.Models;
+
+public sealed record SidebarNavigationItem(string Title,string Icon,string? Area=null,string? Controller=null)
+{
+    public bool IsArea { get; init; }
+    public IReadOnlyList<SidebarNavigationItem> Children { get; init; } = Array.Empty<SidebarNavigationItem>();
+    public bool IsActive(string? area,string? controller) => Children.Count>0
+        ? Children.Any(child=>child.IsActive(area,controller))
+        : string.Equals(Area,area,StringComparison.OrdinalIgnoreCase)&&string.Equals(Controller,controller,StringComparison.OrdinalIgnoreCase);
+}
+
+public static class SidebarNavigation
+{
+    private static SidebarNavigationItem Link(string area,string controller,string title,string icon)=>new(title,icon,area,controller);
+    private static SidebarNavigationItem Group(string title,string icon,params SidebarNavigationItem[] items)=>new(title,icon){Children=items};
+    private static SidebarNavigationItem Area(string code,string title,string icon,params SidebarNavigationItem[] items)=>new(title,icon,code){IsArea=true,Children=items};
+
+    // Only migrated screens are linked. MG and RH retain their existing markup in the layout.
+    // Category and leaf ordering follows the legacy menu; new screens join the relevant category.
+    public static IReadOnlyList<SidebarNavigationItem> Areas { get; } = new[]
+    {
+        Area("CM","Compras","bi-bag-check text-info",
+            Group("Maestros","bi-person-badge-fill text-warning",
+                Link("CM","ProveCompra","Proveedores","bi-truck")),
+            Group("Procesos","bi-gear-fill text-success",
+                Link("CM","PuntoPedido","Punto de pedido","bi-cart-plus"),
+                Link("CM","PedidoCompra","Requerimientos de compra","bi-cart-check"),
+                Link("CM","OrdenCompra","Órdenes de compra","bi-file-earmark-check"),
+                Link("CM","ValorizaCompra","Valorización de compras","bi-receipt")),
+            Group("Autorizaciones","bi-shield-check",
+                Link("CM","PedidoComAuto","Autorización requerimiento","bi-shield-check"),
+                Link("CM","OrdenComAuto","Autorización orden de compra","bi-shield-check")),
+            Group("Reportes","bi-file-earmark-bar-graph-fill text-danger",Link("CM","RepoValorizaComprob","Valorización de comprobantes","bi-receipt"))),
+        Area("IV","Inventario","bi-boxes text-info",
+            Group("Maestros","bi-person-badge-fill text-warning",
+                Link("IV","Transaccion","Transacciones","bi-arrow-left-right"),Link("IV","Almacen","Almacenes","bi-buildings"),Link("IV","VolumenExisten","Volumen de existencias","bi-box-arrow-in-down")),
+            Group("Procesos","bi-gear-fill text-success",
+                Link("IV","MovAlmacen","Movimientos de almacén","bi-box-arrow-in-down-right"),
+                Group("Transferencias","bi-arrow-left-right",
+                    Link("IV","TransfeSalida","Transferencia de salida","bi-arrow-right-circle"),
+                    Link("IV","TransfeIngreso","Recepción de transferencia","bi-box-arrow-in-down")),
+                Link("IV","ConsumoInt","Consumo interno","bi-box-arrow-up"),
+                Link("IV","ControlMerma","Control de mermas","bi-trash3"),
+                Link("IV","ReclasItem","Reclasificación de items","bi-arrow-repeat"),
+                Group("Guías de remisión","bi-truck",
+                    Link("IV","GuiaRemi","Guías remitente","bi-truck"),
+                    Link("IV","GuiaRemOtro","Guías otros motivos","bi-box-arrow-up-right")),
+                Link("IV","ConsultaLlegada","Consulta de llegadas","bi-truck"),Link("IV","ConsultaSaldo","Consulta de saldos","bi-boxes"),
+                Group("Apertura/Cierre","bi-calendar-check",Link("IV","Reproceso","Reproceso de inventario","bi-arrow-repeat"),Link("IV","Valoriza","Valorización","bi-calculator"),Link("IV","ApeCierre","Apertura y cierre","bi-calendar-check"))),
+            Group("Autorizaciones","bi-shield-check",
+                Link("IV","ConsumoIntAuto","Autorización de consumo","bi-shield-check"),
+                Link("IV","ControlMermaAuto","Autorización de mermas","bi-shield-check"),
+                Link("IV","ReclasItemAuto","Autorización de reclasificación","bi-shield-check"),
+                Link("IV","GuiaRemiAuto","Autorización de guías","bi-shield-check")),
+            Group("Reportes","bi-file-earmark-bar-graph-fill text-danger",
+                Link("IV","RepoSaldoVal","Saldo valorizado","bi-cash-stack"),Link("IV","RepoKardex","Kardex de unidades","bi-journal-text"),Link("IV","RepoSaldo","Saldo de unidades","bi-box-seam"),
+                Link("IV","RepoMoviAlma","Reporte de movimientos","bi-list-columns"),Link("IV","RepoGuiaRemi","Reporte de guías de remisión","bi-truck"))),
+        Area("VT","Ventas","bi-cart-check text-success",
+            Group("Maestros","bi-person-badge-fill text-warning",
+                Link("VT","Vendedor","Vendedores","bi-person-badge"),Group("Lista de precios","bi-tags",Link("VT","ListaPrecio","Listas de precios","bi-tags"),Link("VT","GrupoCliente","Grupos de clientes","bi-people")),Link("VT","MedioPago","Medios de pago","bi-credit-card"),Link("VT","CortesGratis","Cortes gratis","bi-scissors")),
+            Group("Procesos","bi-gear-fill text-success",
+                Link("VT","Cotizacion","Cotizaciones","bi-file-earmark-text"),
+                Link("VT","Pedido","Pedidos","bi-bag-check"),
+                Group("Autorizaciones","bi-shield-check",Link("VT","CotizaAutoriza","Autorización cotización","bi-shield-check")),
+                Group("Comprobantes","bi-receipt",
+                    Link("VT","Comprobante","Comprobantes de pago","bi-receipt"),
+                    Link("VT","ComproAutoriza","Autorización comprobantes","bi-shield-check"),
+                    Link("VT","NotaCredito","Notas de crédito","bi-file-earmark-minus"),
+                    Link("VT","CanjeDocu","Canje de documentos","bi-arrow-left-right"),
+                    Link("VT","Detraccion","Detracciones","bi-bank")),
+                Link("VT","CuadroCosto","Cuadro de costos","bi-calculator"),
+                Group("Caja","bi-safe",
+                    Link("VT","CajaCobranza","Cobranza en caja","bi-cash-coin"),
+                    Link("VT","Caja","Cajas","bi-safe"))),
+            Group("Reportes","bi-file-earmark-bar-graph-fill text-danger",
+                Link("VT","RepoRegVentas","Registro de ventas","bi-journal-text"),
+                Link("VT","RepoVentaPorProd","Ventas por producto","bi-box-seam"),
+                Link("VT","RepoCanje","Canjes","bi-arrow-left-right"),Link("VT","RepoDocuReserva","Documentos con reserva","bi-box-seam"),Link("VT","RepoDocuTemporal","Documentos temporales","bi-receipt-cutoff"),
+                Link("VT","RepoLiquiCaja","Liquidación de caja","bi-cash-stack"),Link("VT","RepoPedidoProd","Pedidos por producto","bi-card-list"))),
+        Area("FE","Facturación Electrónica","bi-cloud-arrow-up-fill text-primary",
+            Group("Operaciones SUNAT BETA","bi-hdd-network text-info",
+                Link("FE","DocEmitido","Documentos emitidos","bi-cloud-arrow-up"),
+                Link("FE","ResumenDiario","Resumen diario boletas","bi-calendar-check"))),
+        Area("TS","Tesorería","bi-bank text-success",
+            Group("Maestros","bi-person-badge-fill text-warning",Link("TS","CuentaBanco","Cuentas bancarias","bi-credit-card-2-front")),
+            Group("Procesos","bi-gear-fill text-success",Link("TS","Bancariza","Bancarización","bi-bank"))),
+        Area("PD","Producción","bi-gear text-info",
+            Group("Maestros","bi-person-badge-fill text-warning",
+                Link("PD","ProceProduccion","Procesos de producción","bi-diagram-3"),
+                Link("PD","RutaProduccion","Rutas de producción","bi-signpost-split")),
+            Group("Procesos","bi-gear-fill text-success",
+                Link("PD","OrdenProdu","Órdenes de producción","bi-file-earmark-code"),
+                Link("PD","AsigProd","Asignación de cortadores","bi-person-check"),
+                Link("PD","RequeInsumo","Requerimiento de insumos","bi-box-arrow-right")),
+            Group("Reportes","bi-file-earmark-bar-graph-fill text-danger",Link("PD","RepoProceProd","Reporte de procesos","bi-bar-chart-line"))),
+        Area("MK","Marketing","bi-megaphone-fill text-warning",
+            Group("Maestros","bi-person-badge-fill text-warning",
+                Link("MK","Prospecto","Prospectos","bi-person-lines-fill"),Link("MK","Cliente","Clientes","bi-person-check-fill"),
+                Group("Tablas Generales","bi-table",Link("MK","TipoProfesion","Tipos de profesión","bi-person-workspace"),Link("MK","Oportunidad","Oportunidades de venta","bi-bullseye"),
+                    Link("MK","LeadSource","Origen de prospectos","bi-diagram-3"),Link("MK","TipoVentaCliente","Tipos de venta","bi-tags")),
+                Link("MK","Merchandising","Merchandising","bi-box-seam"))),
+        Area("AS","Administración","bi-sliders2-vertical text-info",
+            Group("Maestros","bi-person-badge-fill text-warning",
+                Link("AS","Empresa","Empresas y sedes","bi-building"),
+                Link("AS","Periodo","Períodos contables","bi-calendar3"),
+                Link("AS","DocuComSerie","Series de documentos","bi-receipt"),
+                Link("AS","ParametroSistema","Parámetros del sistema","bi-sliders")),
+            Group("Seguridad","bi-shield-lock-fill text-danger",
+                Link("AS","Usuario","Usuarios","bi-people"),
+                Link("AS","Rol","Roles y permisos","bi-shield-lock")))
+    };
+}

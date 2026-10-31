@@ -5,7 +5,7 @@ using static AspNet10ArcoERP.Services.MaestroEmpresaSql;
 
 namespace AspNet10ArcoERP.Services;
 
-public class ProduccionService(IDbConnectionFactory factory) : IProduccionService
+public partial class ProduccionService(IDbConnectionFactory factory) : IProduccionService
 {
     // Processes and subprocesses are shared catalogs in the legacy schema; only operators have a company through personal.
     private const string ProcesoSelect=@"SELECT pp.proce_prod_id Id,pp.proce_prod_id ProcesoId,pp.nombre Nombre,pp.estado Estado,COALESCE(pp.fecha_modifica,pp.fecha_creacion) FechaRevision FROM proce_prod pp {LOCK} ";

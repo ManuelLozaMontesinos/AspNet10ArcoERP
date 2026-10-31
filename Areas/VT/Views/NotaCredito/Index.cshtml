@@ -1,0 +1,211 @@
+@model NotaCreditoPageModel
+@{
+    ViewData["Title"] = "Notas de Crédito Electrónicas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-file-earmark-minus text-danger me-2"></i>Notas de Crédito Electrónicas
+                </h1>
+            </div>
+            <div class="col-sm-6 text-end">
+                <button type="button" class="btn btn-danger" onclick="abrirModalNotaCredito()">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Nota de Crédito
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Filtros -->
+        <div class="card card-outline card-danger shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Desde</label>
+                        <input type="date" name="fechaDesde" class="form-control form-control-sm" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Hasta</label>
+                        <input type="date" name="fechaHasta" class="form-control form-control-sm" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Buscar cliente o documento</label>
+                        <input type="text" name="search" class="form-control form-control-sm" placeholder="RUC, razón, serie..." value="@Model.Search" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-sm btn-danger w-100"><i class="bi bi-search me-1"></i> Filtrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="card shadow-sm">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">Nota Crédito</th>
+                            <th>Fecha</th>
+                            <th>Doc. Referencia</th>
+                            <th>Cliente</th>
+                            <th>Motivo / Sustento</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Estado SUNAT</th>
+                            <th class="text-center pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items == null || Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No se registraron notas de crédito.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var nc in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-danger">@nc.SerieNumero</td>
+                                    <td>@nc.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td><span class="badge bg-secondary">@nc.DocumentoReferencia</span></td>
+                                    <td>
+                                        <div class="fw-semibold">@nc.ClienteRazonSocial</div>
+                                        <small class="text-muted">@nc.ClienteNumeroDocumento</small>
+                                    </td>
+                                    <td><small>@nc.TipoNotaCreditoNombre</small></td>
+                                    <td class="text-end fw-bold">@nc.Moneda @nc.MontoTotal.ToString("N2")</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success-subtle text-success border border-success">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Aceptado (BETA)
+                                        </span>
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <a href="/VT/NotaCredito/DescargarXml/@nc.NotaCreditoId" class="btn btn-sm btn-outline-secondary" title="Descargar XML">
+                                            <i class="bi bi-file-earmark-code"></i>
+                                        </a>
+                                        <a href="/VT/NotaCredito/DescargarCdr/@nc.NotaCreditoId" class="btn btn-sm btn-outline-secondary" title="Descargar CDR">
+                                            <i class="bi bi-file-earmark-check"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Nota de Crédito -->
+<div class="modal fade" id="modalNotaCredito" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold"><i class="bi bi-file-earmark-minus me-2"></i> Emitir Nota de Crédito Electrónica</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNotaCredito">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Comprobante de Referencia (ID o N°)</label>
+                            <input type="number" id="nc_compRefId" class="form-control form-control-sm" placeholder="ID del comprobante..." required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Serie de Nota de Crédito</label>
+                            <select id="nc_serie" class="form-select form-select-sm">
+                                <option value="FC01">FC01 (Para Facturas)</option>
+                                <option value="BC01">BC01 (Para Boletas)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tipo de Nota / Catálogo SUNAT 09</label>
+                            <select id="nc_tipo" class="form-select form-select-sm">
+                                @foreach (var tnc in Model.TiposNotaCredito)
+                                {
+                                    <option value="@tnc.Id">@tnc.Descripcion</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Monto Total a Modificar (S/)</label>
+                            <input type="number" step="0.01" min="0.01" id="nc_monto" class="form-control form-control-sm" placeholder="0.00" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Motivo o Sustento de la Nota de Crédito</label>
+                        <textarea id="nc_sustento" class="form-control form-control-sm" rows="3" placeholder="Detalle el motivo tributario..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="guardarNotaCredito()">
+                    <i class="bi bi-send-check me-1"></i> Emitir en SUNAT BETA
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModalNotaCredito() {
+            document.getElementById('formNotaCredito').reset();
+            const modal = new bootstrap.Modal(document.getElementById('modalNotaCredito'));
+            modal.show();
+        }
+
+        async function guardarNotaCredito() {
+            const compId = parseInt(document.getElementById('nc_compRefId').value);
+            const serie = document.getElementById('nc_serie').value;
+            const tipoId = parseInt(document.getElementById('nc_tipo').value);
+            const monto = parseFloat(document.getElementById('nc_monto').value);
+            const sustento = document.getElementById('nc_sustento').value;
+
+            if (!compId || !monto) {
+                Swal.fire('Atención', 'Complete el ID del comprobante y el monto.', 'warning');
+                return;
+            }
+
+            try {
+                Swal.fire({ title: 'Emitiendo Nota de Crédito...', didOpen: () => Swal.showLoading() });
+                const resp = await fetch('/VT/NotaCredito/Guardar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        comprobanteId: compId,
+                        serie: serie,
+                        tipoNotaCreditoId: tipoId,
+                        montoTotal: monto,
+                        motivoSustento: sustento
+                    })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    Swal.fire('Emitido', res.message, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Fallo de conexión.', 'error');
+            }
+        }
+    </script>
+}
+

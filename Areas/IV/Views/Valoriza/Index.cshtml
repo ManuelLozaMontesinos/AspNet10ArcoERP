@@ -1,0 +1,6 @@
+@model InventarioProcesoPageModel
+@{ ViewData["Title"] = Model.Titulo; }
+<partial name="_ProcesoListado" model="Model" />
+<partial name="_ProcesoModal" />
+@section Scripts { <partial name="_ProcesoScript" model="Model" /> }
+

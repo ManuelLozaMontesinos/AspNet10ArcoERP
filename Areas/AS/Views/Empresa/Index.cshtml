@@ -1,0 +1,490 @@
+@model EmpresaPageModel
+@{
+    ViewData["Title"] = "Empresas y sedes";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-building text-primary me-2"></i>Empresas y sedes
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Gestión de empresas del grupo, datos fiscales, sedes operativas y períodos</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="AS" asp-controller="Periodo" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-calendar3 me-1"></i>Períodos
+                </a>
+                <a asp-area="AS" asp-controller="DocuComSerie" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-receipt me-1"></i>Series
+                </a>
+                @if (canWrite)
+                {
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm js-empresa-new">
+                        <i class="bi bi-plus-lg me-1"></i>Nueva Empresa
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="empresa-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="RUC, razón social o nombre comercial..." aria-label="Buscar empresa" />
+                        </div>
+
+                        <select name="estado" class="form-select form-select-sm w-auto" aria-label="Estado">
+                            <option value="">Todos los estados</option>
+                            <option value="A" selected="@(Model.Estado == "A")">Activos</option>
+                            <option value="I" selected="@(Model.Estado == "I")">Inactivos</option>
+                        </select>
+
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Buscar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 erp-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 130px;">RUC</th>
+                                <th>Razón Social / Comercial</th>
+                                <th style="width: 140px;">Sector</th>
+                                <th>Dirección Fiscal</th>
+                                <th class="text-center" style="width: 90px;">Sedes</th>
+                                <th style="width: 110px;">Estado</th>
+                                <th class="text-end" style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                        No se encontraron empresas registradas.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in Model.Items)
+                            {
+                                bool isActivo = item.Estado == "A";
+                                <tr class="@(isActivo ? "" : "table-secondary text-muted")">
+                                    <td class="fw-bold font-monospace">@item.Ruc</td>
+                                    <td>
+                                        <div class="fw-semibold">@item.Nombre</div>
+                                        @if (!string.IsNullOrWhiteSpace(item.NombreComercial))
+                                        {
+                                            <small class="text-muted"><i class="bi bi-shop me-1"></i>@item.NombreComercial</small>
+                                        }
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border">@item.Sector</span></td>
+                                    <td><small class="text-secondary">@item.Direccion</small></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                            @item.TotalSedes @(item.TotalSedes == 1 ? "sede" : "sedes")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge @(isActivo ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary text-white")">
+                                            @item.EstadoTexto
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary js-empresa-edit" data-id="@item.Id" title="Editar empresa y sedes">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            @if (canWrite)
+                                            {
+                                                <button type="button" class="btn @(isActivo ? "btn-outline-danger js-empresa-toggle" : "btn-outline-success js-empresa-toggle")"
+                                                        data-id="@item.Id" data-estado="@(isActivo ? "I" : "A")"
+                                                        title="@(isActivo ? "Desactivar" : "Activar")">
+                                                    <i class="bi @(isActivo ? "bi-slash-circle" : "bi-check-circle")"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-white border-top py-2 px-3">
+                    <partial name="_Paginacion" model="Model" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Principal de Empresa (Pestañas: Datos Generales, Sedes, Sedes por Periodo) -->
+<div class="modal fade" id="modalEmpresa" tabindex="-1" aria-labelledby="modalEmpresaLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light py-2">
+                <h5 class="modal-title fw-bold" id="modalEmpresaLabel">
+                    <i class="bi bi-building me-1 text-primary"></i> <span id="modalEmpresaTitle">Empresa</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs px-3 pt-2 bg-light border-bottom" id="empresaTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-semibold" id="tab-general-btn" data-bs-toggle="tab" data-bs-target="#tab-general" type="button" role="tab">
+                            <i class="bi bi-info-circle me-1"></i> Datos Fiscales y Dirección
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="tab-sedes-btn" data-bs-toggle="tab" data-bs-target="#tab-sedes" type="button" role="tab">
+                            <i class="bi bi-geo-alt me-1"></i> Sedes Operativas <span class="badge bg-secondary ms-1" id="badgeTotalSedes">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="tab-periodos-btn" data-bs-toggle="tab" data-bs-target="#tab-periodos" type="button" role="tab">
+                            <i class="bi bi-calendar3 me-1"></i> Sedes por Período
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-3" id="empresaTabsContent">
+                    <!-- Tab 1: Datos Generales -->
+                    <div class="tab-pane fade show active" id="tab-general" role="tabpanel">
+                        <form id="formEmpresa">
+                            <input type="hidden" id="empresaId" value="0" />
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Sector <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="empresaSectorId" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">RUC <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm font-monospace" id="empresaRuc" maxlength="11" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Razón Social <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaNombre" maxlength="100" required />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Nombre Comercial</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaNombreComercial" maxlength="50" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Banco Detracción</label>
+                                    <select class="form-select form-select-sm" id="empresaBancoId"></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Nro. Cuenta Detracción</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaNumCtaDetrac" maxlength="20" />
+                                </div>
+
+                                <div class="col-12"><hr class="my-1" /><span class="text-muted small fw-bold text-uppercase">Ubicación y Dirección Fiscal</span></div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Tipo de Vía <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="empresaTipoViaId" required></select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-semibold">Nombre de la Vía</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaNombreVia" maxlength="50" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Número</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaNumeroVia" maxlength="10" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Interior</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaInterior" maxlength="10" />
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold"># Dpto</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaDpto" maxlength="10" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Manzana</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaManzana" maxlength="10" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Lote</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaLote" maxlength="10" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">KM</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaKilometro" maxlength="10" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Block</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaBlock" maxlength="10" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-semibold">Etapa</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaEtapa" maxlength="10" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">Tipo de Zona <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="empresaTipoZonaId" required></select>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label small fw-semibold">Nombre de la Zona</label>
+                                    <input type="text" class="form-control form-control-sm" id="empresaNombreZona" maxlength="50" />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Departamento <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="empresaDepartamentoId" required></select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Provincia <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="empresaProvinciaId" required></select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Distrito <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="empresaDistritoId" required></select>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-2 border-top d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i> Guardar Empresa</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tab 2: Sedes Operativas -->
+                    <div class="tab-pane fade" id="tab-sedes" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="fw-semibold">Listado de sedes y locales de la empresa</span>
+                                <small class="text-muted d-block">Cada sede cuenta con su correlativo y código SUNAT</small>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm js-sede-new">
+                                <i class="bi bi-plus-lg me-1"></i>Nueva Sede
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle border mb-0" id="tablaSedes">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 70px;">Cód.</th>
+                                        <th>Nombre de Sede</th>
+                                        <th style="width: 100px;">SUNAT</th>
+                                        <th class="text-center" style="width: 90px;">Central</th>
+                                        <th>Dirección</th>
+                                        <th style="width: 120px;">Teléfono</th>
+                                        <th style="width: 90px;">Estado</th>
+                                        <th class="text-end" style="width: 100px;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dinámico vía JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Sedes por Período -->
+                    <div class="tab-pane fade" id="tab-periodos" role="tabpanel">
+                        <div class="card bg-light border-0 mb-3">
+                            <div class="card-body py-2 px-3">
+                                <div class="row align-items-center g-2">
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold mb-1">Período Contable</label>
+                                        <select class="form-select form-select-sm" id="periodoSelect"></select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-semibold mb-1">Sede a Asignar</label>
+                                        <select class="form-select form-select-sm" id="sedeAsignarSelect"></select>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end pt-3">
+                                        <button type="button" class="btn btn-success btn-sm w-100 js-periodo-sede-add">
+                                            <i class="bi bi-plus-circle me-1"></i> Asignar Sede al Período
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle border mb-0" id="tablaPeriodoSedes">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 90px;">Año</th>
+                                        <th style="width: 80px;">Cód.</th>
+                                        <th>Sede Asignada</th>
+                                        <th style="width: 100px;">Estado</th>
+                                        <th class="text-end" style="width: 90px;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dinámico vía JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Secundario de Sede -->
+<div class="modal fade" id="modalSede" tabindex="-1" aria-labelledby="modalSedeLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light py-2">
+                <h5 class="modal-title fw-bold" id="modalSedeLabel">
+                    <i class="bi bi-geo-alt me-1 text-primary"></i> <span id="modalSedeTitle">Sede</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formSede">
+                    <input type="hidden" id="sedeId" value="0" />
+                    <input type="hidden" id="sedeEmpresaId" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nombre de la Sede <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="sedeNombre" maxlength="100" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Cód. SUNAT (4 dígitos) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm font-monospace" id="sedeCodigoSunat" maxlength="4" placeholder="0000" required />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center pt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="sedeEsCentral" />
+                                <label class="form-check-label small fw-semibold" for="sedeEsCentral">¿Es Sede Central?</label>
+                            </div>
+                        </div>
+
+                        <div class="col-12"><hr class="my-1" /><span class="text-muted small fw-bold text-uppercase">Dirección de la Sede</span></div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Tipo de Vía <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="sedeTipoViaId" required></select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Nombre de la Vía</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeNombreVia" maxlength="50" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Número</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeNumeroVia" maxlength="10" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Interior</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeInterior" maxlength="10" />
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold"># Dpto</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeDpto" maxlength="10" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Manzana</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeManzana" maxlength="10" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Lote</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeLote" maxlength="10" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">KM</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeKilometro" maxlength="10" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Block</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeBlock" maxlength="10" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Etapa</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeEtapa" maxlength="10" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Tipo de Zona <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="sedeTipoZonaId" required></select>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label small fw-semibold">Nombre de la Zona</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeNombreZona" maxlength="50" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Departamento <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="sedeDepartamentoId" required></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Provincia <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="sedeProvinciaId" required></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Distrito <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="sedeDistritoId" required></select>
+                        </div>
+
+                        <div class="col-12"><hr class="my-1" /><span class="text-muted small fw-bold text-uppercase">Datos de Contacto</span></div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Teléfono</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeTelefono" maxlength="20" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Teléfono 2</label>
+                            <input type="text" class="form-control form-control-sm" id="sedeTelefono2" maxlength="20" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Email de Contacto</label>
+                            <input type="email" class="form-control form-control-sm" id="sedeEmail" maxlength="100" />
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-2 border-top d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i> Guardar Sede</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/as-empresa.js" asp-append-version="true"></script>
+}

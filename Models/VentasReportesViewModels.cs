@@ -9,6 +9,8 @@ public class VentaReporteFiltro
     public DateTime? Desde { get; set; }
     public DateTime? Hasta { get; set; }
     public int? VendedorId { get; set; }
+    public int? CajaId { get; set; }
+    public DateTime? Fecha { get; set; }
     public string? Search { get; set; }
     public string Agrupar { get; set; } = "producto";
     public bool Consultar { get; set; }
@@ -16,7 +18,8 @@ public class VentaReporteFiltro
     {
         ["modo"]=Modo??"",["mes"]=Mes?.ToString(CultureInfo.InvariantCulture)??"",
         ["desde"]=Desde?.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture)??"",["hasta"]=Hasta?.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture)??"",
-        ["vendedorId"]=VendedorId?.ToString()??"",["search"]=Search??"",["agrupar"]=Agrupar,["consultar"]="true",["sort"]=sort,["dir"]=dir
+        ["vendedorId"]=VendedorId?.ToString()??"",["cajaId"]=CajaId?.ToString()??"",["fecha"]=Fecha?.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture)??"",
+        ["search"]=Search??"",["agrupar"]=Agrupar,["consultar"]="true",["sort"]=sort,["dir"]=dir
     };
 }
 
@@ -52,6 +55,9 @@ public class VentaReporteRowModel
     public string Moneda { get; set; } = "";
     public string MedioPago { get; set; } = "";
     public string Estado { get; set; } = "";
+    public string Caja { get; set; } = "";
+    public string Simbolo { get; set; } = "";
+    public string MesNombre { get; set; } = "";
     public decimal TipoCambio { get; set; }
     public decimal Bruto { get; set; }
     public decimal Neto { get; set; }
@@ -68,6 +74,19 @@ public static class VentaReporteColumnas
 {
     public static List<VentaReporteColumna> Get(string tipo,string agrupar="producto")
     {
+        if(tipo=="canjes")return new()
+        {
+            new("tipoDocumento","Tipo",r=>r.TipoDocumento),new("documento","Documento",r=>r.Documento),new("fecha","Fecha",r=>r.Fecha,false,true),
+            new("codigo","Código",r=>r.Codigo),new("producto","Producto",r=>r.Producto),new("mesNombre","Mes",r=>r.MesNombre),
+            new("moneda","Moneda origen",r=>r.Moneda),new("tipoCambio","T/C",r=>r.TipoCambio,true),new("cantidad","Cantidad",r=>r.Cantidad,true),
+            new("precioUnitario","P. unitario local",r=>r.PrecioUnitario,true),new("total","Total local",r=>r.Total,true),new("estado","Estado",r=>r.Estado)
+        };
+        if(tipo=="caja")return new()
+        {
+            new("caja","Caja",r=>r.Caja),new("tipoDocumento","Tipo",r=>r.TipoDocumento),new("documento","Documento",r=>r.Documento),new("fecha","Fecha",r=>r.Fecha,false,true),
+            new("cliente","Cliente",r=>r.Cliente),new("moneda","Moneda",r=>r.Moneda),new("simbolo","Símbolo",r=>r.Simbolo),
+            new("tipoCambio","T/C",r=>r.TipoCambio,true),new("total","Total en moneda origen",r=>r.Total,true),new("estado","Estado",r=>r.Estado)
+        };
         if(tipo=="pedidos")return new()
         {
             new("pedido","Pedido",r=>r.Pedido),new("codigo","Código",r=>r.Codigo),new("producto","Producto",r=>r.Producto),new("unidad","U.M.",r=>r.Unidad),new("detalle","Detalle",r=>r.Detalle),
@@ -101,12 +120,20 @@ public class VentaReportePageModel : ListadoPaginadoModel
     public VentaReporteContexto Contexto { get; set; } = new();
     public List<LookupItemModel> Meses { get; set; } = new();
     public List<LookupItemModel> Vendedores { get; set; } = new();
+    public List<LookupItemModel> Cajas { get; set; } = new();
     public List<VentaReporteRowModel> Items { get; set; } = new();
     public List<string> Errores { get; set; } = new();
     public bool Consultada { get; set; }
     public decimal TotalLocal { get; set; }
     public List<VentaReporteColumna> Columnas=>VentaReporteColumnas.Get(Tipo,Filtro.Agrupar);
     public string Resumen=>string.Join(" · ",new[]{ $"Ejercicio {Contexto.Anio}",Contexto.Sede,
-        Tipo=="reservas"?$"Mes de reserva: {Contexto.Hoy:MM} (mes actual del servidor)":Filtro.Modo=="rango"?$"{Filtro.Desde:dd/MM/yyyy} al {Filtro.Hasta:dd/MM/yyyy}":Filtro.Modo=="anual"?"Todo el ejercicio":Meses.FirstOrDefault(m=>m.Id==Filtro.Mes)?.Nombre,
+        Tipo=="caja"?$"{Filtro.Fecha:dd/MM/yyyy} · {Cajas.FirstOrDefault(c=>c.Id==Filtro.CajaId)?.Nombre}":Tipo=="reservas"?$"Mes de reserva: {Contexto.Hoy:MM} (mes actual del servidor)":Filtro.Modo=="rango"?$"{Filtro.Desde:dd/MM/yyyy} al {Filtro.Hasta:dd/MM/yyyy}":Filtro.Modo=="anual"?"Todo el ejercicio":Meses.FirstOrDefault(m=>m.Id==Filtro.Mes)?.Nombre,
         Vendedores.FirstOrDefault(v=>v.Id==Filtro.VendedorId)?.Nombre,string.IsNullOrWhiteSpace(Filtro.Search)?null:"Búsqueda: "+Filtro.Search }.Where(s=>!string.IsNullOrWhiteSpace(s)));
+    public string Nota => Tipo switch
+    {
+        "canjes"=>"Se incluyen líneas sin registro de canje de documentos internos y temporales según el legacy. Precios y totales en moneda local con el T/C del documento; en documentos anulados esos importes son cero y la cantidad se conserva.",
+        "caja"=>"Documentos de la caja en la fecha elegida con estado de comprobante emitido. Se conservan los importes y el estado de la cabecera del legacy; no se suman monedas distintas ni se convierten los importes.",
+        _=>""
+    };
+    public string ResumenSalida => string.Join(" · ",new[]{Resumen,Nota}.Where(s=>!string.IsNullOrWhiteSpace(s)));
 }

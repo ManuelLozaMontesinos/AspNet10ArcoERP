@@ -21,6 +21,9 @@ builder.Services.AddScoped<IVentasService, VentasService>();
 builder.Services.AddScoped<IReporteDocumentosService, ReporteDocumentosService>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 builder.Services.AddScoped<IProduccionService, ProduccionService>();
+builder.Services.AddScoped<ITesoreriaService, TesoreriaService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IFacturacionElectronicaService, FacturacionElectronicaService>();
 
 // Authentication & Cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -58,20 +61,18 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
 
-// Map Area routes (Area MG - Maestros)
+app.MapStaticAssets();
+
 app.MapControllerRoute(
     name: "areas",
     pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
 
-// Default route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

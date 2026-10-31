@@ -38,7 +38,7 @@
     const modal = new bootstrap.Modal(modalNode);
     /** @type {Plan|null} */ let plan = null;
     let version = 0, busy = false;
-    /** @type {Record<string,string>} */ const labels = { apertura: "Aperturar mes", cierre: "Cerrar mes", reproceso: "Reprocesar mes", anual: "Reproceso anual" };
+    /** @type {Record<string,string>} */ const labels = { apertura: "Aperturar mes", cierre: "Cerrar mes", reproceso: "Reprocesar mes", anual: "Reproceso anual", valorizar: "Valorizar mes" };
     /** @param {string} text */
     function status(text) { const p = document.createElement("p"); p.className = "text-muted py-3"; p.setAttribute("role", "status"); p.textContent = text; body.replaceChildren(p); }
     /** @param {string} title */
@@ -77,7 +77,8 @@
             note.textContent = operation === "apertura" ? "Abre el mes y limpia la fecha de cierre y el indicador de movimientos posteriores."
                 : operation === "cierre" ? "Recalcula los saldos del mes y lo registra como cerrado con la fecha de hoy."
                     : operation === "anual" ? "Recalcula los saldos de enero al mes actual, en orden. Conserva los estados de apertura y cierre."
-                        : "Recalcula los saldos del mes." + (prepared.esVenta ? " También recalcula las reservas de la sede, por tratarse de un almacén de ventas." : "");
+                        : operation === "valorizar" ? "Calcula los costos unitarios y valoriza las existencias del mes seleccionado."
+                            : "Recalcula los saldos del mes." + (prepared.esVenta ? " También recalcula las reservas de la sede, por tratarse de un almacén de ventas." : "");
             const list = document.createElement("ul"); list.className = "list-group";
             prepared.meses.forEach(month => { const li = document.createElement("li"); li.className = "list-group-item bg-body d-flex flex-wrap justify-content-between gap-2"; const name = document.createElement("strong"); name.textContent = month.mesNombre; const state = document.createElement("span"); state.className = "text-muted"; state.textContent = month.estadoNombre + (month.movimientoPostCierre === "S" ? " · con movimientos posteriores al cierre" : ""); li.append(name, state); list.append(li); });
             body.replaceChildren(content, note, list); submit.classList.remove("d-none");

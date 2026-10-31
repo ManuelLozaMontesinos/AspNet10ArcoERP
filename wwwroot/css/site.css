@@ -17,6 +17,29 @@ html, body {
   padding: 0;
 }
 
+/* Keep expanded navigation inside the viewport, independently of page scrolling. */
+.layout-fixed .app-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.layout-fixed .app-sidebar .sidebar-brand {
+    flex: 0 0 auto;
+}
+
+.layout-fixed.sidebar-expand-lg .app-sidebar .sidebar-wrapper {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+}
+
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);
   text-align: end;

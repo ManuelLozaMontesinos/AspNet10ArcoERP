@@ -1,0 +1,180 @@
+@model RolPageModel
+@{
+    ViewData["Title"] = "Roles y permisos";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-shield-lock-fill text-primary me-2"></i>Roles y permisos
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Catálogo de perfiles y roles de autorización del sistema</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="AS" asp-controller="Usuario" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-people me-1"></i>Usuarios
+                </a>
+                @if (canWrite)
+                {
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm js-rol-new">
+                        <i class="bi bi-plus-lg me-1"></i>Nuevo Rol
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="rol-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="Código o nombre de rol..." aria-label="Buscar rol" />
+                        </div>
+
+                        <select name="estado" class="form-select form-select-sm w-auto" aria-label="Estado">
+                            <option value="">Todos los estados</option>
+                            <option value="A" selected="@(Model.Estado == "A")">Activos</option>
+                            <option value="I" selected="@(Model.Estado == "I")">Inactivos</option>
+                        </select>
+
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Buscar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 erp-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 120px;">Código</th>
+                                <th>Nombre del Rol</th>
+                                <th class="text-center" style="width: 100px;">Usuarios</th>
+                                <th style="width: 110px;">Estado</th>
+                                <th class="text-end" style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                        No se encontraron roles registrados.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in Model.Items)
+                            {
+                                bool isActivo = item.Estado == "A";
+                                <tr class="@(isActivo ? "" : "table-secondary text-muted")">
+                                    <td class="fw-bold font-monospace">@item.Codigo</td>
+                                    <td class="fw-semibold">@item.Nombre</td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill bg-body-secondary text-body">@item.CantidadUsuarios</span>
+                                    </td>
+                                    <td>
+                                        @if (isActivo)
+                                        {
+                                            <span class="badge bg-success">ACTIVO</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">INACTIVO</span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-outline-primary btn-sm js-rol-edit" data-id="@item.Id" data-codigo="@item.Codigo" data-nombre="@item.Nombre" title="Editar Rol">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        @if (canWrite && isActivo)
+                                        {
+                                            <button type="button" class="btn btn-outline-danger btn-sm js-rol-del" data-id="@item.Id" data-nombre="@item.Nombre" title="Anular Rol">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-transparent py-2 px-3 border-top">
+                    <partial name="_ListadoPaginacion" model="Model" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edición / Creación de Rol -->
+<div class="modal fade" id="modal-rol" tabindex="-1" aria-labelledby="modalRolLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalRolLabel">
+                    <i class="bi bi-shield-fill text-primary me-2"></i><span id="modal-rol-title">Rol</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-rol">
+                    <input type="hidden" id="rol-id" name="id" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Código del Rol</label>
+                        <input type="text" id="rol-codigo" name="codigo" maxlength="10" class="form-control form-control-sm font-monospace text-uppercase" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre del Rol</label>
+                        <input type="text" id="rol-nombre" name="nombre" maxlength="100" class="form-control form-control-sm" required />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm js-btn-save-rol" id="btn-save-rol">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Rol
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/as-rol.js" asp-append-version="true"></script>
+}
+

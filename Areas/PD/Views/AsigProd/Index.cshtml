@@ -1,0 +1,280 @@
+@model OrdenProduccionPageModel
+@{
+    ViewData["Title"] = "Asignación de producción";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-person-gear text-primary me-2"></i>Asignación de producción
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Designación de cortadores y asignación operativa de máquinas · @ViewBag.SedeNombre</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-outline-info btn-sm shadow-sm js-ver-cortadores" id="btn-ver-cortadores">
+                    <i class="bi bi-people me-1"></i>Ver Cortadores del Día
+                </button>
+                <a asp-area="PD" asp-controller="OrdenProdu" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-gear-wide-connected me-1"></i>Órdenes de Producción
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <form method="get" id="asig-filters" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                        <input type="hidden" name="top" value="@Model.PageSize" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
+                        <input type="hidden" name="dir" value="@Model.Dir" />
+
+                        <div class="input-group input-group-sm listing-search">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input name="search" value="@Model.Search" class="form-control border-start-0" maxlength="150" placeholder="N° OP, Cotización, Cliente..." aria-label="Buscar orden" />
+                        </div>
+
+                        <div class="input-group input-group-sm w-auto">
+                            <span class="input-group-text bg-body-tertiary">Desde</span>
+                            <input type="date" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" class="form-control" />
+                        </div>
+
+                        <div class="input-group input-group-sm w-auto">
+                            <span class="input-group-text bg-body-tertiary">Hasta</span>
+                            <input type="date" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" class="form-control" />
+                        </div>
+
+                        <select name="estadoOrdenProduccionId" class="form-select form-select-sm w-auto" aria-label="Estado Orden">
+                            <option value="">Todos los estados</option>
+                            @foreach (var est in Model.Estados)
+                            {
+                                <option value="@est.Id" selected="@(Model.EstadoOrdenProduccionId == est.Id)">@est.Descripcion</option>
+                            }
+                        </select>
+
+                        <div class="form-check form-check-inline form-switch ms-1 mb-0">
+                            <input class="form-check-input" type="checkbox" name="mostrarAnulados" value="true" id="chk-anulados" @(Model.MostrarAnulados ? "checked" : "") onchange="this.form.submit()" />
+                            <label class="form-check-label small" for="chk-anulados">Ver anulados</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Buscar</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+                    </form>
+
+                    <partial name="_ListadoControles" model="Model" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 erp-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 100px;">N° OP</th>
+                                <th style="width: 100px;">Fecha</th>
+                                <th style="width: 100px;">#Pedido</th>
+                                <th>Cliente</th>
+                                <th>Vendedor</th>
+                                <th style="width: 120px;">Fecha Entr.</th>
+                                <th>Planos</th>
+                                <th class="text-center" style="width: 60px;">#Mod.</th>
+                                <th style="width: 110px;">Estado</th>
+                                <th class="text-end" style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="10" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                        No se encontraron órdenes para asignación.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var item in Model.Items)
+                            {
+                                bool isAnulado = item.Estado == "I";
+                                <tr class="@(isAnulado ? "table-danger text-muted" : "")">
+                                    <td class="fw-bold font-monospace">@item.Codigo</td>
+                                    <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.CotizacionCodigo))
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary font-monospace">@item.CotizacionCodigo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-truncate" style="max-width: 260px;" title="@item.ClienteRazonSocial">@item.ClienteRazonSocial</div>
+                                        <small class="text-muted">@item.ClienteDocumento</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-truncate d-inline-block" style="max-width: 140px;">@(item.VendedorNombre ?? "-")</small>
+                                    </td>
+                                    <td>
+                                        @if (item.FechaEntrega.HasValue)
+                                        {
+                                            <span>@item.FechaEntrega.Value.ToString("dd/MM/yy HH:mm")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            @if (!string.IsNullOrEmpty(item.EstadoPlanoMelNombre))
+                                            {
+                                                <span class="badge bg-info-subtle text-info me-1">Mel: @item.EstadoPlanoMelNombre</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.EstadoPlanoMdfNombre))
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning">MDF: @item.EstadoPlanoMdfNombre</span>
+                                            }
+                                            @if (string.IsNullOrEmpty(item.EstadoPlanoMelNombre) && string.IsNullOrEmpty(item.EstadoPlanoMdfNombre))
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill bg-body-secondary text-body">@item.Modificaciones</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">@item.EstadoOrdenProduccionNombre</span>
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-outline-primary btn-sm js-asignar-op" data-id="@item.Id" data-codigo="@item.Codigo" title="Designar Cortador / Máquina">
+                                            <i class="bi bi-person-gear"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-transparent py-2 px-3 border-top">
+                    <partial name="_ListadoPaginacion" model="Model" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Designar Cortador / Máquina para OP -->
+<div class="modal fade" id="modal-asignar-cortador" tabindex="-1" aria-labelledby="modalAsignarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalAsignarLabel">
+                    <i class="bi bi-person-gear text-primary me-2"></i>Designar Cortador / Máquina
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-asignar-cortador">
+                    <input type="hidden" id="asig-op-id" name="ordenProduccionId" value="0" />
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">N° Orden Producción</label>
+                            <input type="text" id="asig-op-codigo" class="form-control form-control-sm font-monospace fw-bold" readonly />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">Subproceso Operativo</label>
+                            <select id="asig-subproceso-id" name="subProcesoProduccionId" class="form-select form-select-sm" required></select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Cortador / Personal</label>
+                            <select id="asig-personal-id" name="personalId" class="form-select form-select-sm" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Máquina Asignada</label>
+                            <select id="asig-maquina-id" name="maquinaId" class="form-select form-select-sm" required></select>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Observación</label>
+                        <textarea id="asig-obs" name="observacion" rows="2" maxlength="400" class="form-control form-control-sm" placeholder="Instrucciones o especificaciones para el cortador..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm js-btn-save-asig" id="btn-save-asig">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Asignación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Cortadores del Día -->
+<div class="modal fade" id="modal-cortadores-dia" tabindex="-1" aria-labelledby="modalCortadoresLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalCortadoresLabel">
+                    <i class="bi bi-people text-info me-2"></i>Cortadores y Máquinas Programadas
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Máquina</th>
+                                <th>Cortador / Operador</th>
+                                <th>Asistente</th>
+                                <th style="width: 120px;">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-cortadores-dia">
+                            <tr><td colspan="4" class="text-center text-muted py-3">Cargando cortadores...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/asig-prod.js" asp-append-version="true"></script>
+}
+

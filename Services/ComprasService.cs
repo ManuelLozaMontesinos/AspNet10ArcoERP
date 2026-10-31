@@ -4,7 +4,7 @@ using static AspNet10ArcoERP.Services.MaestroEmpresaSql;
 
 namespace AspNet10ArcoERP.Services;
 
-public class ComprasService(IDbConnectionFactory factory) : IComprasService
+public partial class ComprasService(IDbConnectionFactory factory) : IComprasService
 {
     public async Task<PuntoPedidoPageModel> GetPuntoPedidoAsync(int empresaId,int contextoId,PuntoPedidoFiltro filtro,int page=1,int top=25,string? sort=null,string? dir=null,bool exportar=false)
     {

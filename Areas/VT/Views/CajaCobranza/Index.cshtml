@@ -1,0 +1,216 @@
+@model CajaCobranzaPageModel
+@{
+    ViewData["Title"] = "Cobranza en Caja";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-cash-coin text-success me-2"></i>Cobranza en Caja y Emisión
+                </h1>
+            </div>
+            <div class="col-sm-6 text-end">
+                <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+                    <i class="bi bi-lightning-charge me-1"></i> Cobro Rápido con Emisión SUNAT BETA
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Filtros -->
+        <div class="card card-outline card-success shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Caja Operativa</label>
+                        <select name="cajaId" class="form-select form-select-sm">
+                            <option value="">-- Todas las Cajas --</option>
+                            @foreach (var c in Model.Cajas)
+                            {
+                                <option value="@c.Id" selected="@(Model.CajaId == c.Id)">@c.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">Buscar cliente o documento</label>
+                        <input type="text" name="search" class="form-control form-control-sm" placeholder="RUC, razón, serie-número..." />
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-sm btn-success w-100"><i class="bi bi-search me-1"></i> Consultar Pendientes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="card shadow-sm">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">Tipo</th>
+                            <th>N° Documento</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Pagado</th>
+                            <th class="text-end">Saldo Pendiente</th>
+                            <th class="text-center">Estado Cobranza</th>
+                            <th class="text-center pe-3">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items == null || Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    <i class="bi bi-check-circle fs-2 d-block mb-2 text-success"></i>
+                                    No hay comprobantes con saldo pendiente de cobro.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-3"><span class="badge bg-primary">@item.TipoDocumento</span></td>
+                                    <td class="fw-bold">@item.SerieNumero</td>
+                                    <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@item.Cliente</td>
+                                    <td class="text-end fw-bold">@item.Moneda @item.MontoTotal.ToString("N2")</td>
+                                    <td class="text-end text-success">@item.Moneda @item.MontoPagado.ToString("N2")</td>
+                                    <td class="text-end text-danger fw-bold">@item.Moneda @item.SaldoPendiente.ToString("N2")</td>
+                                    <td class="text-center">
+                                        <span class="badge @(item.EstadoCobranza == "Cancelado" ? "bg-success" : "bg-warning text-dark")">
+                                            @item.EstadoCobranza
+                                        </span>
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <button type="button" class="btn btn-sm btn-success" onclick="cobrarComprobante(@item.ComprobanteId, '@item.SerieNumero', @item.SaldoPendiente)">
+                                            <i class="bi bi-wallet2 me-1"></i> Cobrar en Caja
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cobro en Caja -->
+<div class="modal fade" id="modalCobro" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold"><i class="bi bi-cash-coin me-2"></i> Registrar Cobranza</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cobro_compId" />
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Comprobante:</label>
+                    <div id="cobro_txtDoc" class="fw-bold text-dark fs-6"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Caja Destino *</label>
+                    <select id="cobro_cajaId" class="form-select form-select-sm">
+                        @foreach (var c in Model.Cajas)
+                        {
+                            <option value="@c.Id">@c.Descripcion</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Medio de Pago *</label>
+                    <select id="cobro_medioId" class="form-select form-select-sm">
+                        @foreach (var m in Model.MediosPago)
+                        {
+                            <option value="@m.Id">@m.Descripcion</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Monto a Cobrar (S/) *</label>
+                    <input type="number" step="0.01" min="0.01" id="cobro_monto" class="form-control form-control-sm fw-bold fs-6 text-primary" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">N° Operación / Voucher (opcional)</label>
+                    <input type="text" id="cobro_numOpera" class="form-control form-control-sm" placeholder="Ej. 123456" />
+                </div>
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="cobro_emitir" checked />
+                    <label class="form-check-label small fw-semibold" for="cobro_emitir">
+                        Emitir comprobante electrónicamente ante SUNAT BETA de inmediato
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="procesarCobro()">
+                    <i class="bi bi-check2-circle me-1"></i> Confirmar Cobro
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function cobrarComprobante(id, doc, saldo) {
+            document.getElementById('cobro_compId').value = id;
+            document.getElementById('cobro_txtDoc').textContent = `${doc} (Saldo: S/ ${parseFloat(saldo).toFixed(2)})`;
+            document.getElementById('cobro_monto').value = parseFloat(saldo).toFixed(2);
+            const modal = new bootstrap.Modal(document.getElementById('modalCobro'));
+            modal.show();
+        }
+
+        async function procesarCobro() {
+            const compId = parseInt(document.getElementById('cobro_compId').value);
+            const cajaId = parseInt(document.getElementById('cobro_cajaId').value);
+            const medioId = parseInt(document.getElementById('cobro_medioId').value);
+            const monto = parseFloat(document.getElementById('cobro_monto').value);
+            const numOpera = document.getElementById('cobro_numOpera').value;
+            const emitir = document.getElementById('cobro_emitir').checked;
+
+            if (!cajaId || !monto || monto <= 0) {
+                Swal.fire('Atención', 'Complete la caja y el monto.', 'warning');
+                return;
+            }
+
+            try {
+                Swal.fire({ title: 'Registrando cobro...', didOpen: () => Swal.showLoading() });
+                const resp = await fetch('/VT/CajaCobranza/Pagar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        comprobanteId: compId,
+                        cajaId: cajaId,
+                        medioPagoId: medioId,
+                        montoPago: monto,
+                        numeroOperacion: numOpera,
+                        emitirElectronicamente: emitir
+                    })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    Swal.fire('Cobro Registrado', res.message, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Fallo de conexión.', 'error');
+            }
+        }
+    </script>
+}
+

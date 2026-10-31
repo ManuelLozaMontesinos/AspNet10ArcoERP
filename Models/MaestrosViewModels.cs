@@ -8,6 +8,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
     }
 
     public class CuentaBancoPageModel : ListadoPaginadoModel
@@ -22,6 +24,8 @@ namespace AspNet10ArcoERP.Models
         public int BancoId { get; set; }
         public string BancoNombre { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public int MonedaId { get; set; }
         public string MonedaNombre { get; set; } = string.Empty;
         public string Cuenta { get; set; } = string.Empty;
@@ -35,6 +39,8 @@ namespace AspNet10ArcoERP.Models
         public int PadreId { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
     }
 
     public class TipoDocIdentidadLookupModel
@@ -42,6 +48,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public string Abreviatura { get; set; } = string.Empty;
         public string FormatoValidacion { get; set; } = string.Empty;
     }
@@ -178,6 +186,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public int EmpresaId { get; set; } = 1;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public string Sigla { get; set; } = string.Empty;
         public string Estado { get; set; } = "A";
     }
@@ -189,6 +199,8 @@ namespace AspNet10ArcoERP.Models
         public string TipoProductoNombre { get; set; } = string.Empty;
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public short Correlativo { get; set; } = 1;
         public string UsarIncrementoFraccion { get; set; } = "N";
         public string EsCombo { get; set; } = "N";
@@ -207,6 +219,8 @@ namespace AspNet10ArcoERP.Models
         public string GrupoNombre { get; set; } = string.Empty;
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public short Correlativo { get; set; } = 1;
         public int TipoDetraccionId { get; set; } = 1;
         public string TipoDetraccionNombre { get; set; } = string.Empty;
@@ -274,6 +288,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
     }
 
     public class TipoCambioMaestroModel
@@ -281,6 +297,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public string Estado { get; set; } = "A";
     }
 
@@ -289,6 +307,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public string Simbolo { get; set; } = string.Empty;
     }
 
@@ -392,6 +412,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public int ProductoId { get; set; }
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public string Estado { get; set; } = "A";
     }
 
@@ -401,6 +423,8 @@ namespace AspNet10ArcoERP.Models
         public int ProcesoId { get; set; }
         public string ProcesoNombre { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
     }
 
     public class ComboProductoModel
@@ -455,6 +479,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public int TipoCondicionPagoId { get; set; } = 1;
         public string TipoCondicionPagoNombre { get; set; } = string.Empty;
         public int Dias { get; set; }
@@ -465,6 +491,8 @@ namespace AspNet10ArcoERP.Models
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public string Estado { get; set; } = "A";
     }
 
@@ -473,6 +501,8 @@ namespace AspNet10ArcoERP.Models
         public int Id { get; set; }
         public string Tabla { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get => Nombre; set => Nombre = value; }
+        public string? Extra { get; set; }
         public string Prefijo { get; set; } = string.Empty;
         public int Correlativo { get; set; } = 1;
         public string Estado { get; set; } = "A";

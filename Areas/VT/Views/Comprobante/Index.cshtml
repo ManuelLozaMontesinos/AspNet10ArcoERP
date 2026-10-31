@@ -1,0 +1,390 @@
+@model ComprobantePageModel
+@{
+    ViewData["Title"] = "Comprobantes de Pago";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark fw-bold">
+                    <i class="bi bi-receipt text-primary me-2"></i>Comprobantes de Pago
+                </h1>
+            </div>
+            <div class="col-sm-6 text-end">
+                <span class="badge bg-success-subtle text-success border border-success px-3 py-2 me-2">
+                    <i class="bi bi-shield-check me-1"></i> Entorno SUNAT BETA / Pruebas Activo
+                </span>
+                <button type="button" class="btn btn-primary" onclick="abrirModalNuevo()">
+                    <i class="bi bi-plus-circle me-1"></i> Nuevo Comprobante
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Banner de modo pruebas SUNAT -->
+        <div class="alert alert-info border-info d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+            <div>
+                <strong>Modo de Pruebas / SUNAT BETA Habilitado:</strong> Los comprobantes generados se firman con estructura estándar UBL 2.1, calculan su código Hash y emiten constancia de recepción (CDR) de prueba sin generar contingencias tributarias reales.
+            </div>
+        </div>
+
+        <!-- Filtros de búsqueda -->
+        <div class="card card-outline card-primary shadow-sm mb-3">
+            <div class="card-header py-2">
+                <h3 class="card-title text-primary fw-bold mb-0"><i class="bi bi-funnel me-1"></i> Filtros de Búsqueda</h3>
+            </div>
+            <div class="card-body">
+                <form method="get" id="formFiltros" class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Tipo Comprobante</label>
+                        <select name="tipoDocId" class="form-select form-select-sm">
+                            <option value="">-- Todos --</option>
+                            @foreach (var td in Model.TiposDocumento)
+                            {
+                                <option value="@td.Id" selected="@(Model.TipoDocumentoComercialId == td.Id)">@td.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Estado Comprobante</label>
+                        <select name="estadoComproId" class="form-select form-select-sm">
+                            <option value="">-- Todos --</option>
+                            @foreach (var ec in Model.EstadosComprobante)
+                            {
+                                <option value="@ec.Id" selected="@(Model.EstadoComprobanteId == ec.Id)">@ec.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Estado SUNAT</label>
+                        <select name="estadoSunatId" class="form-select form-select-sm">
+                            <option value="">-- Todos --</option>
+                            @foreach (var es in Model.EstadosSunat)
+                            {
+                                <option value="@es.Id" selected="@(Model.EstadoSunatId == es.Id)">@es.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Desde</label>
+                        <input type="date" name="fechaDesde" class="form-control form-control-sm" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Hasta</label>
+                        <input type="date" name="fechaHasta" class="form-control form-control-sm" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Buscar cliente / N°</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" class="form-control" placeholder="RUC, razón, serie..." value="@Model.Search" />
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Grilla de Comprobantes -->
+        <div class="card shadow-sm">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">Tipo</th>
+                            <th>Documento</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Vendedor</th>
+                            <th>Origen</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Estado SUNAT</th>
+                            <th class="text-center pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items == null || Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="10" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No se encontraron comprobantes con los filtros seleccionados.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var c in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="badge @(c.TipoDocumentoComercial == "FT" ? "bg-primary" : "bg-info")">
+                                            @c.TipoDocumentoComercial
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold">@c.SerieNumero</td>
+                                    <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div class="fw-semibold">@c.ClienteRazonSocial</div>
+                                        <small class="text-muted">@c.ClienteNumeroDocumento</small>
+                                    </td>
+                                    <td><small>@c.VendedorNombre</small></td>
+                                    <td><small class="text-muted">@c.CotizacionPedido</small></td>
+                                    <td class="text-end fw-bold">@c.Moneda @c.MontoTotal.ToString("N2")</td>
+                                    <td class="text-center">
+                                        @if (c.EstadoComprobante == "3")
+                                        {
+                                            <span class="badge bg-success">Emitido</span>
+                                        }
+                                        else if (c.EstadoComprobante == "9")
+                                        {
+                                            <span class="badge bg-danger">Anulado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@c.EstadoComprobanteNombre</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (c.EstadoSunat == "4")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success" title="Aceptado en SUNAT BETA">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Aceptado (BETA)
+                                            </span>
+                                        }
+                                        else if (c.EstadoSunat == "6")
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger">
+                                                <i class="bi bi-x-circle-fill me-1"></i> Rechazado
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning border border-warning">
+                                                <i class="bi bi-clock-history me-1"></i> @c.EstadoSunatNombre
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-info" title="Ver Detalle" onclick="verDetalle(@c.ComprobanteId)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            @if (c.Emitido != "S" && c.EstadoComprobante != "9")
+                                            {
+                                                <button type="button" class="btn btn-outline-success" title="Emitir a SUNAT Beta" onclick="emitirSunat(@c.ComprobanteId)">
+                                                    <i class="bi bi-send-check"></i>
+                                                </button>
+                                            }
+                                            @if (c.EstadoSunat == "4")
+                                            {
+                                                <a href="/VT/Comprobante/DescargarXml/@c.ComprobanteId" class="btn btn-outline-secondary" title="Descargar XML UBL">
+                                                    <i class="bi bi-file-earmark-code"></i>
+                                                </a>
+                                                <a href="/VT/Comprobante/DescargarCdr/@c.ComprobanteId" class="btn btn-outline-secondary" title="Descargar CDR SUNAT">
+                                                    <i class="bi bi-file-earmark-check"></i>
+                                                </a>
+                                            }
+                                            @if (c.EstadoComprobante != "9")
+                                            {
+                                                <button type="button" class="btn btn-outline-danger" title="Anular" onclick="anularComprobante(@c.ComprobanteId)">
+                                                    <i class="bi bi-slash-circle"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <!-- Paginación -->
+            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                <small class="text-muted">Total registros: @Model.Total</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        @for (int p = 1; p <= Model.PageCount; p++)
+                        {
+                            <li class="page-item @(p == Model.Page ? "active" : "")">
+                                <a class="page-link" href="javascript:irPagina(@p)">@p</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Comprobante -->
+<div class="modal fade" id="modalComprobante" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold"><i class="bi bi-receipt me-2"></i> Emisión de Comprobante de Pago (SUNAT BETA)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formComprobante">
+                    <input type="hidden" id="comp_id" value="0" />
+                    <!-- Cabecera -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Tipo Comprobante *</label>
+                            <select id="comp_tipoDoc" class="form-select form-select-sm" onchange="cargarSeries()">
+                                @foreach (var td in Model.TiposDocumento)
+                                {
+                                    <option value="@td.Id">@td.Descripcion</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Serie *</label>
+                            <select id="comp_serie" class="form-select form-select-sm" onchange="cargarSiguienteNumero()">
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Número</label>
+                            <input type="text" id="comp_numero" class="form-control form-control-sm bg-light" readonly />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Fecha Emisión *</label>
+                            <input type="date" id="comp_fecha" class="form-control form-control-sm" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Moneda</label>
+                            <select id="comp_moneda" class="form-select form-select-sm">
+                                @foreach (var m in Model.Monedas)
+                                {
+                                    <option value="@m.Id">@m.Descripcion</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">Cliente (RUC / Razón Social) *</label>
+                            <div class="input-group input-group-sm">
+                                <input type="hidden" id="comp_clienteId" value="1" />
+                                <input type="text" id="comp_clienteNombre" class="form-control" placeholder="Buscar cliente..." value="CLIENTE GENERAL VARIOS" />
+                                <button type="button" class="btn btn-outline-secondary" onclick="buscarCliente()"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Condición Pago</label>
+                            <select id="comp_condPago" class="form-select form-select-sm">
+                                @foreach (var cp in Model.CondicionesPago)
+                                {
+                                    <option value="@cp.Id">@cp.Descripcion</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Medio de Pago</label>
+                            <select id="comp_medioPago" class="form-select form-select-sm">
+                                @foreach (var mp in Model.MediosPago)
+                                {
+                                    <option value="@mp.Id">@mp.Descripcion</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Guía de Remisión Ref.</label>
+                            <input type="text" id="comp_guiaRem" class="form-control form-control-sm" placeholder="T001-00000001" />
+                        </div>
+                    </div>
+
+                    <!-- Detalle de Ítems -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-box-seam me-1"></i> Detalle de Productos y Servicios</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="agregarItemFila()">
+                            <i class="bi bi-plus-lg me-1"></i> Agregar Ítem
+                        </button>
+                    </div>
+
+                    <div class="table-responsive border rounded mb-3">
+                        <table class="table table-sm table-bordered align-middle mb-0" id="tablaItems">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;" class="text-center">#</th>
+                                    <th>Descripción del Producto / Servicio</th>
+                                    <th style="width: 100px;">U.M.</th>
+                                    <th style="width: 100px;" class="text-end">Cantidad</th>
+                                    <th style="width: 120px;" class="text-end">Precio Unit.</th>
+                                    <th style="width: 130px;">Afectación IGV</th>
+                                    <th style="width: 120px;" class="text-end">Total</th>
+                                    <th style="width: 40px;" class="text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyItems">
+                                <!-- Filas dinámicas -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumen de Totales -->
+                    <div class="row justify-content-end">
+                        <div class="col-md-4">
+                            <table class="table table-sm table-borderless text-end mb-0">
+                                <tr>
+                                    <td class="text-muted">Subtotal / Op. Gravada:</td>
+                                    <td class="fw-bold" id="lblSubtotal">S/ 0.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">IGV (18%):</td>
+                                    <td class="fw-bold" id="lblIgv">S/ 0.00</td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td class="fs-5 fw-bold text-dark">Total Comprobante:</td>
+                                    <td class="fs-5 fw-bold text-primary" id="lblTotal">S/ 0.00</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-success" onclick="guardarComprobante(false)">
+                    <i class="bi bi-save me-1"></i> Guardar Borrador
+                </button>
+                <button type="button" class="btn btn-primary" onclick="guardarComprobante(true)">
+                    <i class="bi bi-send-check me-1"></i> Guardar y Emitir SUNAT BETA
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Visor de Comprobante -->
+<div class="modal fade" id="modalVisor" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h5 class="modal-title fs-6"><i class="bi bi-file-earmark-text me-2"></i> Visor Electrónico del Comprobante</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="contenidoVisor">
+                <!-- Se rellena vía JS -->
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/vt-comprobante.js"></script>
+}

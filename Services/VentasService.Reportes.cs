@@ -14,6 +14,7 @@ public partial class VentasService
 
     public async Task<VentaReportePageModel> GetReporteVentaAsync(int empresaId,int contextoId,string tipo,VentaReporteFiltro filtro,int page=1,int top=25,string? sort=null,string? dir=null,bool exportar=false)
     {
+        if(tipo is "canjes" or "caja")return await GetReporteComplementarioAsync(empresaId,contextoId,tipo,filtro,page,top,sort,dir,exportar);
         var model=new VentaReportePageModel{Tipo=tipo,Filtro=filtro??new(),Titulo=tipo switch{"temporales"=>"Documentos temporales","reservas"=>"Documentos con reserva","pedidos"=>"Pedidos por producto",_=>"Reporte de ventas"}};
         filtro=model.Filtro;filtro.Modo=Text(filtro.Modo).ToLowerInvariant();filtro.Agrupar=Text(filtro.Agrupar).ToLowerInvariant();
         if(filtro.Modo.Length==0)filtro.Modo=tipo=="reservas"?"actual":"mes";
@@ -22,10 +23,7 @@ public partial class VentasService
         model.Ordenar(sort,dir,columns.Keys,tipo=="temporales"?"fecha":tipo=="pedidos"?"pedido":filtro.Agrupar=="documento"?"documento":"codigo");model.Paginar(0,page,top);
         if(tipo is not ("temporales" or "reservas" or "pedidos")||empresaId<=0||contextoId<=0){model.Errores.Add("El reporte o contexto no está disponible.");return model;}
         using var conn=factory.CreateConnection();
-        var scope=await conn.QuerySingleOrDefaultAsync<VentaReporteContexto>(@"SELECT pes.periodo_emp_sede_id PeriodoEmpresaSedeId,s.empresa_sede_id EmpresaSedeId,p.periodo Anio,
-            e.nombre Empresa,s.nombre Sede,CAST(GETDATE() AS date) Hoy FROM periodo_emp_sede pes
-            JOIN empresa_sede s ON s.empresa_sede_id=pes.empresa_sede_id JOIN empresa e ON e.empresa_id=s.empresa_id JOIN periodo p ON p.periodo_id=pes.periodo_id
-            WHERE pes.periodo_emp_sede_id=@Id AND s.empresa_id=@EmpresaId AND pes.estado='A' AND s.estado='A' AND e.estado='A' AND p.estado='A'",new{Id=contextoId,EmpresaId=empresaId});
+        var scope=await GetContextoReporteAsync(conn,empresaId,contextoId);
         if(scope is null){model.Errores.Add("El período y sede no están habilitados para la empresa.");return model;}model.Contexto=scope;
         model.Meses=(await conn.QueryAsync<LookupItemModel>("SELECT TRY_CONVERT(int,mes_contable) Id,RTRIM(mes_contable) Codigo,nombre Nombre FROM mes_contable WHERE estado='A' AND mes_contable BETWEEN '01' AND '12' ORDER BY mes_contable")).AsList();
         if(tipo=="reservas")model.Vendedores=(await conn.QueryAsync<LookupItemModel>("SELECT v.vendedor_id Id,CONCAT(RTRIM(v.vendedor),' · ',p.razon_social) Nombre FROM vendedor v JOIN proveedor p ON p.proveedor_id=v.proveedor_id WHERE p.empresa_id=@EmpresaId ORDER BY p.razon_social,v.vendedor_id",new{EmpresaId=empresaId})).AsList();
