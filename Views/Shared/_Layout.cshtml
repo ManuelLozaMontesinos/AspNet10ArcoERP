@@ -34,6 +34,7 @@
     
     <!-- Custom ERP CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/app.notifications.css" asp-append-version="true" />
     @if (erpModule)
     {
         <link rel="stylesheet" href="~/css/listados.css" asp-append-version="true" />
@@ -104,6 +105,41 @@
                             <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen fs-5"></i>
                             <i data-lte-icon="minimize" class="bi bi-fullscreen-exit fs-5" style="display: none;"></i>
                         </a>
+                    </li>
+
+                    <!-- Notificaciones Campanita & Centro de Avisos -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link app-notification-trigger" id="app-notification-trigger" data-bs-toggle="dropdown" href="#" aria-label="Abrir notificaciones" aria-haspopup="true" aria-expanded="false" title="Centro de Notificaciones">
+                            <i class="far fa-bell fs-5"></i>
+                            <span id="app-notification-icon" class="badge navbar-badge app-notification-badge fw-bold" style="display: none;">0</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end app-notification-panel" aria-labelledby="app-notification-trigger">
+                            <div class="app-notification-heading">
+                                <div>
+                                    <span class="app-notification-eyebrow">Centro de avisos</span>
+                                    <div class="app-notification-title-row">
+                                        <h2 class="h6 mb-0 fw-bold">Notificaciones</h2>
+                                        <span id="app-notification-total" class="app-notification-count">0</span>
+                                    </div>
+                                    <p class="small text-muted mb-0">Los avisos de hoy</p>
+                                </div>
+                                <div class="d-flex align-items-center" style="gap: 8px;">
+                                    <button type="button" id="app-notification-sound-toggle" class="app-notification-sound-toggle" title="Sonido de notificaciones: Activado" aria-label="Alternar sonido de notificaciones">
+                                        <i class="fas fa-volume-up" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" id="app-notification-clear-all" class="app-notification-clear-all" disabled>
+                                        <i class="far fa-trash-alt" aria-hidden="true"></i>
+                                        <span>Vaciar</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="app-notification-dropdown" class="app-notification-list" role="list"></div>
+                            <div id="app-notification-empty" class="app-notification-empty text-center py-4" hidden>
+                                <span class="app-notification-empty-icon text-muted mb-2 d-block"><i class="far fa-bell-slash fs-2" aria-hidden="true"></i></span>
+                                <strong class="d-block text-body">Todo al día</strong>
+                                <span class="text-muted small">Cuando recibas un aviso, aparecerá aquí.</span>
+                            </div>
+                        </div>
                     </li>
 
                     <!-- User Profile Dropdown -->
@@ -187,6 +223,16 @@
                                 <p>
                                     Tablero Principal V2
                                     <span class="badge text-bg-warning ms-1">V2 Pro</span>
+                                </p>
+                            </a>
+                        </li>
+                        <!-- Calendario de Eventos -->
+                        <li class="nav-item">
+                            <a asp-area="" asp-controller="Calendario" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Calendario" ? "active" : "")">
+                                <i class="nav-icon bi bi-calendar3-event text-danger"></i>
+                                <p>
+                                    Calendario
+                                    <span class="badge text-bg-danger ms-1">Eventos</span>
                                 </p>
                             </a>
                         </li>
@@ -440,6 +486,24 @@
                                                 <p>Aprobación de Accesos</p>
                                             </a>
                                         </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="PlanillaCalculo" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "PlanillaCalculo" ? "active" : "")">
+                                                <i class="nav-icon bi bi-calculator"></i>
+                                                <p>Cálculo de Planilla</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="RegistroContrato" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RegistroContrato" ? "active" : "")">
+                                                <i class="nav-icon bi bi-file-earmark-text"></i>
+                                                <p>Registro de Contratos</p>
+                                            </a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a asp-area="RH" asp-controller="Tregistro" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tregistro" ? "active" : "")">
+                                                <i class="nav-icon bi bi-cloud-arrow-down"></i>
+                                                <p>T-Registro SUNAT</p>
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
 
@@ -498,6 +562,8 @@
     <script src="~/plugins/adminlte/adminlte.min.js" asp-append-version="true"></script>
     <script src="~/plugins/chart.js/chart.min.js" asp-append-version="true"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/plugins/signalr/signalr.min.js" asp-append-version="true"></script>
+    <script src="~/js/app.signalr.js" asp-append-version="true"></script>
 
     <!-- Dark Mode Toggle & Treeview Scripts -->
     <script>
@@ -514,6 +580,7 @@
 
             function applyTheme(theme) {
                 document.documentElement.setAttribute('data-bs-theme', theme);
+                document.body.classList.toggle('dark-mode', theme === 'dark');
                 var $icon = $('#theme-icon-active');
                 if (theme === 'dark') {
                     $icon.removeClass('bi-moon-stars-fill text-warning').addClass('bi-sun-fill text-warning');

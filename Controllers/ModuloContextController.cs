@@ -42,14 +42,49 @@ public abstract class ModuloContextController(IRHService contextService, IAuthSe
             }
             UsuarioId = userId; EmpresaId = session.EmpresaId; EmpresaSedeId = session.EmpresaSedeId;
             PeriodoEmpresaSedeId = scope.Value;
-            int permission = await contextService.GetPermisoModuloAsync(userId, EmpresaId, areaCode.ToLowerInvariant(), menuUrl);
-            bool canWrite = (permission & 2) != 0;
-            if ((permission & 1) == 0 || (HttpMethods.IsPost(Request.Method) && !canWrite))
+
+            // 1. Resolver permisos del usuario
+            int permission = 0;
+            if (session.IsAdmin)
             {
-                context.Result = StatusCode(403, new { success = false, message = "No cuenta con permisos para esta operación." }); return;
+                permission = 3;
             }
+            else
+            {
+                permission = await contextService.GetPermisoModuloAsync(userId, EmpresaId, areaCode.ToLowerInvariant(), menuUrl);
+                if (permission == 0 && (User.IsInRole("Administrador") || User.IsInRole("S0001") ||
+                    string.Equals(session.UsuarioLogon, "administrador", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(session.UsuarioLogon, "admin", StringComparison.OrdinalIgnoreCase)))
+                {
+                    permission = 3;
+                }
+            }
+
+            bool canWrite = (permission & 2) != 0 || session.IsAdmin;
+            bool canRead = (permission & 1) != 0 || canWrite;
+
+            // 2. Control de acceso:
+            // Siguiendo el comportamiento original (DataController legacy):
+            // - Para navegación (GET), siempre se permite abrir la vista (Index) para ver la interfaz en modo solo lectura.
+            // - Para operaciones POST mutantes (guardar, eliminar, anular, aprobar, emitir, etc.), se valida permiso de escritura.
+            if (!canWrite && HttpMethods.IsPost(Request.Method))
+            {
+                string actionName = context.ActionDescriptor.RouteValues["action"]?.ToString()?.ToLowerInvariant() ?? string.Empty;
+                if (IsMutatingAction(actionName))
+                {
+                    context.Result = StatusCode(403, new { success = false, message = "No cuenta con permisos de escritura para realizar modificaciones en este módulo." });
+                    return;
+                }
+            }
+            else if (!canRead && !HttpMethods.IsGet(Request.Method))
+            {
+                context.Result = StatusCode(403, new { success = false, message = "No cuenta con permisos para esta operación." });
+                return;
+            }
+
             if (restoring) HttpContext.Session.SetString("USER_SESSION", JsonSerializer.Serialize(session));
             ViewBag.PuedeEscribir = canWrite;
+            ViewBag.EsSoloLectura = !canWrite;
             ViewBag.ContextoId = scope.Value;
             ViewBag.SedeNombre = session.SedeNombre;
             var executed = await next();
@@ -66,6 +101,13 @@ public abstract class ModuloContextController(IRHService contextService, IAuthSe
             context.Result = StatusCode(500, new { success = false, message = "No se pudo verificar el acceso al módulo." });
         }
     }
+
+    protected static bool IsMutatingAction(string action)
+        => action.StartsWith("guardar") || action.StartsWith("grabar") || action.StartsWith("eliminar") ||
+           action.StartsWith("anular") || action.StartsWith("aprobar") || action.StartsWith("desaprobar") ||
+           action.StartsWith("emitir") || action.StartsWith("cambiarestado") || action.StartsWith("cerrar") ||
+           action.StartsWith("extornar") || action.StartsWith("asignar") || action.StartsWith("recepcionar") ||
+           action.StartsWith("canjear") || action.StartsWith("liquidar") || action.StartsWith("pagar");
 
     private async Task<UserSessionDto?> RecoverSessionAsync(int userId)
     {

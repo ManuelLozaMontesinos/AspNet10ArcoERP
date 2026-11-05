@@ -1104,7 +1104,7 @@ public partial class VentasService
               AND CAST(c.fecha AS date) = CAST(@Fecha AS date)
               AND c.emitido = 'S'", new { EmpresaId = empresaId, Fecha = fecha });
 
-        if (resumen != null && (int)resumen.Cantidad > 0)
+        if (resumen != null && resumen.Cantidad != null && (int)resumen.Cantidad > 0)
         {
             model.Items.Add(new ResumenDiarioItemModel
             {
@@ -1112,10 +1112,10 @@ public partial class VentasService
                 FechaEmision = fecha,
                 FechaGeneracion = DateTime.Now,
                 Ticket = $"RC-{fecha:yyyyMMdd}-0001",
-                CantidadDocumentos = (int)resumen.Cantidad,
-                TotalGravado = (decimal)resumen.TotalGravado,
-                TotalIgv = (decimal)resumen.TotalIgv,
-                TotalGeneral = (decimal)resumen.TotalGeneral,
+                CantidadDocumentos = (int)(resumen.Cantidad ?? 0),
+                TotalGravado = (decimal)(resumen.TotalGravado ?? 0m),
+                TotalIgv = (decimal)(resumen.TotalIgv ?? 0m),
+                TotalGeneral = (decimal)(resumen.TotalGeneral ?? 0m),
                 Estado = "Aceptado (BETA)",
                 MensajeSunat = "Resumen diario procesado correctamente ante SUNAT BETA."
             });

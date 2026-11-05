@@ -1,0 +1,224 @@
+@model DespachoPageModel
+@{
+    ViewData["Title"] = "Despacho de Producción";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-truck text-success me-2"></i>Despacho de Producción
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Control y entrega de productos terminados · @ViewBag.SedeNombre</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="PD" asp-controller="OrdenProdu" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-gear me-1"></i>Órdenes de Producción
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <form method="get" class="row g-2 align-items-end" id="formFiltro">
+                    <input type="hidden" name="sort" value="@Model.Sort" />
+                    <input type="hidden" name="dir" value="@Model.Dir" />
+                    <input type="hidden" name="top" value="@Model.PageSize" />
+
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Buscar comprobante / cliente</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" name="search" value="@Model.Search" placeholder="Serie, número o cliente..." />
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Cotización</label>
+                        <input type="text" class="form-control form-control-sm" name="cotizacion" value="@Model.Cotizacion" placeholder="COT..." />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Estado de despacho</label>
+                        <select class="form-select form-select-sm" name="estadoDespachoId">
+                            <option value="">Todos los estados</option>
+                            @foreach (var st in Model.EstadosDespacho)
+                            {
+                                <option value="@st.Id" selected="@(Model.EstadoDespachoId == st.Id)">@st.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Desde</label>
+                        <input type="date" class="form-control form-control-sm" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Hasta</label>
+                        <input type="date" class="form-control form-control-sm" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-1 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" title="Filtrar">
+                            <i class="bi bi-funnel-fill"></i>
+                        </button>
+                        <a asp-action="Index" class="btn btn-light btn-sm border" title="Limpiar"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Documento</th>
+                            <th>Fecha</th>
+                            <th>Cotización</th>
+                            <th>Cliente</th>
+                            <th>Estado Despacho</th>
+                            <th>Fecha Despacho</th>
+                            <th>Observaciones</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-1"></i>No se encontraron comprobantes para despacho.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.Items)
+                        {
+                            var badgeClass = item.EstadoDespachoId switch
+                            {
+                                3 => "bg-success text-white",
+                                2 => "bg-warning text-dark",
+                                _ => "bg-secondary text-white"
+                            };
+
+                            <tr>
+                                <td class="ps-3 fw-bold">
+                                    <span class="badge bg-light text-dark border me-1">@item.TipoDocumento</span>
+                                    @item.SerieNumero
+                                </td>
+                                <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td><span class="badge bg-light text-secondary border">@(string.IsNullOrWhiteSpace(item.CotizacionPedido) ? "—" : item.CotizacionPedido)</span></td>
+                                <td>
+                                    <div class="fw-semibold">@item.RazonSocial</div>
+                                    <small class="text-muted">@item.NumeroDocumento</small>
+                                </td>
+                                <td>
+                                    <span class="badge @badgeClass">@item.EstadoDespachoNombre</span>
+                                </td>
+                                <td>@(item.FechaDespacho?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                                <td><small class="text-muted text-truncate d-inline-block" style="max-width: 200px;">@(string.IsNullOrWhiteSpace(item.ObservacionDespacho) ? "—" : item.ObservacionDespacho)</small></td>
+                                <td class="text-end pe-3">
+                                    <button type="button" class="btn btn-outline-primary btn-sm btn-detalle" data-id="@item.ComprobanteId" title="Ver detalle de entrega">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i>Despachar
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center py-2">
+                    <small class="text-muted">Mostrando @Model.Items.Count de @Model.Total registros</small>
+                    <ul class="pagination pagination-sm mb-0">
+                        @for (int p = 1; p <= Model.PageCount; p++)
+                        {
+                            <li class="page-item @(p == Model.Page ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { page = p, top = Model.PageSize, search = Model.Search, cotizacion = Model.Cotizacion, estadoDespachoId = Model.EstadoDespachoId, fechaDesde = Model.FechaDesde?.ToString("yyyy-MM-dd"), fechaHasta = Model.FechaHasta?.ToString("yyyy-MM-dd"), sort = Model.Sort, dir = Model.Dir })">@p</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Despacho Detalle -->
+<div class="modal fade" id="modalDespacho" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-truck text-success me-2"></i>Despacho de Productos · <span id="modalDocTitle"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-3 p-3 bg-light rounded-3">
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Cliente</small>
+                        <span class="fw-bold" id="modalCliente"></span> (<span id="modalDocIden"></span>)
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Cotización Referencial</small>
+                        <span class="fw-semibold" id="modalCotiza"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Estado Actual</small>
+                        <span class="badge" id="modalEstadoBadge"></span>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        @if (canWrite)
+                        {
+                            <button type="button" class="btn btn-outline-success btn-sm w-100" id="btnCerrarTodo">
+                                <i class="bi bi-check2-all me-1"></i>Cerrar Todo
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle" id="tblItemsDespacho">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>U.M.</th>
+                                <th class="text-end">Cant. Pedida</th>
+                                <th class="text-end">Cant. Entregada</th>
+                                <th class="text-end">Saldo Pendiente</th>
+                                <th class="text-center" style="width: 220px;">Entrega Parcial</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/pd-despacho.js" asp-append-version="true"></script>
+}

@@ -77,7 +77,7 @@ public partial class AdministracionService
                               u.fecha_expira FechaExpira,
                               CAST(CASE WHEN u.tiene_horario = 'S' THEN 1 ELSE 0 END AS bit) TieneHorario,
                               u.estado Estado,
-                              (SELECT COUNT(1) FROM rol_usuario ru WHERE ru.usuario_id = u.usuario_id AND ru.estado = 'A') CantidadRoles"
+                              (SELECT COUNT(1) FROM rol_usuario ru WHERE ru.usuario_id = u.usuario_id) CantidadRoles"
                      + from
                      + $" ORDER BY {columns[model.Sort]} {model.Dir}, u.usuario_id DESC "
                      + "OFFSET @Offset ROWS FETCH NEXT @Top ROWS ONLY";
@@ -124,7 +124,7 @@ public partial class AdministracionService
             detalle.Datos = user;
 
             detalle.RolesAsignados = (await conn.QueryAsync<int>(
-                "SELECT ru.rol_id FROM rol_usuario ru WHERE ru.usuario_id = @Id AND ru.estado = 'A'",
+                "SELECT ru.rol_id FROM rol_usuario ru WHERE ru.usuario_id = @Id",
                 new { Id = id })).AsList();
         }
         else
@@ -166,30 +166,16 @@ public partial class AdministracionService
 
                 // Roles sincronización
                 await conn.ExecuteAsync(
-                    "UPDATE rol_usuario SET estado = 'I' WHERE usuario_id = @Id",
+                    "DELETE FROM rol_usuario WHERE usuario_id = @Id",
                     new { Id = model.Id }, tx);
 
                 foreach (var rId in model.RolesIds)
                 {
-                    int exists = await conn.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(1) FROM rol_usuario WHERE usuario_id = @UId AND rol_id = @RId",
-                        new { UId = model.Id, RId = rId }, tx);
-
-                    if (exists > 0)
+                    await InsertAsync(conn, tx, "sp_rol_usuario_insertar", new
                     {
-                        await conn.ExecuteAsync(
-                            "UPDATE rol_usuario SET estado = 'A' WHERE usuario_id = @UId AND rol_id = @RId",
-                            new { UId = model.Id, RId = rId }, tx);
-                    }
-                    else
-                    {
-                        await InsertAsync(conn, tx, "sp_rol_usuario_insertar", new
-                        {
-                            rolId = rId,
-                            usuarioId = model.Id,
-                            usuarioAccionId = userId
-                        });
-                    }
+                        rolId = rId,
+                        usuarioId = model.Id
+                    });
                 }
 
                 tx.Commit();
@@ -236,8 +222,7 @@ public partial class AdministracionService
                     await InsertAsync(conn, tx, "sp_rol_usuario_insertar", new
                     {
                         rolId = rId,
-                        usuarioId = newId,
-                        usuarioAccionId = userId
+                        usuarioId = newId
                     });
                 }
 
@@ -364,7 +349,7 @@ public partial class AdministracionService
                               RTRIM(r.rol) Codigo,
                               RTRIM(r.nombre) Nombre,
                               r.estado Estado,
-                              (SELECT COUNT(1) FROM rol_usuario ru WHERE ru.rol_id = r.rol_id AND ru.estado = 'A') CantidadUsuarios"
+                              (SELECT COUNT(1) FROM rol_usuario ru WHERE ru.rol_id = r.rol_id) CantidadUsuarios"
                      + from
                      + $" ORDER BY {columns[model.Sort]} {model.Dir}, r.rol_id DESC "
                      + "OFFSET @Offset ROWS FETCH NEXT @Top ROWS ONLY";
@@ -438,6 +423,73 @@ public partial class AdministracionService
         catch (Exception ex)
         {
             return (false, "Error al anular rol: " + ex.Message);
+        }
+    }
+
+    public async Task<List<RolMenuPermisoModel>> GetRolPermisosAsync(int rolId)
+    {
+        if (rolId <= 0) return new List<RolMenuPermisoModel>();
+
+        using var conn = _dbConnectionFactory.CreateConnection();
+        var rows = await conn.QueryAsync<dynamic>(
+            "sp_rol_menu_listarPorRolId",
+            new { rolId },
+            commandType: CommandType.StoredProcedure);
+
+        var list = new List<RolMenuPermisoModel>();
+        foreach (var r in rows)
+        {
+            list.Add(new RolMenuPermisoModel
+            {
+                MenuId = Convert.ToInt32(r.menu_id),
+                Nombre = (string)r.nombre ?? "",
+                Area = (string)r.area ?? "",
+                Url = (string)r.url ?? "",
+                Icono = (string)r.icono,
+                MenuPadreId = r.menu_padre_id != null ? Convert.ToInt32(r.menu_padre_id) : null,
+                Orden = Convert.ToInt32(r.orden ?? 0),
+                Lectura = string.Equals((string)r.lectura, "S", StringComparison.OrdinalIgnoreCase),
+                Escritura = string.Equals((string)r.escritura, "S", StringComparison.OrdinalIgnoreCase)
+            });
+        }
+        return list;
+    }
+
+    public async Task<(bool success, string message)> SaveRolPermisosAsync(int rolId, List<RolMenuPermisoItem> permisos)
+    {
+        if (rolId <= 0) return (false, "Identificador de rol no válido.");
+
+        using var conn = _dbConnectionFactory.CreateConnection();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        try
+        {
+            await conn.ExecuteAsync("DELETE FROM rol_menu WHERE rol_id = @RolId", new { RolId = rolId }, tx);
+
+            foreach (var p in permisos)
+            {
+                if (p.Lectura || p.Escritura)
+                {
+                    await conn.ExecuteAsync(@"
+                        INSERT INTO rol_menu (rol_menu_id, rol_id, menu_id, lectura, escritura)
+                        VALUES (NEXT VALUE FOR rol_menu_seq, @RolId, @MenuId, @Lectura, @Escritura)",
+                        new
+                        {
+                            RolId = rolId,
+                            MenuId = p.MenuId,
+                            Lectura = p.Lectura ? "S" : "N",
+                            Escritura = p.Escritura ? "S" : "N"
+                        }, tx);
+                }
+            }
+
+            tx.Commit();
+            return (true, "Permisos del rol guardados exitosamente.");
+        }
+        catch (Exception ex)
+        {
+            tx.Rollback();
+            return (false, "Error al guardar permisos: " + ex.Message);
         }
     }
 }

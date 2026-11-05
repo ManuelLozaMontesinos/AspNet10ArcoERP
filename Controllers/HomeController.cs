@@ -35,7 +35,7 @@ namespace AspNet10ArcoERP.Controllers
             return true;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? sedeDashboard = null, int? anio = null)
         {
             var userSessionJson = HttpContext.Session.GetString("USER_SESSION");
             UserSessionDto userSession;
@@ -60,61 +60,33 @@ namespace AspNet10ArcoERP.Controllers
             bool esAdmin = EsAdminOGerencia();
             ViewBag.EsAdmin = esAdmin;
             ViewBag.RolActualCodigo = "S0001";
+            ViewBag.SedeDashboardInicial = sedeDashboard ?? 0;
 
             var vm = await _dashboardService.GetDashboardMetricsAsync(
                 vendedorIdFiltro: null, 
                 mesesInactivos: 5, 
                 vendedorClientesFiltro: null, 
-                esAdmin: esAdmin
+                esAdmin: esAdmin,
+                sedeId: sedeDashboard,
+                anio: anio
             );
 
             return View(vm);
         }
 
         [HttpGet]
-        public async Task<IActionResult> V2()
+        public async Task<IActionResult> V2(int? sedeDashboard = null, int? anio = null)
         {
-            var userSessionJson = HttpContext.Session.GetString("USER_SESSION");
-            UserSessionDto userSession;
-
-            if (!string.IsNullOrEmpty(userSessionJson))
-            {
-                userSession = JsonSerializer.Deserialize<UserSessionDto>(userSessionJson) ?? new UserSessionDto();
-            }
-            else
-            {
-                userSession = new UserSessionDto
-                {
-                    UsuarioLogon = User.Identity?.Name ?? "administrador",
-                    NombreCompleto = User.FindFirst(ClaimTypes.GivenName)?.Value ?? "Administrador",
-                    EmpresaNombre = User.FindFirst("EmpresaNombre")?.Value ?? "ARCO",
-                    SedeNombre = User.FindFirst("SedeNombre")?.Value ?? "Sede Principal",
-                    PeriodoAnio = User.FindFirst("PeriodoAnio")?.Value ?? "2026"
-                };
-            }
-
-            ViewBag.UserSession = userSession;
-            bool esAdmin = EsAdminOGerencia();
-            ViewBag.EsAdmin = esAdmin;
-            ViewBag.RolActualCodigo = "S0001";
-
-            var vm = await _dashboardService.GetDashboardMetricsAsync(
-                vendedorIdFiltro: null, 
-                mesesInactivos: 5, 
-                vendedorClientesFiltro: null, 
-                esAdmin: esAdmin
-            );
-
-            return View(vm);
+            return await Index(sedeDashboard, anio);
         }
 
         [HttpGet]
-        public async Task<JsonResult> ObtenerMetricas(int? vendedorId = null, int mesesInactivos = 5, int? vendedorClientes = null)
+        public async Task<JsonResult> ObtenerMetricas(int? vendedorId = null, int mesesInactivos = 5, int? vendedorClientes = null, int? sedeId = null, int? anio = null, int? cotizacionVendedorId = null)
         {
             try
             {
                 bool esAdmin = EsAdminOGerencia();
-                var vm = await _dashboardService.GetDashboardMetricsAsync(vendedorId, mesesInactivos, vendedorClientes, esAdmin);
+                var vm = await _dashboardService.GetDashboardMetricsAsync(vendedorId, mesesInactivos, vendedorClientes, esAdmin, sedeId, anio);
 
                 var response = new
                 {
@@ -127,7 +99,11 @@ namespace AspNet10ArcoERP.Controllers
                         ordenesProduccionMes = vm.OrdenesProduccionMes,
                         ordenesCompraMes = vm.OrdenesCompraMes,
                         pedidosMesMonto = vm.PedidosMesMonto,
-                        pedidosMesCantidad = vm.PedidosMesCantidad
+                        pedidosMesCantidad = vm.PedidosMesCantidad,
+                        consumoInternoMes = vm.ConsumoInternoMes,
+                        ingresosMermaMes = vm.IngresosMermaMes,
+                        salidasMermaMes = vm.SalidasMermaMes,
+                        guiasRemisionMes = vm.GuiasRemisionMes
                     },
                     vendedores = vm.ListaVendedores.Select(v => new { id = v.Id, nombre = v.Nombre }).ToList(),
                     vendedorData = new
@@ -136,6 +112,13 @@ namespace AspNet10ArcoERP.Controllers
                         nombre = vm.PrimerVendedorNombre,
                         cantidades = vm.VendedorCantidades,
                         montos = vm.VendedorMontos
+                    },
+                    cotizacionData = new
+                    {
+                        id = vm.PrimerCotizacionVendedorId,
+                        nombre = vm.PrimerCotizacionVendedorNombre,
+                        cantidades = vm.CotizacionCantidades,
+                        montos = vm.CotizacionMontos
                     },
                     topPedidos = vm.TopPedidos,
                     topPedidosFecha = vm.TopPedidosFecha,
@@ -196,11 +179,35 @@ namespace AspNet10ArcoERP.Controllers
         }
 
         [HttpGet]
-        public async Task<JsonResult> ObtenerClientesInactivos(int meses = 5, int? vendedorId = null)
+        public async Task<JsonResult> ObtenerCotizacionesVendedor(int vendedorId, int dias = 12, int? anio = null)
         {
             try
             {
-                var list = await _dashboardService.GetClientesInactivosAsync(meses, vendedorId);
+                var (labels, cantidades, montos, totalCotizaciones, totalMonto) = await _dashboardService.GetCotizacionesVendedorAsync(vendedorId, dias, anio);
+                return Json(new
+                {
+                    success = true,
+                    vendedorId = vendedorId,
+                    dias = dias,
+                    labels = labels,
+                    cantidades = cantidades,
+                    montos = montos,
+                    totalCotizaciones = totalCotizaciones,
+                    totalMonto = totalMonto
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerClientesInactivos(int meses = 5, int? vendedorId = null, int? sedeId = null)
+        {
+            try
+            {
+                var list = await _dashboardService.GetClientesInactivosAsync(meses, vendedorId, sedeId);
                 return Json(new { success = true, meses = meses, data = list });
             }
             catch (Exception ex)
@@ -210,9 +217,126 @@ namespace AspNet10ArcoERP.Controllers
         }
 
         [HttpGet]
-        public async Task<JsonResult> ObtenerDatosDashboard(int mesesInactivos = 5)
+        public async Task<JsonResult> ObtenerDatosDashboard(int? vendedorId = null, int mesesInactivos = 5, int? vendedorClientes = null, int? sedeId = null, int? anio = null, int? cotizacionVendedorId = null)
         {
-            return await ObtenerMetricas(null, mesesInactivos, null);
+            return await ObtenerMetricas(vendedorId, mesesInactivos, vendedorClientes, sedeId, anio, cotizacionVendedorId);
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerKpisPorSede(int? sedeId = null, int? anio = null, int? vendedorId = null)
+        {
+            try
+            {
+                var data = await _dashboardService.GetKpisPorSedeAsync(sedeId, anio, vendedorId);
+                return Json(data);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerStockInsumos(int? almacenId = null, int? sedeId = null)
+        {
+            try
+            {
+                var data = await _dashboardService.GetStockInsumosAsync(almacenId, sedeId);
+                return Json(new { success = true, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerClasesPorGrupo(int? grupoId)
+        {
+            try
+            {
+                var data = await _dashboardService.GetClasesPorGrupoAsync(grupoId);
+                return Json(new { success = true, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerFamiliasPorClase(int? claseId)
+        {
+            try
+            {
+                var data = await _dashboardService.GetFamiliasPorClaseAsync(claseId);
+                return Json(new { success = true, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerTopMenorStock(int? grupoId = null, int? claseId = null, int? familiaId = null, int? sedeId = null)
+        {
+            try
+            {
+                var data = await _dashboardService.GetTopMenorStockAsync(grupoId, claseId, familiaId, sedeId);
+                return Json(new { success = true, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerEventosAgenda(int? areaId = null)
+        {
+            try
+            {
+                var data = await _dashboardService.GetEventosAgendaAsync(areaId);
+                return Json(new { success = true, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ObtenerConfiguracionDashboardRoles()
+        {
+            try
+            {
+                var data = await _dashboardService.GetDashboardRolesConfigAsync();
+                return Json(new { success = true, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<JsonResult> GuardarConfiguracionDashboardRol([FromBody] RolConfigModel model)
+        {
+            try
+            {
+                if (model == null || string.IsNullOrEmpty(model.RolCodigo))
+                {
+                    return Json(new { success = false, message = "Datos del rol inválidos." });
+                }
+
+                bool result = await _dashboardService.SaveDashboardRoleConfigAsync(model.RolCodigo, model.ConfigJson);
+                return Json(new { success = result });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }

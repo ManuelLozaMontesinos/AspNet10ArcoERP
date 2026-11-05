@@ -39,5 +39,21 @@ public class RolController(
         var (success, message) = await service.AnularRolAsync(id, UsuarioId);
         return success ? Json(new { success = true, message }) : BadRequest(new { success = false, message });
     }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerPermisos(int rolId)
+    {
+        if (!ModelState.IsValid || rolId <= 0) return InvalidInput();
+        var data = await service.GetRolPermisosAsync(rolId);
+        return Json(new { success = true, data });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> GuardarPermisos([FromBody] RolPermisosGuardarSolicitud model)
+    {
+        if (!ModelState.IsValid || model.RolId <= 0) return InvalidInput();
+        var (success, message) = await service.SaveRolPermisosAsync(model.RolId, model.Permisos);
+        return success ? Json(new { success = true, message }) : BadRequest(new { success = false, message });
+    }
 }
 

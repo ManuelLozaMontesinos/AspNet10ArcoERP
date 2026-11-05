@@ -23,10 +23,12 @@ namespace AspNet10ArcoERP.Services
         Task<(bool success, string message)> CambiarEstadoUsuarioAsync(int id, string nuevoEstado);
         Task<(bool success, string message)> CambiarContrasenaUsuarioAsync(UsuarioCambiarContrasenaSolicitud model);
 
-        // Roles
+        // Roles y Permisos
         Task<RolPageModel> GetRolesAsync(int empresaId, string? search = null, string? estado = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
         Task<(bool success, string message, int id)> SaveRolAsync(int empresaId, int userId, RolGuardarSolicitud model);
         Task<(bool success, string message)> AnularRolAsync(int id, int userId);
+        Task<List<RolMenuPermisoModel>> GetRolPermisosAsync(int rolId);
+        Task<(bool success, string message)> SaveRolPermisosAsync(int rolId, List<RolMenuPermisoItem> permisos);
 
         // Empresas y Sedes
         Task<EmpresaPageModel> GetEmpresasAsync(string? search = null, string? estado = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
@@ -41,5 +43,9 @@ namespace AspNet10ArcoERP.Services
         Task<List<PeriodoSedeItemModel>> GetPeriodoSedesAsync(int empresaId, int periodoId);
         Task<(bool success, string message)> AsignarSedePeriodoAsync(int periodoId, int sedeId, int userId);
         Task<(bool success, string message)> EliminarSedePeriodoAsync(int periodoEmpresaSedeId);
+
+        // Procesos de Integración
+        Task<ProcesoIntegracionPageModel> GetProcesosIntegracionAsync(int moduloId);
+        Task<(bool success, string message)> EjecutarProcesoIntegracionAsync(int empresaId, int contextoId, int userId, int procesoId);
     }
 }

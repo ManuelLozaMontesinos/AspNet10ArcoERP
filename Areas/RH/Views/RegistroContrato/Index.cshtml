@@ -1,0 +1,195 @@
+@model ContratoPersonalPageModel
+@{
+    ViewData["Title"] = "Registro de Contratos";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-file-earmark-text text-primary me-2"></i>Registro de Contratos Laborales
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Asignación de modalidades de contrato SUNAT (D.Leg. 728 / plazo fijo) · @ViewBag.SedeNombre</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Buscar Colaborador</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" name="search" value="@Model.Search" placeholder="Nombre o DNI..." />
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Tipo de Contrato</label>
+                        <select class="form-select form-select-sm" name="tipoContratoId">
+                            <option value="">Todos los tipos</option>
+                            @foreach (var tc in Model.TiposContrato)
+                            {
+                                <option value="@tc.Id" selected="@(Model.TipoContratoId == tc.Id)">@tc.Codigo - @tc.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel-fill me-1"></i>Filtrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Colaborador</th>
+                            <th>DNI</th>
+                            <th>Cargo</th>
+                            <th>Modalidad de Contrato</th>
+                            <th>Fecha Ingreso</th>
+                            <th>Fecha Cese / Término</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-1"></i>No se encontraron registros de colaboradores.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var c in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">@c.NombreCompleto</td>
+                                <td><span class="badge bg-light text-secondary border">@c.NumeroDocumento</span></td>
+                                <td>@c.Cargo</td>
+                                <td>
+                                    <span class="badge @(c.TipoContratoId.HasValue ? "bg-info text-dark" : "bg-warning text-dark")">
+                                        @c.TipoContratoNombre
+                                    </span>
+                                </td>
+                                <td>@(c.FechaIngreso?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td>@(c.FechaCese?.ToString("dd/MM/yyyy") ?? "Indeterminado")</td>
+                                <td class="text-end pe-3">
+                                    @if (canWrite)
+                                    {
+                                        <button type="button" class="btn btn-outline-primary btn-sm btn-editar-contrato" data-id="@c.PersonalId" data-nombre="@c.NombreCompleto" data-contrato="@c.TipoContratoId" data-cese="@(c.FechaCese?.ToString("yyyy-MM-dd"))">
+                                            <i class="bi bi-pencil-square me-1"></i>Editar
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Contrato -->
+<div class="modal fade" id="modalEditarContrato" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-file-earmark-text text-primary me-2"></i>Asignar Contrato Laboral
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="txtPersonalId" />
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Colaborador</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="txtPersonalNombre" readonly />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Tipo de Contrato (SUNAT) <span class="text-danger">*</span></label>
+                    <select class="form-select form-select-sm" id="cboTipoContrato">
+                        @foreach (var tc in Model.TiposContrato)
+                        {
+                            <option value="@tc.Id">@tc.Codigo - @tc.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Fecha de Término / Cese (Opcional)</label>
+                    <input type="date" class="form-control form-control-sm" id="txtFechaCese" />
+                    <small class="text-muted">Dejar vacío si es a plazo indeterminado.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnGuardarContrato">
+                    <i class="bi bi-save me-1"></i>Guardar Contrato
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalEl = document.getElementById('modalEditarContrato');
+            const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+
+            document.querySelectorAll('.btn-editar-contrato').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.getElementById('txtPersonalId').value = this.getAttribute('data-id');
+                    document.getElementById('txtPersonalNombre').value = this.getAttribute('data-nombre');
+                    const cId = this.getAttribute('data-contrato');
+                    if (cId) document.getElementById('cboTipoContrato').value = cId;
+                    document.getElementById('txtFechaCese').value = this.getAttribute('data-cese') || '';
+                    if (modal) modal.show();
+                });
+            });
+
+            const btnGuardar = document.getElementById('btnGuardarContrato');
+            if (btnGuardar) {
+                btnGuardar.addEventListener('click', async function () {
+                    const personalId = parseInt(document.getElementById('txtPersonalId').value);
+                    const tipoContratoId = parseInt(document.getElementById('cboTipoContrato').value);
+                    const fechaCese = document.getElementById('txtFechaCese').value;
+
+                    const payload = {
+                        personalId,
+                        tipoContratoId,
+                        fechaCese: fechaCese ? fechaCese : null
+                    };
+
+                    try {
+                        const res = await fetch('/RH/RegistroContrato/Actualizar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const json = await res.json();
+                        if (json.success) {
+                            alert(json.message || 'Contrato actualizado.');
+                            location.reload();
+                        } else {
+                            alert(json.message || 'Error al actualizar.');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error de conexión.');
+                    }
+                });
+            }
+        });
+    </script>
+}
+

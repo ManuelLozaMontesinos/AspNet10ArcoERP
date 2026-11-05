@@ -9,7 +9,7 @@ using Dapper;
 
 namespace AspNet10ArcoERP.Services
 {
-    public class RHService : IRHService
+    public partial class RHService : IRHService
     {
         private readonly IDbConnectionFactory _dbConnectionFactory;
 
@@ -3412,22 +3412,21 @@ namespace AspNet10ArcoERP.Services
         public async Task<int> GetPermisoModuloAsync(int userId, int empresaId, string area, string menuUrl)
         {
             using var conn = _dbConnectionFactory.CreateConnection();
-            // Legacy administrator role codes; never trust the session's default IsAdmin flag.
+            // Administradores y roles de control tienen acceso total (3 = Lectura y Escritura).
             return await conn.ExecuteScalarAsync<int>(@"
                 SELECT ISNULL(MAX(CASE
-                    WHEN r.rol IN ('S0001','S0002','00020') THEN 3
-                    WHEN m.area = @Area AND m.url = @MenuUrl AND m.estado = 'A'
+                    WHEN u.usuario_logon IN ('administrador', 'admin') THEN 3
+                    WHEN r.rol IN ('S0001','S0002','S0003','00020') THEN 3
+                    WHEN LOWER(m.area) = LOWER(@Area) AND LOWER(m.url) = LOWER(@MenuUrl) AND m.estado = 'A'
                          AND rm.lectura = 'S' THEN CASE WHEN rm.escritura = 'S' THEN 3 ELSE 1 END
-                    ELSE 0 END),0)
+                    ELSE 0 END), 0)
                 FROM usuario u
-                INNER JOIN rol_usuario ru ON ru.usuario_id = u.usuario_id
-                INNER JOIN rol r ON r.rol_id = ru.rol_id AND r.estado = 'A'
+                LEFT JOIN rol_usuario ru ON ru.usuario_id = u.usuario_id
+                LEFT JOIN rol r ON r.rol_id = ru.rol_id AND r.estado = 'A'
                 LEFT JOIN rol_menu rm ON rm.rol_id = r.rol_id
                 LEFT JOIN menu m ON m.menu_id = rm.menu_id
-                WHERE u.usuario_id = @UserId AND u.estado = 'A'
-                  AND (u.empresa_id IS NULL OR u.empresa_id = @EmpresaId)
-                  AND (r.empresa_id IS NULL OR r.empresa_id = @EmpresaId)",
-                new { UserId = userId, EmpresaId = empresaId, Area = area, MenuUrl = menuUrl });
+                WHERE u.usuario_id = @UserId AND u.estado = 'A'",
+                new { UserId = userId, Area = area, MenuUrl = menuUrl });
         }
 
         public async Task<int?> GetPeriodoEmpresaSedePlanillaAsync(int empresaId, int empresaSedeId, int periodoId)

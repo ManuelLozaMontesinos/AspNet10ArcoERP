@@ -208,7 +208,7 @@
                                     </td>
                                 </tr>
                             }
-                            @if (!Model.Any())
+                            @if (Model == null || !Model.Any())
                             {
                                 <tr id="fila-sin-datos">
                                     <td colspan="7" class="text-center text-muted py-4">

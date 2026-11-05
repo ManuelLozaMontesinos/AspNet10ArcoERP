@@ -1,0 +1,74 @@
+@model PlanillaProcesoPageModel
+@{
+    ViewData["Title"] = "Cálculo de Planilla";
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-calculator text-primary me-2"></i>Cálculo y Liquidación de Planilla
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Revisión y liquidación de conceptos remunerativos por período · @ViewBag.SedeNombre</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="RH" asp-controller="PlanillaProceso" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-cpu me-1"></i>Procesos de Planilla
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">ID Proceso</th>
+                            <th>Planilla</th>
+                            <th>Mes / Año</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th class="text-center">Colaboradores</th>
+                            <th class="text-end">Total Neto</th>
+                            <th>Estado</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-1"></i>No hay procesos de planilla para cálculo.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">#@item.Id</td>
+                                <td class="fw-semibold">@item.PlanillaNombre</td>
+                                <td>@item.MesNombre @item.PeriodoAnio</td>
+                                <td>@item.FechaDesde.ToString("dd/MM/yyyy")</td>
+                                <td>@item.FechaHasta.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center"><span class="badge bg-secondary">@item.TotalTrabajadores</span></td>
+                                <td class="text-end fw-bold text-success">S/ @item.TotalNeto.ToString("N2")</td>
+                                <td><span class="badge bg-success">@item.EstadoPlanProceNombre</span></td>
+                                <td class="text-end pe-3">
+                                    <a asp-area="RH" asp-controller="PlanillaProceso" asp-action="Index" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye me-1"></i>Ver Cálculos
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

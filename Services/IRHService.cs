@@ -243,5 +243,12 @@ namespace AspNet10ArcoERP.Services
         Task<List<LookupItemModel>> GetColaboradoresPorPlanillaProcesadaAsync(int planProceId);
         Task<BoletaPagoModel?> GetBoletaPagoAsync(int planProceId, int personalId);
         Task<List<BoletaPagoModel>> GetBoletasPorPlanillaAsync(int planProceId);
+
+        // =========================================================================
+        // 23. CONTRATOS Y T-REGISTRO
+        // =========================================================================
+        Task<ContratoPersonalPageModel> GetContratosPersonalAsync(int empresaId, string? search = null, int? tipoContratoId = null, int page = 1, int top = 25);
+        Task<(bool success, string message)> ActualizarContratoPersonalAsync(int empresaId, int userId, ActualizarContratoSolicitud model);
+        Task<TRegistroExportModel> GetTRegistroDataAsync(int empresaId);
     }
 }

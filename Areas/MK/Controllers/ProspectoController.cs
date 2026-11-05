@@ -56,7 +56,7 @@ namespace AspNet10ArcoERP.Areas.MK.Controllers
             ViewBag.LeadSources = await _mkService.GetLeadSourceLookupsAsync();
             ViewBag.OportunidadesVenta = await _mkService.GetOportunidadVentaLookupsAsync();
 
-            return View("~/Areas/MG/Views/Proveedor/Index.cshtml", list);
+            return View(list);
         }
 
         [HttpGet]

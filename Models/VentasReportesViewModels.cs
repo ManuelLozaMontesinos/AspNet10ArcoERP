@@ -99,6 +99,24 @@ public static class VentaReporteColumnas
             var document=new List<VentaReporteColumna>{new("tipoDocumento","Tipo",r=>r.TipoDocumento),new("documento","Documento",r=>r.Documento),new("fecha","Fecha",r=>r.Fecha,false,true),new("cliente","Cliente",r=>r.Cliente),new("vendedor","Vendedor",r=>r.Vendedor)};
             return (agrupar=="documento"?document.Concat(product):product.Concat(document)).Concat(new[]{new VentaReporteColumna("cantidad","Cantidad pendiente",r=>r.Cantidad,true),new("estado","Estado",r=>r.Estado)}).ToList();
         }
+        if(tipo=="vendedor")return new()
+        {
+            new("vendedor","Vendedor",r=>r.Vendedor),new("cliente","Cliente",r=>r.Cliente),new("tipoDocumento","Tipo",r=>r.TipoDocumento),
+            new("documento","Documento",r=>r.Documento),new("fecha","Fecha",r=>r.Fecha,false,true),new("moneda","Moneda",r=>r.Moneda),
+            new("total","Total en moneda origen",r=>r.Total,true),new("estado","Estado",r=>r.Estado)
+        };
+        if(tipo=="cliente")return new()
+        {
+            new("cliente","Cliente",r=>r.Cliente),new("ruc","RUC / DNI",r=>r.Ruc),new("tipoDocumento","Tipo",r=>r.TipoDocumento),
+            new("documento","Documento",r=>r.Documento),new("fecha","Fecha",r=>r.Fecha,false,true),new("moneda","Moneda",r=>r.Moneda),
+            new("total","Total",r=>r.Total,true),new("estado","Estado",r=>r.Estado)
+        };
+        if(tipo=="margen")return new()
+        {
+            new("codigo","Código",r=>r.Codigo),new("producto","Producto",r=>r.Producto),new("unidad","U.M.",r=>r.Unidad),
+            new("cantidad","Cantidad",r=>r.Cantidad,true),new("precioUnitario","P. Venta Unitario",r=>r.PrecioUnitario,true),
+            new("neto","Costo Unitario",r=>r.Neto,true),new("total","Margen Total",r=>r.Total,true)
+        };
         return new()
         {
             new("fecha","Fecha",r=>r.Fecha,false,true),new("tipoDocumento","Tipo",r=>r.TipoDocumento),new("documento","Documento",r=>r.Documento),new("codigo","Código cliente",r=>r.Codigo),new("cliente","Cliente",r=>r.Cliente),new("ruc","RUC",r=>r.Ruc),

@@ -1,0 +1,274 @@
+@model TransfeSalidaPageModel
+@{
+    ViewData["Title"] = "Modificación de Transferencias";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-pencil-square text-warning me-2"></i>Modificación de Transferencias
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Edición y ajuste de guías/datos de transferencias en tránsito · @ViewBag.SedeNombre</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                <a asp-area="IV" asp-controller="TransfeSalida" asp-action="Index" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-arrow-right-circle me-1"></i>Ver Salidas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <form method="get" class="row g-2 align-items-end">
+                    <input type="hidden" name="sort" value="@Model.Sort" />
+                    <input type="hidden" name="dir" value="@Model.Dir" />
+                    <input type="hidden" name="top" value="@Model.PageSize" />
+
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" name="search" value="@Model.Search" placeholder="Código, guía u observación..." />
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Almacén Origen</label>
+                        <select class="form-select form-select-sm" name="almacenId">
+                            <option value="">Todos los orígenes</option>
+                            @foreach (var a in Model.Almacenes)
+                            {
+                                <option value="@a.Id" selected="@(Model.AlmacenId == a.Id)">@a.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Almacén Destino</label>
+                        <select class="form-select form-select-sm" name="almacenDestinoId">
+                            <option value="">Todos los destinos</option>
+                            @foreach (var a in Model.AlmacenesDestino)
+                            {
+                                <option value="@a.Id" selected="@(Model.AlmacenDestinoId == a.Id)">@a.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Desde</label>
+                        <input type="date" class="form-control form-control-sm" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Hasta</label>
+                        <input type="date" class="form-control form-control-sm" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-1 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" title="Filtrar">
+                            <i class="bi bi-funnel-fill"></i>
+                        </button>
+                        <a asp-action="Index" class="btn btn-light btn-sm border" title="Limpiar"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Código</th>
+                            <th>Fecha</th>
+                            <th>Origen</th>
+                            <th>Destino</th>
+                            <th>Guía Remisión</th>
+                            <th class="text-center">Items</th>
+                            <th>Estado</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-1"></i>No se encontraron transferencias para modificar.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">@item.Codigo</td>
+                                <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td><span class="badge bg-light text-dark border">@item.AlmacenNombre</span></td>
+                                <td><span class="badge bg-light text-info border">@item.AlmacenDestinoNombre</span></td>
+                                <td>@(string.IsNullOrWhiteSpace(item.NumeroGuiaRemision) ? "—" : item.NumeroGuiaRemision)</td>
+                                <td class="text-center"><span class="badge bg-secondary">@item.CantidadItems</span></td>
+                                <td>
+                                    <span class="badge @(item.EstadoMovimientoAlmacenId == 1 ? "bg-warning text-dark" : "bg-success")">
+                                        @item.EstadoMovimientoAlmacenNombre
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    @if (canWrite)
+                                    {
+                                        <button type="button" class="btn btn-outline-warning btn-sm btn-editar" data-id="@item.Id" title="Modificar datos">
+                                            <i class="bi bi-pencil-square me-1"></i>Modificar
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center py-2">
+                    <small class="text-muted">Mostrando @Model.Items.Count de @Model.Total registros</small>
+                    <ul class="pagination pagination-sm mb-0">
+                        @for (int p = 1; p <= Model.PageCount; p++)
+                        {
+                            <li class="page-item @(p == Model.Page ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { page = p, top = Model.PageSize, search = Model.Search, almacenId = Model.AlmacenId, almacenDestinoId = Model.AlmacenDestinoId, fechaDesde = Model.FechaDesde?.ToString("yyyy-MM-dd"), fechaHasta = Model.FechaHasta?.ToString("yyyy-MM-dd"), sort = Model.Sort, dir = Model.Dir })">@p</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modificar Transferencia -->
+<div class="modal fade" id="modalModificar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-square text-warning me-2"></i>Modificar Transferencia · <span id="modCodigo"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formModificar">
+                    <input type="hidden" id="modId" name="Id" />
+                    <input type="hidden" id="modRevision" name="Revision" />
+                    <input type="hidden" id="modContextoId" name="ContextoId" value="@ViewBag.PeriodoEmpresaSedeId" />
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Almacén Origen</label>
+                            <input type="text" class="form-control form-control-sm bg-light" id="modOrigen" readonly />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Almacén Destino</label>
+                            <input type="text" class="form-control form-control-sm bg-light" id="modDestino" readonly />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">N° Guía de Remisión</label>
+                            <input type="text" class="form-control form-control-sm" id="modGuia" name="NumeroGuiaRemision" maxlength="20" placeholder="001-0000123" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Documento Referencial</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="modSerieDoc" name="SerieDocumento" maxlength="4" placeholder="Serie" style="max-width: 80px;" />
+                                <input type="text" class="form-control" id="modNumDoc" name="NumeroDocumento" maxlength="15" placeholder="Número" />
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Observaciones</label>
+                            <textarea class="form-control form-control-sm" id="modObservacion" name="Observacion" rows="3" maxlength="250" placeholder="Motivo de la modificación..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnGuardarMod">
+                    <i class="bi bi-save me-1"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalEl = document.getElementById('modalModificar');
+            const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+
+            document.querySelectorAll('.btn-editar').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const id = this.getAttribute('data-id');
+                    try {
+                        const res = await fetch(`/IV/TransfeModifica/Obtener?id=${id}`);
+                        const json = await res.json();
+                        if (!json.success) {
+                            alert(json.message || 'Error al obtener la transferencia.');
+                            return;
+                        }
+                        const d = json.data;
+                        document.getElementById('modId').value = d.id;
+                        document.getElementById('modCodigo').textContent = d.codigo;
+                        document.getElementById('modRevision').value = d.revision || '';
+                        document.getElementById('modOrigen').value = d.almacenNombre || '';
+                        document.getElementById('modDestino').value = d.almacenDestinoNombre || '';
+                        document.getElementById('modGuia').value = d.numeroGuiaRemision || '';
+                        document.getElementById('modSerieDoc').value = d.serieDocumento || '';
+                        document.getElementById('modNumDoc').value = d.numeroDocumento || '';
+                        document.getElementById('modObservacion').value = d.observacion || '';
+                        if (modal) modal.show();
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error de conexión.');
+                    }
+                });
+            });
+
+            const btnGuardar = document.getElementById('btnGuardarMod');
+            if (btnGuardar) {
+                btnGuardar.addEventListener('click', async function () {
+                    const form = document.getElementById('formModificar');
+                    const formData = new FormData(form);
+
+                    try {
+                        const res = await fetch('/IV/TransfeModifica/Guardar', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const json = await res.json();
+                        if (json.success) {
+                            alert('Transferencia modificada satisfactoriamente.');
+                            location.reload();
+                        } else {
+                            alert(json.message || 'Error al guardar los cambios.');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error al guardar.');
+                    }
+                });
+            }
+        });
+    </script>
+}

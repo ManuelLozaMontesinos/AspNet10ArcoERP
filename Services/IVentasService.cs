@@ -104,4 +104,14 @@ public interface IVentasService
     // Control Tributario Electrónico (FE)
     Task<DocEmitidoPageModel> GetDocumentosEmitidosAsync(int empresaId, int contextoId, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int? tipoDocId = null, string? estadoDoc = null, string? search = null, int page = 1, int top = 25);
     Task<ResumenDiarioPageModel> GetResumenDiarioAsync(int empresaId, DateTime fecha, int page = 1, int top = 25);
+
+    // Anticipos de Clientes
+    Task<AnticipoClientePageModel> GetAnticiposClienteAsync(int empresaId, int contextoId, string? search = null, int? clienteId = null, int? monedaId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, bool conSaldo = false, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<AnticipoClienteItemModel?> GetAnticipoClienteAsync(int empresaId, int contextoId, int id);
+    Task<(bool success, string message, int id)> SaveAnticipoClienteAsync(int empresaId, int contextoId, int userId, AnticipoClienteGuardarSolicitud model);
+    Task<(bool success, string message)> ExtornarAnticipoClienteAsync(int empresaId, int contextoId, int userId, int id);
+
+    // Cambio de Boletas
+    Task<ComprobantePageModel> GetBoletasParaCambioAsync(int empresaId, int contextoId, string? search = null, int? tipoComprobanteId = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null, int page = 1, int top = 25, string? sort = null, string? dir = null);
+    Task<(bool success, string message)> CambiarTipoComprobanteAsync(int empresaId, int contextoId, int userId, int comprobanteId, int nuevoTipoId);
 }

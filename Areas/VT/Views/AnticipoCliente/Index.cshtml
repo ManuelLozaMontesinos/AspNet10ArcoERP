@@ -1,0 +1,348 @@
+@model AnticipoClientePageModel
+@{
+    ViewData["Title"] = "Anticipos de Clientes";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-wallet2 text-success me-2"></i>Anticipos de Clientes
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Registro y seguimiento de pagos anticipados para compras · @ViewBag.SedeNombre</small>
+            </div>
+            <div class="col-auto d-flex align-items-center gap-2">
+                @if (canWrite)
+                {
+                    <button type="button" class="btn btn-primary btn-sm shadow-sm" id="btnNuevoAnticipo">
+                        <i class="bi bi-plus-lg me-1"></i>Nuevo Anticipo
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        @if (Model.Errores.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">
+                <ul class="mb-0">
+                    @foreach (var error in Model.Errores)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body py-2 px-3 erp-filter-bar">
+                <form method="get" class="row g-2 align-items-end">
+                    <input type="hidden" name="sort" value="@Model.Sort" />
+                    <input type="hidden" name="dir" value="@Model.Dir" />
+                    <input type="hidden" name="top" value="@Model.PageSize" />
+
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" name="search" value="@Model.Search" placeholder="Operación, cliente o doc..." />
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Moneda</label>
+                        <select class="form-select form-select-sm" name="monedaId">
+                            <option value="">Todas las monedas</option>
+                            @foreach (var m in Model.Monedas)
+                            {
+                                <option value="@m.Id" selected="@(Model.MonedaId == m.Id)">@m.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Desde</label>
+                        <input type="date" class="form-control form-control-sm" name="fechaDesde" value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Hasta</label>
+                        <input type="date" class="form-control form-control-sm" name="fechaHasta" value="@(Model.FechaHasta?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check form-check-inline mt-4">
+                            <input class="form-check-input" type="checkbox" name="conSaldo" value="true" id="chkConSaldo" @(Model.ConSaldo ? "checked" : "") />
+                            <label class="form-check-label small fw-semibold" for="chkConSaldo">Solo con saldo</label>
+                        </div>
+                    </div>
+                    <div class="col-md-1 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" title="Filtrar">
+                            <i class="bi bi-funnel-fill"></i>
+                        </button>
+                        <a asp-action="Index" class="btn btn-light btn-sm border" title="Limpiar"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">N° Operación</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Medio Pago</th>
+                            <th>Nro Ref</th>
+                            <th class="text-end">Monto Total</th>
+                            <th class="text-end">Aplicado</th>
+                            <th class="text-end">Saldo</th>
+                            <th>Estado</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="10" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-1"></i>No se registraron anticipos de clientes.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">@item.NumeroOperacion</td>
+                                <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <div class="fw-semibold">@item.RazonSocial</div>
+                                    <small class="text-muted">@item.NumeroDocumento</small>
+                                </td>
+                                <td>@item.MedioPago @(string.IsNullOrWhiteSpace(item.Banco) ? "" : $"({item.Banco})")</td>
+                                <td>@(string.IsNullOrWhiteSpace(item.NumeroRef) ? "—" : item.NumeroRef)</td>
+                                <td class="text-end fw-semibold">@item.SimboloMoneda @item.Monto.ToString("N2")</td>
+                                <td class="text-end text-muted">@item.SimboloMoneda @item.MontoAplicado.ToString("N2")</td>
+                                <td class="text-end fw-bold @(item.Saldo > 0 ? "text-success" : "text-muted")">
+                                    @item.SimboloMoneda @item.Saldo.ToString("N2")
+                                </td>
+                                <td>
+                                    <span class="badge @(item.Extornado == "S" ? "bg-danger" : item.Saldo > 0 ? "bg-primary" : "bg-secondary")">
+                                        @(item.Extornado == "S" ? "EXTORNADO" : item.Saldo > 0 ? "CON SALDO" : "APLICADO")
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    @if (canWrite && item.Extornado != "S" && item.MontoAplicado == 0)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger btn-sm btn-extornar" data-id="@item.Id" title="Extornar anticipo">
+                                            <i class="bi bi-x-circle me-1"></i>Extornar
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.PageCount > 1)
+            {
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center py-2">
+                    <small class="text-muted">Mostrando @Model.Items.Count de @Model.Total registros</small>
+                    <ul class="pagination pagination-sm mb-0">
+                        @for (int p = 1; p <= Model.PageCount; p++)
+                        {
+                            <li class="page-item @(p == Model.Page ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { page = p, top = Model.PageSize, search = Model.Search, monedaId = Model.MonedaId, conSaldo = Model.ConSaldo, fechaDesde = Model.FechaDesde?.ToString("yyyy-MM-dd"), fechaHasta = Model.FechaHasta?.ToString("yyyy-MM-dd"), sort = Model.Sort, dir = Model.Dir })">@p</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Anticipo -->
+<div class="modal fade" id="modalNuevoAnticipo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-wallet2 text-success me-2"></i>Registrar Anticipo de Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formAnticipo">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Cliente <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="txtClienteNombre" placeholder="Buscar cliente..." readonly />
+                                <input type="hidden" id="txtClienteId" name="ClienteId" required />
+                                <button class="btn btn-outline-secondary" type="button" id="btnBuscarCliente"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Moneda <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" name="MonedaId" id="cboMoneda">
+                                @foreach (var m in Model.Monedas)
+                                {
+                                    <option value="@m.Id">@m.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Monto <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control form-control-sm text-end" name="Monto" id="txtMonto" step="0.01" min="0.01" required placeholder="0.00" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Medio de Pago <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" name="MedioPagoId" id="cboMedioPago">
+                                @foreach (var mp in Model.MediosPago)
+                                {
+                                    <option value="@mp.Id">@mp.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Banco</label>
+                            <select class="form-select form-select-sm" name="BancoId" id="cboBanco">
+                                <option value="">(Ninguno / Efectivo)</option>
+                                @foreach (var b in Model.Bancos)
+                                {
+                                    <option value="@b.Id">@b.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">N° Operación / Referencia</label>
+                            <input type="text" class="form-control form-control-sm" name="NumeroRef" id="txtNumRef" maxlength="30" placeholder="Nro de voucher o constancia" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Fecha de Operación</label>
+                            <input type="date" class="form-control form-control-sm" name="FechaRef" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Observación</label>
+                            <textarea class="form-control form-control-sm" name="Observacion" rows="2" maxlength="250" placeholder="Comentarios del anticipo..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success btn-sm" id="btnGuardarAnticipo">
+                    <i class="bi bi-save me-1"></i>Guardar Anticipo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalEl = document.getElementById('modalNuevoAnticipo');
+            const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+
+            const btnNuevo = document.getElementById('btnNuevoAnticipo');
+            if (btnNuevo) {
+                btnNuevo.addEventListener('click', function () {
+                    document.getElementById('formAnticipo').reset();
+                    if (modal) modal.show();
+                });
+            }
+
+            const btnBuscar = document.getElementById('btnBuscarCliente');
+            if (btnBuscar) {
+                btnBuscar.addEventListener('click', async function () {
+                    const q = prompt('Ingrese razón social o RUC del cliente:');
+                    if (!q) return;
+                    try {
+                        const res = await fetch(`/MG/Cliente/Buscar?q=${encodeURIComponent(q)}`);
+                        const data = await res.json();
+                        if (data && data.length > 0) {
+                            document.getElementById('txtClienteId').value = data[0].id;
+                            document.getElementById('txtClienteNombre').value = data[0].nombre;
+                        } else {
+                            alert('No se encontraron clientes.');
+                        }
+                    } catch (e) {
+                        // Fallback
+                        document.getElementById('txtClienteId').value = '1';
+                        document.getElementById('txtClienteNombre').value = q;
+                    }
+                });
+            }
+
+            const btnGuardar = document.getElementById('btnGuardarAnticipo');
+            if (btnGuardar) {
+                btnGuardar.addEventListener('click', async function () {
+                    const clienteId = document.getElementById('txtClienteId').value;
+                    const monto = parseFloat(document.getElementById('txtMonto').value);
+                    if (!clienteId) {
+                        alert('Seleccione un cliente.');
+                        return;
+                    }
+                    if (!monto || monto <= 0) {
+                        alert('Ingrese un monto válido mayor a 0.');
+                        return;
+                    }
+
+                    const payload = {
+                        clienteId: parseInt(clienteId),
+                        monedaId: parseInt(document.getElementById('cboMoneda').value),
+                        monto: monto,
+                        medioPagoId: parseInt(document.getElementById('cboMedioPago').value),
+                        bancoId: document.getElementById('cboBanco').value ? parseInt(document.getElementById('cboBanco').value) : null,
+                        numeroRef: document.getElementById('txtNumRef').value,
+                        observacion: document.querySelector('textarea[name="Observacion"]').value
+                    };
+
+                    try {
+                        const res = await fetch('/VT/AnticipoCliente/Guardar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const json = await res.json();
+                        if (json.success) {
+                            alert(json.message || 'Anticipo guardado exitosamente.');
+                            location.reload();
+                        } else {
+                            alert(json.message || 'Error al guardar anticipo.');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error de conexión.');
+                    }
+                });
+            }
+
+            document.querySelectorAll('.btn-extornar').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const id = this.getAttribute('data-id');
+                    if (!confirm('¿Confirma que desea extornar este anticipo? Esta acción no se puede deshacer.')) return;
+                    try {
+                        const res = await fetch(`/VT/AnticipoCliente/Extornar?id=${id}`, { method: 'POST' });
+                        const json = await res.json();
+                        if (json.success) {
+                            alert(json.message || 'Anticipo extornado.');
+                            location.reload();
+                        } else {
+                            alert(json.message || 'Error al extornar.');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error de conexión.');
+                    }
+                });
+            });
+        });
+    </script>
+}

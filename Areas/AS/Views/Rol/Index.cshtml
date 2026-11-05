@@ -113,7 +113,10 @@
                                         }
                                     </td>
                                     <td class="text-end text-nowrap">
-                                        <button type="button" class="btn btn-outline-primary btn-sm js-rol-edit" data-id="@item.Id" data-codigo="@item.Codigo" data-nombre="@item.Nombre" title="Editar Rol">
+                                        <button type="button" class="btn btn-outline-info btn-sm js-rol-permisos me-1" data-id="@item.Id" data-nombre="@item.Nombre" title="Gestionar Permisos de Menú">
+                                            <i class="bi bi-shield-check"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm js-rol-edit me-1" data-id="@item.Id" data-codigo="@item.Codigo" data-nombre="@item.Nombre" title="Editar Rol">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
                                         @if (canWrite && isActivo)
@@ -168,6 +171,72 @@
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary btn-sm js-btn-save-rol" id="btn-save-rol">
                     <i class="bi bi-check-lg me-1"></i>Guardar Rol
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gestión de Permisos de Menú por Rol -->
+<div class="modal fade" id="modal-rol-permisos" tabindex="-1" aria-labelledby="modalRolPermisosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light py-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-shield-lock-fill text-primary fs-4 me-2"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalRolPermisosLabel">Permisos del Rol</h5>
+                        <small class="text-muted" id="modal-rol-permisos-sub">Configurar lectura y escritura en los módulos del ERP</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-3">
+                <input type="hidden" id="permisos-rol-id" value="0" />
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
+                    <div class="small text-muted">
+                        Seleccione los accesos autorizados para este rol:
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-permisos-todos-lectura">
+                            <i class="bi bi-check-all me-1"></i>Toda Lectura
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" id="btn-permisos-todos-escritura">
+                            <i class="bi bi-check2-all me-1"></i>Toda Escritura
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-permisos-desmarcar-todos">
+                            <i class="bi bi-x-lg me-1"></i>Desmarcar Todo
+                        </button>
+                    </div>
+                </div>
+
+                <div id="permisos-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-muted small mt-2">Cargando árbol de módulos y opciones...</p>
+                </div>
+
+                <div id="permisos-container" class="d-none">
+                    <div class="table-responsive" style="max-height: 55vh;">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Módulo / Opción</th>
+                                    <th class="text-center" style="width: 100px;">Lectura</th>
+                                    <th class="text-center" style="width: 100px;">Escritura</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permisos-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold" id="btn-save-permisos">
+                    <i class="bi bi-save me-1"></i>Guardar Permisos
                 </button>
             </div>
         </div>

@@ -1,0 +1,102 @@
+@model ProcesoIntegracionPageModel
+@{
+    ViewData["Title"] = $"Procesos de Integración - {Model.ModuloNombre}";
+    bool canWrite = ViewBag.PuedeEscribir == true;
+}
+
+<div class="app-content-header py-3 border-bottom">
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <div class="col">
+                <h3 class="mb-0 fw-bold d-flex align-items-center">
+                    <i class="bi bi-cpu text-info me-2"></i>Procesos de Integración · @Model.ModuloNombre
+                </h3>
+                <small class="text-muted" data-erp-list-summary>Sincronización por lotes y tareas en segundo plano · @ViewBag.SedeNombre</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-content py-4 erp-listing">
+    <div class="container-fluid">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-light py-2">
+                <h5 class="card-title text-secondary fw-semibold mb-0">Tareas Automatizadas Registradas</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Código</th>
+                            <th>Descripción / Endpoint / Procedimiento</th>
+                            <th>Módulo</th>
+                            <th>Estado</th>
+                            <th class="text-end pe-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-1"></i>No hay procesos de integración configurados para este módulo.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var p in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">@p.Codigo</td>
+                                <td class="fw-semibold font-monospace">@p.Nombre</td>
+                                <td><span class="badge bg-light text-dark border">@p.ModuloNombre</span></td>
+                                <td><span class="badge bg-success">Activo</span></td>
+                                <td class="text-end pe-3">
+                                    @if (canWrite)
+                                    {
+                                        <button type="button" class="btn btn-primary btn-sm btn-ejecutar" data-id="@p.Id" data-nombre="@p.Nombre">
+                                            <i class="bi bi-play-fill me-1"></i>Ejecutar Ahora
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.btn-ejecutar').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const id = this.getAttribute('data-id');
+                    const nombre = this.getAttribute('data-nombre');
+
+                    if (!confirm(`¿Confirma la ejecución manual del proceso '${nombre}'?`)) return;
+
+                    this.disabled = true;
+                    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ejecutando...';
+
+                    try {
+                        const currentUrl = window.location.pathname.replace(/\/+$/, '');
+                        const res = await fetch(`${currentUrl}/Ejecutar?procesoId=${id}`, {
+                            method: 'POST'
+                        });
+                        const json = await res.json();
+                        alert(json.message || (json.success ? 'Proceso completado.' : 'Ocurrió un error.'));
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error al ejecutar el proceso.');
+                    } finally {
+                        this.disabled = false;
+                        this.innerHTML = '<i class="bi bi-play-fill me-1"></i>Ejecutar Ahora';
+                    }
+                });
+            });
+        });
+    </script>
+}
+

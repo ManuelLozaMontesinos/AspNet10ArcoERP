@@ -15,20 +15,28 @@ public partial class VentasService
     public async Task<VentaReportePageModel> GetReporteVentaAsync(int empresaId,int contextoId,string tipo,VentaReporteFiltro filtro,int page=1,int top=25,string? sort=null,string? dir=null,bool exportar=false)
     {
         if(tipo is "canjes" or "caja")return await GetReporteComplementarioAsync(empresaId,contextoId,tipo,filtro,page,top,sort,dir,exportar);
-        var model=new VentaReportePageModel{Tipo=tipo,Filtro=filtro??new(),Titulo=tipo switch{"temporales"=>"Documentos temporales","reservas"=>"Documentos con reserva","pedidos"=>"Pedidos por producto",_=>"Reporte de ventas"}};
+        var model=new VentaReportePageModel{Tipo=tipo,Filtro=filtro??new(),Titulo=tipo switch{
+            "temporales"=>"Documentos temporales",
+            "reservas"=>"Documentos con reserva",
+            "pedidos"=>"Pedidos por producto",
+            "vendedor"=>"Ventas por vendedor",
+            "cliente"=>"Ventas por cliente",
+            "margen"=>"Márgenes unitarios",
+            _=>"Reporte de ventas"
+        }};
         filtro=model.Filtro;filtro.Modo=Text(filtro.Modo).ToLowerInvariant();filtro.Agrupar=Text(filtro.Agrupar).ToLowerInvariant();
         if(filtro.Modo.Length==0)filtro.Modo=tipo=="reservas"?"actual":"mes";
         if(filtro.Agrupar.Length==0)filtro.Agrupar="producto";
         var columns=model.Columnas.ToDictionary(c=>c.Campo.ToLowerInvariant(),c=>c.Campo);
-        model.Ordenar(sort,dir,columns.Keys,tipo=="temporales"?"fecha":tipo=="pedidos"?"pedido":filtro.Agrupar=="documento"?"documento":"codigo");model.Paginar(0,page,top);
-        if(tipo is not ("temporales" or "reservas" or "pedidos")||empresaId<=0||contextoId<=0){model.Errores.Add("El reporte o contexto no está disponible.");return model;}
+        model.Ordenar(sort,dir,columns.Keys,tipo=="temporales"?"fecha":tipo=="pedidos"?"pedido":tipo=="vendedor"?"vendedor":tipo=="cliente"?"cliente":filtro.Agrupar=="documento"?"documento":"codigo");model.Paginar(0,page,top);
+        if(tipo is not ("temporales" or "reservas" or "pedidos" or "vendedor" or "cliente" or "margen")||empresaId<=0||contextoId<=0){model.Errores.Add("El reporte o contexto no está disponible.");return model;}
         using var conn=factory.CreateConnection();
         var scope=await GetContextoReporteAsync(conn,empresaId,contextoId);
         if(scope is null){model.Errores.Add("El período y sede no están habilitados para la empresa.");return model;}model.Contexto=scope;
         model.Meses=(await conn.QueryAsync<LookupItemModel>("SELECT TRY_CONVERT(int,mes_contable) Id,RTRIM(mes_contable) Codigo,nombre Nombre FROM mes_contable WHERE estado='A' AND mes_contable BETWEEN '01' AND '12' ORDER BY mes_contable")).AsList();
-        if(tipo=="reservas")model.Vendedores=(await conn.QueryAsync<LookupItemModel>("SELECT v.vendedor_id Id,CONCAT(RTRIM(v.vendedor),' · ',p.razon_social) Nombre FROM vendedor v JOIN proveedor p ON p.proveedor_id=v.proveedor_id WHERE p.empresa_id=@EmpresaId ORDER BY p.razon_social,v.vendedor_id",new{EmpresaId=empresaId})).AsList();
+        if(tipo is "reservas" or "vendedor")model.Vendedores=(await conn.QueryAsync<LookupItemModel>("SELECT v.vendedor_id Id,CONCAT(RTRIM(v.vendedor),' · ',p.razon_social) Nombre FROM vendedor v JOIN proveedor p ON p.proveedor_id=v.proveedor_id WHERE p.empresa_id=@EmpresaId ORDER BY p.razon_social,v.vendedor_id",new{EmpresaId=empresaId})).AsList();
         if(filtro.Search?.Length>150)model.Errores.Add("La búsqueda admite hasta 150 caracteres.");
-        if(filtro.VendedorId.HasValue&&(filtro.VendedorId<=0||tipo!="reservas"||!model.Vendedores.Any(v=>v.Id==filtro.VendedorId)))model.Errores.Add("Seleccione un vendedor de la empresa.");
+        if(filtro.VendedorId.HasValue&&(filtro.VendedorId<=0||!model.Vendedores.Any(v=>v.Id==filtro.VendedorId)))model.Errores.Add("Seleccione un vendedor de la empresa.");
         if(filtro.Agrupar is not ("producto" or "documento"))model.Errores.Add("Seleccione una vista de agrupación válida.");
         if(tipo=="reservas")
         {
@@ -37,7 +45,7 @@ public partial class VentasService
         }
         else
         {
-            if((tipo=="pedidos"&&filtro.Modo!="mes")||(tipo=="temporales"&&filtro.Modo is not ("mes" or "rango" or "anual")))model.Errores.Add("Seleccione un modo de consulta válido.");
+            if((tipo=="pedidos"&&filtro.Modo!="mes")||(tipo is "temporales" or "vendedor" or "cliente" or "margen"&&filtro.Modo is not ("mes" or "rango" or "anual")))model.Errores.Add("Seleccione un modo de consulta válido.");
             if(filtro.Modo=="mes"){filtro.Mes??=scope.Hoy.Month;if(!model.Meses.Any(m=>m.Id==filtro.Mes))model.Errores.Add("Seleccione un mes contable vigente.");}
             if(filtro.Modo=="rango"&&(!filtro.Desde.HasValue||!filtro.Hasta.HasValue||filtro.Desde.Value.Year is <1900 or >9998||filtro.Hasta.Value.Year is <1900 or >9998||filtro.Desde.Value.Date>filtro.Hasta.Value.Date))model.Errores.Add("Seleccione un rango de fechas válido.");
         }
@@ -45,8 +53,22 @@ public partial class VentasService
         var args=new DynamicParameters(new{EmpresaId=empresaId,ScopeId=contextoId,SiteId=scope.EmpresaSedeId,Mes=filtro.Modo=="mes"?filtro.Mes:null,
             MesReserva=scope.Hoy.Month.ToString("00"),Desde=filtro.Modo=="rango"?filtro.Desde?.Date:null,Hasta=filtro.Modo=="rango"?filtro.Hasta?.Date.AddDays(1):null,
             filtro.VendedorId,Search=Search(filtro.Search)});
-        string query=tipo switch{"temporales"=>TemporalesSql,"pedidos"=>PedidosSql,_=>ReservasSql};
-        string searchFields=tipo switch{"temporales"=>"Codigo,Cliente,Ruc,Documento,TipoDocumento,MedioPago,Estado","pedidos"=>"Codigo,Producto,Detalle,Pedido,Cliente,Vendedor,ListaPrecio,Estado",_=>"Codigo,Producto,Documento,TipoDocumento,Cliente,Vendedor,Estado"};
+        string query=tipo switch{
+            "temporales"=>TemporalesSql,
+            "pedidos"=>PedidosSql,
+            "vendedor"=>VendedorSql,
+            "cliente"=>ClienteSql,
+            "margen"=>MargenSql,
+            _=>ReservasSql
+        };
+        string searchFields=tipo switch{
+            "temporales"=>"Codigo,Cliente,Ruc,Documento,TipoDocumento,MedioPago,Estado",
+            "pedidos"=>"Codigo,Producto,Detalle,Pedido,Cliente,Vendedor,ListaPrecio,Estado",
+            "vendedor"=>"Vendedor,Cliente,Documento,TipoDocumento,Estado",
+            "cliente"=>"Cliente,Ruc,Documento,TipoDocumento,Estado",
+            "margen"=>"Codigo,Producto,Unidad",
+            _=>"Codigo,Producto,Documento,TipoDocumento,Cliente,Vendedor,Estado"
+        };
         string where=" WHERE (@Search IS NULL OR "+string.Join(" OR ",searchFields.Split(',').Select(c=>c+" LIKE @Search"))+")";
         // Reservation scopes have very different cardinalities. Avoid both a reused scope plan and
         // oversized memory grants that can leave this read waiting on RESOURCE_SEMAPHORE.
@@ -124,5 +146,54 @@ public partial class VentasService
         JOIN vendedor v ON v.vendedor_id=c.vendedor_id JOIN proveedor pv ON pv.proveedor_id=v.proveedor_id JOIN proveedor p ON p.proveedor_id=c.proveedor_id
         WHERE c.periodo_emp_sede_id=@ScopeId AND ec.estado_cotiza IN ('02','04') AND cp.estado='A' AND cp.cantidad<>cp.cant_compro
             AND (@VendedorId IS NULL OR c.vendedor_id=@VendedorId) AND tp.tipo_producto='S' AND tp.empresa_id=@EmpresaId AND p.empresa_id=@EmpresaId AND pv.empresa_id=@EmpresaId
+    ) ";
+
+    private const string VendedorSql=@"WITH datos AS (
+        SELECT c.comprobante_id Id,c.fecha Fecha,tdc.abrev TipoDocumento,CONCAT(RTRIM(c.serie),' - ',RTRIM(c.numero)) Documento,
+            pv.razon_social Vendedor,p.razon_social Cliente,m.moneda Moneda,
+            CASE WHEN m.es_local='S' THEN c.monto_total ELSE c.monto_total*c.monto_tc END Total,
+            ec.nombre Estado
+        FROM comprobante c
+        JOIN tipo_doc_com tdc ON tdc.tipo_doc_com_id=c.tipo_doc_com_id
+        JOIN vendedor v ON v.vendedor_id=c.vendedor_id
+        JOIN proveedor pv ON pv.proveedor_id=v.proveedor_id
+        JOIN proveedor p ON p.proveedor_id=c.proveedor_id
+        JOIN moneda m ON m.moneda_id=c.moneda_id
+        JOIN estado_compro ec ON ec.estado_compro_id=c.estado_compro_id
+        WHERE c.periodo_emp_sede_id=@ScopeId AND c.estado='A' AND c.emitido='S'
+            AND (@Mes IS NULL OR MONTH(c.fecha)=@Mes)
+            AND (@Desde IS NULL OR c.fecha>=@Desde) AND (@Hasta IS NULL OR c.fecha<@Hasta)
+            AND (@VendedorId IS NULL OR c.vendedor_id=@VendedorId)
+    ) ";
+
+    private const string ClienteSql=@"WITH datos AS (
+        SELECT c.comprobante_id Id,c.fecha Fecha,tdc.abrev TipoDocumento,CONCAT(RTRIM(c.serie),' - ',RTRIM(c.numero)) Documento,
+            p.razon_social Cliente,ISNULL(p.numero_ruc,p.num_doc_iden) Ruc,m.moneda Moneda,
+            CASE WHEN m.es_local='S' THEN c.monto_total ELSE c.monto_total*c.monto_tc END Total,
+            ec.nombre Estado
+        FROM comprobante c
+        JOIN tipo_doc_com tdc ON tdc.tipo_doc_com_id=c.tipo_doc_com_id
+        JOIN proveedor p ON p.proveedor_id=c.proveedor_id
+        JOIN moneda m ON m.moneda_id=c.moneda_id
+        JOIN estado_compro ec ON ec.estado_compro_id=c.estado_compro_id
+        WHERE c.periodo_emp_sede_id=@ScopeId AND c.estado='A' AND c.emitido='S'
+            AND (@Mes IS NULL OR MONTH(c.fecha)=@Mes)
+            AND (@Desde IS NULL OR c.fecha>=@Desde) AND (@Hasta IS NULL OR c.fecha<@Hasta)
+    ) ";
+
+    private const string MargenSql=@"WITH datos AS (
+        SELECT cp.comprob_prod_id Id,RTRIM(prd.producto) Codigo,prd.descripcion Producto,um.abrev Unidad,
+            cp.cantidad Cantidad,cp.precio_unitario PrecioUnitario,
+            CASE WHEN m.es_local='S' THEN cp.monto_neto/NULLIF(cp.cantidad,0) ELSE (cp.monto_neto*c.monto_tc)/NULLIF(cp.cantidad,0) END Neto,
+            CASE WHEN m.es_local='S' THEN cp.monto_total ELSE cp.monto_total*c.monto_tc END Total,
+            c.fecha Fecha
+        FROM comprob_prod cp
+        JOIN comprobante c ON c.comprobante_id=cp.comprobante_id
+        JOIN producto prd ON prd.producto_id=cp.producto_id
+        JOIN unidad_medida um ON um.unidad_medida_id=prd.unidad_medida_id
+        JOIN moneda m ON m.moneda_id=c.moneda_id
+        WHERE c.periodo_emp_sede_id=@ScopeId AND c.estado='A' AND cp.estado='A' AND c.emitido='S'
+            AND (@Mes IS NULL OR MONTH(c.fecha)=@Mes)
+            AND (@Desde IS NULL OR c.fecha>=@Desde) AND (@Hasta IS NULL OR c.fecha<@Hasta)
     ) ";
 }

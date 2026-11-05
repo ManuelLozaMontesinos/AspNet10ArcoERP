@@ -43,7 +43,7 @@ public class ProveCompraController(IMaestrosService maestrosService, IRHService 
         ViewBag.CondicionesPago = await maestrosService.GetCondicionesPagoLookupAsync(EmpresaId);
         ViewBag.Departamentos = await maestrosService.GetDepartamentosLookupAsync();
 
-        return View("~/Areas/MG/Views/Proveedor/Index.cshtml", list);
+        return View(list);
     }
 }
 

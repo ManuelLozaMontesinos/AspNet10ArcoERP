@@ -72,4 +72,23 @@ public interface IProduccionService
     // Asignación de Producción
     Task<List<PersonalMaquinaItemModel>> GetPersonalMaquinasAsync(int empresaId, DateTime? fecha = null);
     Task<(bool success, string message)> AsignarCortadorAsync(int empresaId, int contextoId, int userId, AsignarCortadorSolicitud model);
+
+    // Despacho de Producción
+    Task<DespachoPageModel> GetDespachosAsync(
+        int empresaId,
+        int contextoId,
+        string? search = null,
+        string? codigo = null,
+        string? cotizacion = null,
+        string? cliente = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? estadoDespachoId = null,
+        int page = 1,
+        int top = 25,
+        string? sort = null,
+        string? dir = null);
+    Task<DespachoDetalleModel?> GetDespachoDetalleAsync(int empresaId, int contextoId, int id);
+    Task<(bool success, string message)> EntregarItemDespachoAsync(int empresaId, int contextoId, int userId, DespachoEntregaSolicitud model);
+    Task<(bool success, string message)> CerrarDespachoAsync(int empresaId, int contextoId, int userId, DespachoCerrarSolicitud model);
 }

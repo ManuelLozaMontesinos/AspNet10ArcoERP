@@ -1,4 +1,5 @@
 using System;
+using AspNet10ArcoERP.Hubs;
 using AspNet10ArcoERP.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -24,6 +25,12 @@ builder.Services.AddScoped<IProduccionService, ProduccionService>();
 builder.Services.AddScoped<ITesoreriaService, TesoreriaService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IFacturacionElectronicaService, FacturacionElectronicaService>();
+
+// SignalR & Notifications & Calendar Services
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotifyService, NotifyService>();
+builder.Services.AddScoped<ICalendarioService, CalendarioService>();
+builder.Services.AddHostedService<CalendarEventReminderBackgroundService>();
 
 // Authentication & Cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -67,7 +74,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
 
+app.UseStaticFiles();
 app.MapStaticAssets();
+
+app.MapHub<NotifyHub>("/notifyHub");
 
 app.MapControllerRoute(
     name: "areas",

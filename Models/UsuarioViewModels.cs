@@ -85,3 +85,29 @@ public class RolGuardarSolicitud
     public string? Revision { get; set; }
 }
 
+public class RolMenuPermisoModel
+{
+    public int MenuId { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Area { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+    public string? Icono { get; set; }
+    public int? MenuPadreId { get; set; }
+    public int Orden { get; set; }
+    public bool Lectura { get; set; }
+    public bool Escritura { get; set; }
+}
+
+public class RolPermisosGuardarSolicitud
+{
+    public int RolId { get; set; }
+    public List<RolMenuPermisoItem> Permisos { get; set; } = new();
+}
+
+public class RolMenuPermisoItem
+{
+    public int MenuId { get; set; }
+    public bool Lectura { get; set; }
+    public bool Escritura { get; set; }
+}
+
